@@ -38,8 +38,8 @@ Acceptance: the initial migration applies on a clean database; relations, constr
 Acceptance: the seed creates the first admin from `ADMIN_USERNAME` and `ADMIN_PASSWORD` (fails clearly if missing), settings with default values, sample categories, rooms, items of both tracking types, borrowers, and a current semester; it is safe to re-run; `npm run admin:reset-password` resets any user's password from the command line. Refs: ARCH 5, 12.4.
 
 **FND-5 · Web app shell and API client** (3 pts, Sprint 2). Depends on: AUTH-1, AUTH-2.
-React Router layout with navigation, an API client wrapper, TanStack Query setup, an auth context, the login and change-password screens, and shared form and table components for the CRUD screens.
-Acceptance: users can sign in, sign out, and change their password from the browser; navigation shows only what the user's role may use (SPEC 3, 5); the API client sends `X-Requested-With: fetch`, understands the standard error format, and shows the error `message`; a 401 returns the user to the login screen; a 429 or 503 shows a "try again in N seconds" message from `Retry-After`. Refs: SPEC 3, 5, ARCH 2, 5, 7.
+React Router layout with navigation, an API client wrapper, TanStack Query setup, an auth context, the login and change-password screens, and shared form and table components for the CRUD screens. Also adds `GET /api/auth/me`, which the auth context uses to restore the signed-in user after a page reload.
+Acceptance: users can sign in, sign out, and change their password from the browser; `GET /api/auth/me` returns the signed-in user (id, name, username, role, the same shape as the login response) or 401 `UNAUTHENTICATED`, and a reload keeps the user signed in; navigation shows only what the user's role may use (SPEC 3, 5); the API client sends `X-Requested-With: fetch`, understands the standard error format, and shows the error `message`; a 401 returns the user to the login screen; a 429 or 503 shows a "try again in N seconds" message from `Retry-After`. Refs: SPEC 3, 5, ARCH 2, 5, 7.
 
 ## Epic AUTH: Authentication and users
 
