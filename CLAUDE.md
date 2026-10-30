@@ -36,6 +36,7 @@ npm install                 # install all workspaces
 npm run lint
 npm run typecheck
 npm test                    # unit and integration tests
+npm run build               # compile shared and api with tsc, build web with Vite
 npm run format              # Prettier (Markdown is excluded)
 ```
 

@@ -10,6 +10,7 @@
     "lint": "eslint .",
     "typecheck": "npm run typecheck --workspaces",
     "test": "vitest run",
+    "build": "npm run build --workspaces --if-present",
     "format": "prettier --write ."
   },
   "devDependencies": {
