@@ -1,0 +1,279 @@
+// Data model from docs/SPEC.md section 4. Constraints from docs/ARCHITECTURE.md section 8.
+// Tables and columns use snake_case in the database (@@map / @map) so raw SQL matches the spec.
+// CHECK constraints and special indexes that Prisma cannot express are added as raw SQL at the
+// end of the migration that creates the table. Migrations are append-only: never edit an applied one.
+
+generator client {
+  provider            = "prisma-client"
+  output              = "../src/generated/prisma"
+  moduleFormat        = "esm"
+  importFileExtension = "ts"
+}
+
+// The connection URL comes from prisma.config.ts.
+datasource db {
+  provider = "postgresql"
+}
+
+// Enums are mirrored in packages/shared/src/enums.ts. A test checks they stay equal.
+
+enum Role {
+  ADMIN
+  HANDLER
+  VIEWER
+
+  @@map("role")
+}
+
+enum BorrowerType {
+  STUDENT
+  FACULTY
+  EMPLOYEE
+
+  @@map("borrower_type")
+}
+
+enum TrackingType {
+  UNIT
+  QUANTITY
+
+  @@map("tracking_type")
+}
+
+enum ItemCondition {
+  NEW
+  GOOD
+  FAIR
+  DAMAGED
+
+  @@map("item_condition")
+}
+
+enum ItemStatus {
+  ACTIVE
+  UNDER_REPAIR
+  LOST
+  RETIRED
+
+  @@map("item_status")
+}
+
+enum ReturnCondition {
+  GOOD
+  FAIR
+  DAMAGED
+
+  @@map("return_condition")
+}
+
+enum FlagStatus {
+  NONE
+  FLAGGED
+  OVERRIDDEN
+
+  @@map("flag_status")
+}
+
+model User {
+  id           String   @id @default(uuid()) @db.Uuid
+  name         String
+  username     String   @unique
+  passwordHash String   @map("password_hash")
+  role         Role
+  active       Boolean  @default(true)
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt    DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  createdLocations   Location[]
+  issuedTransactions Transaction[]
+  overriddenLines    TransactionItem[]
+  receivedReturns    Return[]
+  auditEntries       AuditLog[]
+
+  @@map("users")
+}
+
+// Read only through BorrowerService (CLAUDE.md rule 1).
+model Borrower {
+  id         String       @id @default(uuid()) @db.Uuid
+  schoolId   String       @unique @map("school_id")
+  name       String
+  type       BorrowerType
+  department String
+  active     Boolean      @default(true)
+  createdAt  DateTime     @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt  DateTime     @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  transactions Transaction[]
+
+  @@map("borrowers")
+}
+
+model Category {
+  id        String   @id @default(uuid()) @db.Uuid
+  name      String   @unique
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  items Item[]
+
+  @@map("categories")
+}
+
+// Rooms and labs. Name is unique case-insensitively (raw SQL index on lower(name)).
+model Location {
+  id          String   @id @default(uuid()) @db.Uuid
+  name        String
+  active      Boolean  @default(true)
+  createdById String   @map("created_by") @db.Uuid
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt   DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  createdBy    User          @relation(fields: [createdById], references: [id])
+  transactions Transaction[]
+
+  @@map("locations")
+}
+
+// Whether an item is borrowed is never stored: it is calculated from open lines (Rule 1).
+// UNIT items have an asset tag and total quantity 1; QUANTITY items have no asset tag (CHECK constraints).
+model Item {
+  id            String        @id @default(uuid()) @db.Uuid
+  name          String
+  categoryId    String        @map("category_id") @db.Uuid
+  description   String?
+  trackingType  TrackingType  @map("tracking_type")
+  assetTag      String?       @unique @map("asset_tag")
+  totalQuantity Int           @map("total_quantity")
+  condition     ItemCondition
+  status        ItemStatus    @default(ACTIVE)
+  createdAt     DateTime      @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt     DateTime      @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  category Category          @relation(fields: [categoryId], references: [id])
+  lines    TransactionItem[]
+
+  @@map("items")
+}
+
+// Dates are calendar dates in Asia/Manila. Exactly one row has is_current = true (partial unique index).
+model Semester {
+  id        String   @id @default(uuid()) @db.Uuid
+  name      String
+  startDate DateTime @map("start_date") @db.Date
+  endDate   DateTime @map("end_date") @db.Date
+  isCurrent Boolean  @default(false) @map("is_current")
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  transactions Transaction[]
+
+  @@map("semesters")
+}
+
+// Single row: id is always 1 (CHECK constraint). Defaults from SPEC section 4.
+model Setting {
+  id               Int      @id @default(1)
+  closingTime      String   @default("17:00") @map("closing_time")
+  warningThreshold Int      @default(3) @map("warning_threshold")
+  noticeThreshold  Int      @default(4) @map("notice_threshold")
+  blockThreshold   Int      @default(5) @map("block_threshold")
+  createdAt        DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt        DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  @@map("settings")
+}
+
+model Transaction {
+  id         String   @id @default(uuid()) @db.Uuid
+  borrowerId String   @map("borrower_id") @db.Uuid
+  locationId String   @map("location_id") @db.Uuid
+  issuedById String   @map("issued_by") @db.Uuid
+  issuedAt   DateTime @default(now()) @map("issued_at") @db.Timestamptz(3)
+  semesterId String   @map("semester_id") @db.Uuid
+  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt  DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  borrower Borrower          @relation(fields: [borrowerId], references: [id])
+  location Location          @relation(fields: [locationId], references: [id])
+  issuedBy User              @relation(fields: [issuedById], references: [id])
+  semester Semester          @relation(fields: [semesterId], references: [id])
+  lines    TransactionItem[]
+
+  // Strike counting looks up a borrower's transactions in the current semester (Rule 10).
+  @@index([borrowerId, semesterId])
+  @@map("transactions")
+}
+
+// One row per item line. Outstanding = quantity_borrowed - quantity_returned; open while > 0.
+model TransactionItem {
+  id                 String     @id @default(uuid()) @db.Uuid
+  transactionId      String     @map("transaction_id") @db.Uuid
+  itemId             String     @map("item_id") @db.Uuid
+  quantityBorrowed   Int        @map("quantity_borrowed")
+  quantityReturned   Int        @default(0) @map("quantity_returned")
+  note               String?
+  expectedReturnDate DateTime?  @map("expected_return_date") @db.Date
+  flagStatus         FlagStatus @default(NONE) @map("flag_status")
+  flaggedAt          DateTime?  @map("flagged_at") @db.Timestamptz(3)
+  overrideById       String?    @map("override_by") @db.Uuid
+  overrideAt         DateTime?  @map("override_at") @db.Timestamptz(3)
+  overrideReason     String?    @map("override_reason")
+  createdAt          DateTime   @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt          DateTime   @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  transaction Transaction @relation(fields: [transactionId], references: [id])
+  item        Item        @relation(fields: [itemId], references: [id])
+  overrideBy  User?       @relation(fields: [overrideById], references: [id], onDelete: Restrict)
+  returns     Return[]
+
+  @@index([flagStatus])
+  @@map("transaction_items")
+}
+
+// One row per return event. quantity_returned on the line is the sum of these.
+model Return {
+  id                String          @id @default(uuid()) @db.Uuid
+  transactionItemId String          @map("transaction_item_id") @db.Uuid
+  quantity          Int
+  returnedAt        DateTime        @default(now()) @map("returned_at") @db.Timestamptz(3)
+  receivedById      String          @map("received_by") @db.Uuid
+  condition         ReturnCondition
+  createdAt         DateTime        @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt         DateTime        @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  transactionItem TransactionItem @relation(fields: [transactionItemId], references: [id])
+  receivedBy      User            @relation(fields: [receivedById], references: [id])
+
+  @@map("returns")
+}
+
+// Written only through the audit helper (src/lib/audit.ts), inside the same transaction as the change.
+// actor_id is null for system actions such as the end-of-day flagging job.
+// entity_id is text because the settings row has an integer id.
+model AuditLog {
+  id        String   @id @default(uuid()) @db.Uuid
+  actorId   String?  @map("actor_id") @db.Uuid
+  action    String
+  entity    String
+  entityId  String   @map("entity_id")
+  before    Json?
+  after     Json?
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  actor User? @relation(fields: [actorId], references: [id], onDelete: Restrict)
+
+  @@index([entity, entityId, createdAt])
+  @@index([createdAt])
+  @@map("audit_log")
+}
+
+// Shape required by @quixo3/prisma-session-store (ARCHITECTURE.md section 5). Used from AUTH-1.
+model Session {
+  id        String   @id
+  sid       String   @unique
+  data      String
+  expiresAt DateTime @map("expires_at") @db.Timestamptz(3)
+
+  @@map("session")
+}

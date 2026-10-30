@@ -1,6 +1,6 @@
 import express from 'express';
-import { config } from './lib/config.js';
-import { healthRouter } from './routes/health.js';
+import { config } from './lib/config.ts';
+import { healthRouter } from './routes/health.ts';
 
 export function createApp() {
   const app = express();
