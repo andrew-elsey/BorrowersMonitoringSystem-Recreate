@@ -14,7 +14,8 @@
     "format": "prettier --write .",
     "dev:db": "docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d --wait db",
     "test:db": "docker compose -f docker-compose.yml -f docker-compose.dev.yml --profile test up -d --wait db-test",
-    "db:migrate": "npm run db:migrate -w @bms/api"
+    "db:migrate": "npm run db:migrate -w @bms/api",
+    "db:seed": "npm run db:seed -w @bms/api"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

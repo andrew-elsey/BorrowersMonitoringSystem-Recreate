@@ -144,7 +144,7 @@ Adding a dependency outside this list needs the owner's approval.
 Services in `docker-compose.yml`:
 
 - **db**: PostgreSQL with a named volume, started with the timeout settings in section 12.5. The port is not published to the host except through a development override file.
-- **api**: builds from `apps/api`, waits for `db` to be healthy, runs `prisma migrate deploy` on start, exposes port 3000 internally.
+- **api**: builds from `apps/api`, waits for `db` to be healthy, runs `prisma migrate deploy` and then the seed on every start, exposes port 3000 internally. The seed only adds what is missing: in production (`NODE_ENV=production`, as in the containers) the first admin and default settings; in development also sample categories, rooms, items, borrowers, and a current semester.
 - **web**: multi-stage build (Vite build, then nginx). Serves the SPA with fallback to `index.html`, proxies `/api` to `api:3000`. Published on `WEB_PORT` (default 8080).
 - All services get the memory, CPU, restart, healthcheck, and log-rotation settings in section 12.6. Only the web port is published, and it should be bound to the LAN address.
 

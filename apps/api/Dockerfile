@@ -29,5 +29,5 @@ COPY apps/api/prisma.config.ts apps/api/
 USER node
 WORKDIR /app/apps/api
 EXPOSE 3000
-# Apply pending migrations, then start the API (ARCHITECTURE.md 10).
-CMD ["sh", "-c", "npx prisma migrate deploy && exec node dist/index.js"]
+# Apply pending migrations, add any missing seed data (safe to re-run, FND-4), then start the API.
+CMD ["sh", "-c", "npx prisma migrate deploy && node dist/prisma/seed.js && exec node dist/src/index.js"]
