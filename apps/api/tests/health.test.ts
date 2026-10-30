@@ -1,6 +1,6 @@
 import request from 'supertest';
 import { expect, test } from 'vitest';
-import { createApp } from '../src/app.js';
+import { createApp } from '../src/app.ts';
 
 test('GET /api/health answers ok', async () => {
   const response = await request(createApp()).get('/api/health');

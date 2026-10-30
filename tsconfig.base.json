@@ -3,9 +3,14 @@
     "target": "ES2023",
     "lib": ["ES2023"],
     // NodeNext so compiled api and shared output runs under plain Node.
-    // Relative imports therefore need a .js extension: import { x } from './x.js'.
     "module": "NodeNext",
     "moduleResolution": "NodeNext",
+    // Relative imports use the real file name: import { x } from './x.ts'.
+    // tsc rewrites them to .js when compiling, and Node runs the .ts source directly in development.
+    "allowImportingTsExtensions": true,
+    "rewriteRelativeImportExtensions": true,
+    // Only TypeScript syntax Node can strip (no enums or namespaces), so Node can run the source.
+    "erasableSyntaxOnly": true,
     // Resolve @bms/shared to its TypeScript source during development (see packages/shared/package.json).
     "customConditions": ["source"],
     "strict": true,
