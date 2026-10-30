@@ -25,13 +25,14 @@ function toApiError(error: unknown): ApiError {
   if (error instanceof HashingBusyError) {
     return new ApiError(503, 'SERVER_BUSY', 'The server is busy. Try again in a few seconds.');
   }
-  // Errors from express.json(): body over the size limit, or not valid JSON.
-  const type = (error as { type?: string }).type;
+  // Errors from express.json() carry a 4xx status: body over the size limit, invalid JSON,
+  // unsupported charset, and so on. They are the client's mistake, not a server failure.
+  const { type, status } = error as { type?: string; status?: number };
   if (type === 'entity.too.large') {
     return new ApiError(413, 'PAYLOAD_TOO_LARGE', 'The request is too large.');
   }
-  if (type === 'entity.parse.failed') {
-    return new ApiError(400, 'VALIDATION_ERROR', 'The request body is not valid JSON.');
+  if (status !== undefined && status >= 400 && status < 500) {
+    return new ApiError(400, 'VALIDATION_ERROR', 'The request body could not be read.');
   }
   // Unexpected: log the details server-side, never send them to the client.
   console.error(error);

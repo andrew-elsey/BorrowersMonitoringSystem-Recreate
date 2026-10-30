@@ -1,6 +1,7 @@
 import express from 'express';
 import helmet from 'helmet';
 import { config } from './lib/config.ts';
+import { ApiError } from './lib/errors.ts';
 import { getSessionMiddleware } from './lib/session.ts';
 import { requireFetchHeader } from './middleware/auth.ts';
 import { errorHandler } from './middleware/errors.ts';
@@ -17,6 +18,10 @@ export function createApp() {
   app.use('/api', healthRouter);
   app.use('/api', requireFetchHeader, getSessionMiddleware());
   app.use('/api', createAuthRouter());
+  // Unknown API paths get the standard error format too (CLAUDE.md rule 10), not Express's HTML page.
+  app.use('/api', () => {
+    throw new ApiError(404, 'NOT_FOUND', 'Not found.');
+  });
   app.use(errorHandler);
   return app;
 }
