@@ -13,7 +13,8 @@ export default defineConfig({
           name: 'api',
           root: 'apps/api',
           // Integration tests use the real test database (ARCHITECTURE.md 11). Start it with `npm run test:db`.
-          env: { DATABASE_URL: testDatabaseUrl },
+          // SESSION_SECRET here is a throwaway value for tests only.
+          env: { DATABASE_URL: testDatabaseUrl, SESSION_SECRET: 'test-only-session-secret' },
           globalSetup: './tests/setup/global-setup.ts',
           // Test files share one database, so they run one at a time.
           fileParallelism: false,
