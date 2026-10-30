@@ -5,3 +5,6 @@ coverage/
 .env
 .env.*
 !.env.example
+
+# Prisma client, created by `prisma generate`
+apps/api/src/generated/

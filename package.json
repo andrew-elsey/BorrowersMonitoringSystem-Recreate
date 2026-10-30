@@ -9,9 +9,12 @@
   "scripts": {
     "lint": "eslint .",
     "typecheck": "npm run typecheck --workspaces",
-    "test": "vitest run",
+    "test": "npm run db:generate -w @bms/api && vitest run",
     "build": "npm run build --workspaces --if-present",
-    "format": "prettier --write ."
+    "format": "prettier --write .",
+    "dev:db": "docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d --wait db",
+    "test:db": "docker compose -f docker-compose.yml -f docker-compose.dev.yml --profile test up -d --wait db-test",
+    "db:migrate": "npm run db:migrate -w @bms/api"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
