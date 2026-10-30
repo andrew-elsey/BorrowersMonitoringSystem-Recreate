@@ -18,6 +18,12 @@ export const config = {
   // Password hashing limiter (ARCHITECTURE.md 12.4): hashes running at once, and hashes allowed to wait.
   hashConcurrency: readInt('HASH_CONCURRENCY', 2, 1),
   hashQueueMax: readInt('HASH_QUEUE_MAX', 10, 0),
+  // Sessions (ARCHITECTURE.md 5). SESSION_SECRET is checked when the session middleware is built,
+  // so scripts that never serve requests (seed, password reset) do not need it.
+  sessionSecret: process.env.SESSION_SECRET ?? '',
+  sessionTtlHours: readInt('SESSION_TTL_HOURS', 8, 1),
+  // Must stay false on a plain-HTTP LAN, or browsers drop the cookie.
+  cookieSecure: process.env.COOKIE_SECURE === 'true',
   // Business dates (closing time, "today", semesters) use this zone (ARCHITECTURE.md 6).
   timezone: process.env.APP_TIMEZONE || 'Asia/Manila',
   // The containers set NODE_ENV=production. The seed adds sample data only outside production.

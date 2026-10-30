@@ -44,7 +44,7 @@ More commands (database, seed) are added by later tickets; `CLAUDE.md` lists the
 ## Running with Docker
 
 ```
-cp .env.example .env        # then set POSTGRES_PASSWORD (letters and digits only)
+cp .env.example .env        # then set POSTGRES_PASSWORD (letters and digits only), ADMIN_PASSWORD, and SESSION_SECRET
 docker compose up --build   # or add -d to run in the background
 ```
 

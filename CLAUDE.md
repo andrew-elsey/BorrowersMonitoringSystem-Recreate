@@ -33,7 +33,7 @@ Available now:
 
 ```
 npm install                 # install all workspaces
-cp .env.example .env        # then set POSTGRES_PASSWORD (required)
+cp .env.example .env        # then set POSTGRES_PASSWORD, ADMIN_PASSWORD, and SESSION_SECRET (all required)
 docker compose up --build   # run db, api, and web at http://127.0.0.1:8080
 npm run lint
 npm run typecheck
