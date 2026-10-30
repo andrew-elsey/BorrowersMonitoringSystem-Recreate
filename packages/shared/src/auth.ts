@@ -3,6 +3,7 @@ import { z } from 'zod';
 // Password policy (ARCHITECTURE.md 5): at least 10 characters, no other composition rules.
 export const PASSWORD_MIN_LENGTH = 10;
 // Caps the text argon2 has to hash, so one request cannot make hashing expensive (SPEC.md 7).
+// shortcut: 200 is borrowed from the name limit in SPEC.md 7 and not yet confirmed by the owner; record the final value in SPEC.md 7.
 export const PASSWORD_MAX_LENGTH = 200;
 // Names are at most 200 characters (SPEC.md 7).
 const USERNAME_MAX_LENGTH = 200;

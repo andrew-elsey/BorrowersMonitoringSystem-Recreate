@@ -32,6 +32,7 @@ export function createAuthRouter() {
     res.status(204).end();
   });
 
+  // shortcut: no rate limit of its own (signed-in staff only, still behind the hash limiter); add one in SEC-1 if staff accounts are shared or exposed.
   router.put('/auth/password', requireAuth, async (req, res) => {
     const { currentPassword, newPassword } = changePasswordSchema.parse(req.body);
     await changePassword(req.session.userId!, currentPassword, newPassword);

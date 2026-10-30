@@ -36,6 +36,7 @@ export async function authenticate(
   return { id: user.id, name: user.name, username: user.username, role: user.role };
 }
 
+// shortcut: the user's other sessions stay signed in after a password change; sign them out when AUTH-3 adds session revocation.
 export async function changePassword(
   userId: string,
   currentPassword: string,
