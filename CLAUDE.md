@@ -37,16 +37,18 @@ cp .env.example .env        # then set POSTGRES_PASSWORD (required)
 docker compose up --build   # run db, api, and web at http://127.0.0.1:8080
 npm run lint
 npm run typecheck
+npm run test:db             # start the throwaway test database (needed by npm test)
 npm test                    # unit and integration tests
 npm run build               # compile shared and api with tsc, build web with Vite
 npm run format              # Prettier (Markdown is excluded)
+npm run dev:db              # start only the dev database, published on 127.0.0.1:5432
+npm run db:migrate          # create/apply a migration in development (needs dev:db)
 ```
 
 Not yet created (ticket in brackets):
 
 ```
 npm run dev                 # api and web in watch mode (db from docker)  [no ticket yet]
-npm run db:migrate          # create/apply a migration in development  [FND-3]
 npm run db:seed             # seed sample data (safe to re-run)  [FND-4]
 npm run admin:reset-password  # emergency password reset (run inside the api container)  [FND-4]
 ```

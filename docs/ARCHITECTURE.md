@@ -225,7 +225,7 @@ argon2 is deliberately slow and memory hungry, which makes `/api/auth/login` the
 
 ### 12.5 PostgreSQL
 
-- Connection pool capped at 10 (`connection_limit=10&pool_timeout=10` in `DATABASE_URL`).
+- Connection pool capped at 10, waiting at most 10 seconds for a connection. Set on the `pg` driver adapter in `apps/api/src/lib/prisma.ts`, because Prisma 7 with a driver adapter ignores `connection_limit` and `pool_timeout` in `DATABASE_URL`.
 - Server settings passed in compose: `statement_timeout=15000`, `lock_timeout=5000`, `idle_in_transaction_session_timeout=15000`. (`pg_dump` turns the statement timeout off for itself.)
 - Prisma interactive transactions use `{ maxWait: 5000, timeout: 10000 }`.
 - Indexes for every filter and sort used by lists and reports (section 8). Reports aggregate in SQL.
