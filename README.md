@@ -39,4 +39,19 @@ npm run build       # compile shared and api to dist/, build web with Vite
 npm run format      # Prettier
 ```
 
-More commands (Docker, database, seed) are added by later tickets; `CLAUDE.md` lists them.
+More commands (database, seed) are added by later tickets; `CLAUDE.md` lists them.
+
+## Running with Docker
+
+```
+cp .env.example .env        # then set POSTGRES_PASSWORD (letters and digits only)
+docker compose up --build   # or add -d to run in the background
+```
+
+Open http://127.0.0.1:8080. Three containers start:
+
+- **db**: PostgreSQL 18. Data lives in the `db-data` volume and survives `docker compose down`. `docker compose down -v` deletes it.
+- **api**: the compiled Express API. Not published to the host; nginx reaches it on port 3000.
+- **web**: nginx serving the React build and proxying `/api` to the api.
+
+Only the web port is published, and by default only to this machine. To reach the app from other machines on the LAN, set `WEB_BIND_ADDRESS` in `.env` to this PC's LAN address. All variables are described in `.env.example` and `docs/ARCHITECTURE.md` section 10.
