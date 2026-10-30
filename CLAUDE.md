@@ -29,16 +29,24 @@ TypeScript (strict) everywhere. Backend: Node, Express 5, Prisma, PostgreSQL, Zo
 
 These scripts are created by tickets FND-1 to FND-4. Keep this section accurate as the project grows.
 
+Available now (FND-1):
+
 ```
 npm install                 # install all workspaces
-docker compose up --build   # run db, api, and web
-npm run dev                 # api and web in watch mode (db from docker)
 npm run lint
 npm run typecheck
 npm test                    # unit and integration tests
-npm run db:migrate          # create/apply a migration in development
-npm run db:seed             # seed sample data (safe to re-run)
-npm run admin:reset-password  # emergency password reset (run inside the api container)
+npm run format              # Prettier (Markdown is excluded)
+```
+
+Not yet created (ticket in brackets):
+
+```
+docker compose up --build   # run db, api, and web  [FND-2]
+npm run dev                 # api and web in watch mode (db from docker)  [FND-2]
+npm run db:migrate          # create/apply a migration in development  [FND-3]
+npm run db:seed             # seed sample data (safe to re-run)  [FND-4]
+npm run admin:reset-password  # emergency password reset (run inside the api container)  [FND-4]
 ```
 
 ## Working agreement
