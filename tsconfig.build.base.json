@@ -1,0 +1,12 @@
+{
+  // Shared settings for `npm run build` in packages compiled with tsc (api, shared).
+  "extends": "./tsconfig.base.json",
+  "compilerOptions": {
+    "noEmit": false,
+    "outDir": "${configDir}/dist",
+    "rootDir": "${configDir}/src",
+    "sourceMap": true
+  },
+  "include": ["${configDir}/src"],
+  "exclude": ["${configDir}/src/**/*.test.ts"]
+}

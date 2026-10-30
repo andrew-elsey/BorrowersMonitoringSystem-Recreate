@@ -1,0 +1,19 @@
+{
+  "compilerOptions": {
+    "target": "ES2023",
+    "lib": ["ES2023"],
+    // NodeNext so compiled api and shared output runs under plain Node.
+    // Relative imports therefore need a .js extension: import { x } from './x.js'.
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    // Resolve @bms/shared to its TypeScript source during development (see packages/shared/package.json).
+    "customConditions": ["source"],
+    "strict": true,
+    "noEmit": true,
+    "isolatedModules": true,
+    "verbatimModuleSyntax": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "resolveJsonModule": true
+  }
+}
