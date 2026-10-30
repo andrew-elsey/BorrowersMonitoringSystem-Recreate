@@ -43,14 +43,14 @@ npm run build               # compile shared and api with tsc, build web with Vi
 npm run format              # Prettier (Markdown is excluded)
 npm run dev:db              # start only the dev database, published on 127.0.0.1:5432
 npm run db:migrate          # create/apply a migration in development (needs dev:db)
+npm run db:seed             # add missing seed data in development, with sample data (needs dev:db and DATABASE_URL in .env)
+docker compose exec api npm run admin:reset-password -- <username>   # emergency password reset (hidden prompt)
 ```
 
 Not yet created (ticket in brackets):
 
 ```
 npm run dev                 # api and web in watch mode (db from docker)  [no ticket yet]
-npm run db:seed             # seed sample data (safe to re-run)  [FND-4]
-npm run admin:reset-password  # emergency password reset (run inside the api container)  [FND-4]
 ```
 
 ## Working agreement

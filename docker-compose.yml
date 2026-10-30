@@ -54,6 +54,11 @@ services:
       # Pool limits (ARCHITECTURE.md 12.5) are set in apps/api/src/lib/prisma.ts, not in the URL.
       DATABASE_URL: postgresql://${POSTGRES_USER:-bms}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-bms}
       TRUST_PROXY_HOPS: ${TRUST_PROXY_HOPS:-1}
+      HASH_CONCURRENCY: ${HASH_CONCURRENCY:-2}
+      HASH_QUEUE_MAX: ${HASH_QUEUE_MAX:-10}
+      # The seed runs on every start and needs these to create the first admin (FND-4).
+      ADMIN_USERNAME: ${ADMIN_USERNAME:-admin}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:?Set ADMIN_PASSWORD in .env (at least 10 characters)}
     # No ports: only nginx reaches the API (ARCHITECTURE.md 12.1).
     healthcheck:
       test:
