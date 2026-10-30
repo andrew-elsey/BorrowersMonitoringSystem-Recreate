@@ -6,7 +6,6 @@
   "scripts": {
     "dev": "node --watch --conditions=source --env-file-if-exists=../../.env src/index.ts",
     "build": "prisma generate && tsc -p tsconfig.build.json",
-    "start": "prisma migrate deploy && node dist/index.js",
     "typecheck": "prisma generate && tsc -p .",
     "db:generate": "prisma generate",
     "db:migrate": "prisma migrate dev"

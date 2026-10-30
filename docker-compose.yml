@@ -51,7 +51,8 @@ services:
       NODE_ENV: production
       TZ: ${TZ:-Asia/Manila}
       APP_TIMEZONE: ${APP_TIMEZONE:-Asia/Manila}
-      DATABASE_URL: postgresql://${POSTGRES_USER:-bms}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-bms}?connection_limit=10&pool_timeout=10
+      # Pool limits (ARCHITECTURE.md 12.5) are set in apps/api/src/lib/prisma.ts, not in the URL.
+      DATABASE_URL: postgresql://${POSTGRES_USER:-bms}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-bms}
       TRUST_PROXY_HOPS: ${TRUST_PROXY_HOPS:-1}
     # No ports: only nginx reaches the API (ARCHITECTURE.md 12.1).
     healthcheck:
