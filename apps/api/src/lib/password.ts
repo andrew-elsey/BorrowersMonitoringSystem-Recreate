@@ -1,11 +1,12 @@
+import { PASSWORD_MIN_LENGTH } from '@bms/shared';
 import argon2 from 'argon2';
 import { config } from './config.ts';
 
 // All password hashing and verifying goes through this file (CLAUDE.md rule 11, ARCHITECTURE.md 12.4).
 // argon2 is deliberately slow and memory hungry, so a limiter caps how many hashes run at once.
 
-// Password policy (ARCHITECTURE.md 5): at least 10 characters, no other composition rules.
-export const PASSWORD_MIN_LENGTH = 10;
+// The password policy constant lives in @bms/shared so the web forms use the same value.
+export { PASSWORD_MIN_LENGTH };
 
 // argon2id parameters from ARCHITECTURE.md 5. They are stored inside each hash.
 const HASH_OPTIONS = {
@@ -15,7 +16,7 @@ const HASH_OPTIONS = {
   parallelism: 1,
 } as const;
 
-// Thrown when the limiter's queue is full. AUTH-1 turns this into 503 SERVER_BUSY with Retry-After.
+// Thrown when the limiter's queue is full. The error handler turns this into 503 SERVER_BUSY with Retry-After.
 export class HashingBusyError extends Error {
   constructor() {
     super('Too many password hashes are waiting. Try again shortly.');
