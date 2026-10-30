@@ -1,6 +1,6 @@
-// Placeholder entry point. The Express server arrives with FND-2 and AUTH-1.
-import { APP_NAME } from '@bms/shared';
+import { createApp } from './app.js';
+import { config } from './lib/config.js';
 
-export function startupMessage(): string {
-  return `${APP_NAME} API`;
-}
+createApp().listen(config.port, () => {
+  console.log(`API listening on port ${config.port}`);
+});

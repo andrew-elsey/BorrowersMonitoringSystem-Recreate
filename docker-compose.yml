@@ -1,0 +1,95 @@
+# Settings from ARCHITECTURE.md sections 10 and 12. Variables are documented in .env.example.
+
+x-logging: &logging
+  driver: json-file
+  options:
+    max-size: '10m'
+    max-file: '3'
+
+services:
+  db:
+    image: postgres:18.6-bookworm
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-bms}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}
+      POSTGRES_DB: ${POSTGRES_DB:-bms}
+      TZ: ${TZ:-Asia/Manila}
+    # Timeouts from ARCHITECTURE.md 12.5.
+    command:
+      - postgres
+      - -c
+      - statement_timeout=15000
+      - -c
+      - lock_timeout=5000
+      - -c
+      - idle_in_transaction_session_timeout=15000
+    volumes:
+      # PostgreSQL 18+ images keep their data under /var/lib/postgresql.
+      - db-data:/var/lib/postgresql
+    # No ports: the database is reachable only from the api container (ARCHITECTURE.md 12.1).
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U "$$POSTGRES_USER" -d "$$POSTGRES_DB"']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    mem_limit: 1g
+    cpus: 1.5
+    logging: *logging
+
+  api:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    restart: unless-stopped
+    # Forwards stop signals to Node so the container shuts down promptly.
+    init: true
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      NODE_ENV: production
+      TZ: ${TZ:-Asia/Manila}
+      APP_TIMEZONE: ${APP_TIMEZONE:-Asia/Manila}
+      DATABASE_URL: postgresql://${POSTGRES_USER:-bms}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-bms}?connection_limit=10&pool_timeout=10
+      TRUST_PROXY_HOPS: ${TRUST_PROXY_HOPS:-1}
+    # No ports: only nginx reaches the API (ARCHITECTURE.md 12.1).
+    healthcheck:
+      test:
+        - CMD
+        - node
+        - -e
+        - "fetch('http://localhost:3000/api/health').then(r => process.exit(r.ok ? 0 : 1), () => process.exit(1))"
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    mem_limit: 512m
+    cpus: 1.0
+    pids_limit: 200
+    logging: *logging
+
+  web:
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+    restart: unless-stopped
+    depends_on:
+      api:
+        condition: service_healthy
+    environment:
+      TZ: ${TZ:-Asia/Manila}
+    # The only published port. Bound to localhost by default; set WEB_BIND_ADDRESS to the
+    # department PC's LAN address to reach it from other machines (ARCHITECTURE.md 12.1).
+    ports:
+      - '${WEB_BIND_ADDRESS:-127.0.0.1}:${WEB_PORT:-8080}:8080'
+    healthcheck:
+      test: ['CMD', 'wget', '-q', '-O', '/dev/null', 'http://127.0.0.1:8080/healthz']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    mem_limit: 128m
+    cpus: 0.5
+    logging: *logging
+
+volumes:
+  db-data:

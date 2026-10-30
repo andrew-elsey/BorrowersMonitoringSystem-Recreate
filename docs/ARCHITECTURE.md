@@ -160,6 +160,7 @@ Environment variables (all documented in `.env.example`):
 | `APP_TIMEZONE`, `TZ` | Timezone | Asia/Manila |
 | `ADMIN_USERNAME`, `ADMIN_PASSWORD` | First admin for the seed script | none |
 | `WEB_PORT` | Published web port | 8080 |
+| `WEB_BIND_ADDRESS` | Host address the web port is bound to (LAN address on the department PC, section 12.1) | 127.0.0.1 |
 | `TRUST_PROXY_HOPS` | Number of proxies in front of the API (nginx = 1) | 1 |
 | `HASH_CONCURRENCY` | Password hashes allowed at once | 2 |
 | `HASH_QUEUE_MAX` | Hash requests allowed to wait | 10 |
