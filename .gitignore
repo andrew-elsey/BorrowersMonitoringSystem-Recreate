@@ -8,3 +8,6 @@ coverage/
 
 # Prisma client, created by `prisma generate`
 apps/api/src/generated/
+
+# Local Claude Code skills, installed per machine
+.claude/skills/

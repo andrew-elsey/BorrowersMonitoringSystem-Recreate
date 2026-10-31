@@ -92,3 +92,31 @@ npm run dev                 # api and web in watch mode (db from docker)  [no ti
 ## Quality bar
 
 Code should be easy for a student to read: small functions, descriptive names, comments at integration points and wherever a business rule is applied (reference the rule number from `docs/BUSINESS_RULES.md`). Prefer simple and obvious over clever.
+
+## Project documents
+- Spec and backlog: `docs/SPEC.md` and `docs/BACKLOG.md` (tickets such as FND-1, BRW-2, FLG-4). Business rules are numbered 1 to 16 in `docs/BUSINESS_RULES.md`.
+- Test cases: `TEST_CASES.md` (IDs like TC-BRW-07; each lists its ticket and rule). It is not in the repo yet.
+
+## Trello workflow
+The backlog and sprints live on the Trello board for this project. Use the Trello MCP tools to read and update it. Cards are named with their ticket ID (for example "BRW-2 Checkout API").
+
+When you start a ticket:
+1. Find its card by ticket ID. If you cannot find it or there is more than one match, stop and ask me.
+2. Move it to "In progress" and read its acceptance criteria. If the card and `docs/BACKLOG.md` disagree, stop and ask me.
+
+A ticket is ready for testing only when the Definition of Done above is met and the test cases in `TEST_CASES.md` that reference this ticket are implemented and pass. If the file is missing or has no cases for this ticket, say so in the card comment. Do not invent test case IDs.
+
+When all of that is true:
+1. Move the card to "Ready for Testing".
+2. Add a comment with: a two or three line summary of what changed, the commit hash or pull request, the test case IDs that were run and their results, and anything I should check by hand.
+
+If something is not ready (failing tests, a missing decision, a blocker):
+- Leave the card in "In progress" and comment what is blocking it.
+- Do not move it forward.
+
+Rules for the board:
+- Never move a card to "Done". Only I do that after testing.
+- Never delete or archive cards, and never edit a card's acceptance criteria or sprint assignment. Suggest changes in a comment instead.
+- If testing sends a card back, I will move it to "In progress" with a comment. Fix it and repeat the steps above.
+- At the start of a session, check the board for cards in "In progress" and any I have sent back.
+- Do not put Trello tokens, passwords, or other secrets in files or comments.
