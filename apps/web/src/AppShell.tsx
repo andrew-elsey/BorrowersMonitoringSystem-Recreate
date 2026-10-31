@@ -1,5 +1,5 @@
 import { PERMISSIONS } from '@bms/shared';
-import { NavLink, Outlet, useNavigate } from 'react-router';
+import { NavLink, Outlet } from 'react-router';
 import { ROLE_LABELS, useAuth } from './auth';
 import { BoxIcon } from './components/icons';
 
@@ -12,13 +12,7 @@ const onBarFocus = 'focus-visible:outline-accent';
 
 export function AppShell() {
   const { user, signOut } = useAuth();
-  const navigate = useNavigate();
   const role = user!.role;
-
-  async function handleSignOut() {
-    await signOut();
-    navigate('/login', { replace: true });
-  }
 
   return (
     <div className="flex min-h-screen flex-col bg-page">
@@ -44,7 +38,7 @@ export function AppShell() {
           </NavLink>
           <button
             type="button"
-            onClick={handleSignOut}
+            onClick={signOut} // the route guard then shows the login page
             className={`h-10 cursor-pointer rounded-lg border border-white px-4 text-[15px] font-medium transition-colors duration-150 hover:bg-primary-hover ${onBarFocus}`}
           >
             Sign out

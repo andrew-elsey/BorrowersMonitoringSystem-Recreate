@@ -126,3 +126,37 @@ test('sign out ends the session and returns to the login page', async () => {
   expect(router.state.location.pathname).toBe('/login');
   expect(fetchMock.mock.calls.some(([url]) => url === '/api/auth/logout')).toBe(true);
 });
+
+test('after a deliberate sign out, the next sign-in lands on home, not the last page', async () => {
+  let signedIn = true;
+  mockApi((method, path) => {
+    if (path === '/auth/me') return signedIn ? signedInAs(HANDLER) : signedOut;
+    if (path === '/auth/logout') {
+      signedIn = false;
+      return { status: 204 };
+    }
+    if (path === '/auth/login') return signedInAs(HANDLER);
+    throw new Error(`unexpected ${method} ${path}`);
+  });
+  const router = renderApp('/password');
+
+  await userEvent.click(await screen.findByRole('button', { name: 'Sign out' }));
+  await signIn('jdelacruz', 'a-brand-new-password');
+
+  expect(await screen.findByRole('heading', { name: 'Home' })).toBeTruthy();
+  expect(router.state.location.pathname).toBe('/');
+});
+
+test('when the session expires, signing in again returns to the page the user was on', async () => {
+  mockApi((method, path) => {
+    if (path === '/auth/me') return signedOut;
+    if (path === '/auth/login') return signedInAs(HANDLER);
+    throw new Error(`unexpected ${method} ${path}`);
+  });
+  const router = renderApp('/password');
+
+  await signIn('jdelacruz', 'correct-horse-battery');
+
+  expect(await screen.findByRole('heading', { name: 'Change password' })).toBeTruthy();
+  expect(router.state.location.pathname).toBe('/password');
+});

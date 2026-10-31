@@ -6,7 +6,7 @@ import {
   useQuery,
   useQueryClient,
 } from '@tanstack/react-query';
-import { createContext, use, type ReactNode } from 'react';
+import { createContext, use, useState, type ReactNode } from 'react';
 import { apiFetch, ApiRequestError } from './api';
 import { Alert } from './components/Alert';
 
@@ -48,6 +48,9 @@ async function fetchSignedInUser(): Promise<SignedInUser | null> {
 
 type AuthValue = {
   user: SignedInUser | null;
+  // True after the Sign out button, false after a 401 (session expired). Only an expired session
+  // returns the user to the page they were on, so the next person at the counter starts at home.
+  signedOutOnPurpose: boolean;
   signIn: (user: SignedInUser) => void;
   signOut: () => Promise<void>;
 };
@@ -58,6 +61,7 @@ const AuthContext = createContext<AuthValue | null>(null);
 export function AuthProvider({ children }: { children: ReactNode }) {
   const queryClient = useQueryClient();
   const me = useQuery({ queryKey: ME_KEY, queryFn: fetchSignedInUser, staleTime: Infinity });
+  const [signedOutOnPurpose, setSignedOutOnPurpose] = useState(false);
 
   if (me.isPending) return <p className="p-6 text-muted">Loading…</p>;
   if (me.isError) {
@@ -70,9 +74,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const value: AuthValue = {
     user: me.data,
-    signIn: (user) => queryClient.setQueryData(ME_KEY, user),
+    signedOutOnPurpose,
+    signIn: (user) => {
+      setSignedOutOnPurpose(false);
+      queryClient.setQueryData(ME_KEY, user);
+    },
     signOut: async () => {
       await apiFetch('POST', '/auth/logout');
+      // Set before the user is cleared, so the route guard never redirects without it.
+      setSignedOutOnPurpose(true);
       // Drop everything cached for this user before the next person uses the counter PC.
       queryClient.removeQueries({ predicate: (query) => query.queryKey[0] !== ME_KEY[0] });
       queryClient.setQueryData(ME_KEY, null);

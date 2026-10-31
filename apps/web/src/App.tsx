@@ -8,11 +8,15 @@ import { HomePage } from './pages/HomePage';
 import { LoginPage } from './pages/LoginPage';
 import { NotAllowedPage } from './pages/NotAllowedPage';
 
-// Route guard: signed-out users go to the login page, which sends them back here afterwards.
+// Route guard: signed-out users go to the login page. After an expired session, login sends them
+// back to this page; after Sign out it sends them home.
 function RequireSignIn({ children }: { children: ReactNode }) {
-  const { user } = useAuth();
+  const { user, signedOutOnPurpose } = useAuth();
   const location = useLocation();
-  if (!user) return <Navigate to="/login" replace state={{ from: location.pathname }} />;
+  if (!user) {
+    const state = signedOutOnPurpose ? undefined : { from: location.pathname };
+    return <Navigate to="/login" replace state={state} />;
+  }
   return children;
 }
 
