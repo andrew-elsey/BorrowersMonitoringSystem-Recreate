@@ -112,6 +112,7 @@ When all of that is true:
 
 QA tests the branch before it is merged, never `main`:
 - QA checks out the branch named in the card comment, follows the "How to QA" steps, and comments PASS or FAIL with what was run and the results. A failure includes the exact steps and output.
+- The pull request stays open until QA comments PASS. It is never merged before QA has run.
 - On PASS, I merge the pull request and move the card to "Done".
 - On FAIL, the card goes back to "In progress" and the fix starts from the steps above.
 - QA never merges, never moves a card to "Done", and never edits a card's description.

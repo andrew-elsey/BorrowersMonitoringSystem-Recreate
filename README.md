@@ -55,3 +55,20 @@ Open http://127.0.0.1:8080. Three containers start:
 - **web**: nginx serving the React build and proxying `/api` to the api.
 
 Only the web port is published, and by default only to this machine. To reach the app from other machines on the LAN, set `WEB_BIND_ADDRESS` in `.env` to this PC's LAN address. All variables are described in `.env.example` and `docs/ARCHITECTURE.md` section 10.
+
+## Development data
+
+The api seeds the first admin and default settings on every start. Sample data (categories, rooms, items, borrowers, a semester) and the QA role accounts come only from `npm run db:seed`, which never runs in production.
+
+**Start over with clean data.** This deletes everything in the dev database, including any password changes:
+
+```
+docker compose down -v
+docker compose up --build -d --wait
+npm run dev:db
+npm run db:seed             # needs DATABASE_URL in .env, pointing at 127.0.0.1:5432
+```
+
+Rows written before FND-6 (2026-10-31) are stored 8 hours early. Resetting is the fix for them; there is no correcting migration.
+
+**Role test accounts for QA** (until AUTH-3 adds user management): set `QA_PASSWORD` in `.env` (at least 10 characters), then run `npm run db:seed`. It creates `qa-handler` (Handler) and `qa-viewer` (View-only) if they do not exist, and never changes them afterwards. To set a new password for one of them: `docker compose exec api npm run admin:reset-password -- qa-handler`.
