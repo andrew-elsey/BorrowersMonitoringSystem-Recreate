@@ -227,7 +227,7 @@ argon2 is deliberately slow and memory hungry, which makes `/api/auth/login` the
 
 - All hashing and verifying goes through one limiter. At most `HASH_CONCURRENCY` (default 2) run at once and at most `HASH_QUEUE_MAX` (default 10) wait. Beyond that the request is refused immediately with 503 `SERVER_BUSY` and a `Retry-After` header. Memory used by hashing is therefore bounded (about 2 x 19 MiB).
 - Rate limits are checked before any hashing happens.
-- **Throttle, never lock.** Failed logins are throttled per IP-and-username pair (10 failures per 15 minutes) and per IP overall (30 per 15 minutes) with `Retry-After`. Accounts are never locked, because a lock would let an attacker lock the real admin out, which is itself a denial of service. Because throttling is keyed on the IP, the admin signing in from another machine is unaffected.
+- **Throttle, never lock.** Failed logins are throttled per IP-and-username pair (10 failures per 15 minutes) and per IP overall (30 per 15 minutes) with `Retry-After`. Accounts are never locked, because a lock would let an attacker lock the real admin out, which is itself a denial of service. Because throttling is keyed on the IP, the admin signing in from another machine is unaffected. The per-IP limiter runs first, so a blocked machine stores nothing more in memory, and the username in a limiter key is cut to 200 characters (AUTH-5).
 - A login for an unknown username still runs a dummy verify through the same limiter, so response time does not reveal which usernames exist.
 - Emergency recovery: `npm run admin:reset-password` (run inside the api container) resets any user's password from the command line.
 
