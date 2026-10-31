@@ -271,6 +271,8 @@ Record the results and any tuned limits in this section.
 | Exposure | LAN only, web port only, VPN for remote access | Application limits cannot stop a flood that saturates the network link |
 | Resource limits | Per-container memory, CPU, and log caps | One misbehaving service cannot take the host down |
 | UI colors | College of Fine Arts and Design logo colors (section 14) | The handout room belongs to the college; contrast checked against WCAG AA |
+| College logo | Not used | No license to use it |
+| UI font | System font stack (Segoe UI Variable on Windows 11) | No download, works offline on the LAN, no new dependency |
 
 ## 14. UI theme
 
@@ -309,4 +311,6 @@ Strike levels (thresholds come from settings, BR 11) differ in lightness and lab
 | Stricter notice | `danger-tint` background, `danger` text, alert icon, "Notice: N strikes" |
 | Blocked | `danger` background, white text, block icon, "Blocked: N strikes" |
 
-The college logo file is supplied by the owner. Until then, the top bar shows the app name with a generic icon.
+The app does not use the college logo, because the project has no license for it. The top bar and login screen show the app name with a generic icon.
+
+Font: the system font stack, `"Segoe UI Variable", "Segoe UI", system-ui, sans-serif`, set as Tailwind's `--font-sans`. The department PC runs Windows 11, which ships Segoe UI Variable, so nothing is downloaded and the app works without internet access. Body text is at least 16px.
