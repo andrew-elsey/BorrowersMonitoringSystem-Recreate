@@ -62,7 +62,7 @@ const SAMPLE_BORROWERS = [
 export async function seed(options: SeedOptions): Promise<number> {
   const { adminUsername, adminPassword } = readAdminCredentials(options);
   const admin = await seedAdmin(adminUsername, adminPassword);
-  const qaUsers = options.includeSampleData ? await missingQaUsers(options.qaPassword) : [];
+  const qaUsers = options.includeSampleData ? await sampleQaUsers(options.qaPassword) : [];
 
   const created = await prisma.$transaction(async (tx) => {
     // Settings with the defaults from SPEC 4 (the column defaults). Always a single row with id 1.
@@ -108,24 +108,16 @@ async function seedAdmin(username: string, password: string) {
   });
 }
 
-// The QA accounts not created yet, with their password hashed. Hashed before the transaction, like the admin's.
-async function missingQaUsers(
+// The QA accounts with their password hashed, before the transaction like the admin's.
+// Existing accounts are skipped by the insert (skipDuplicates), so a re-run never changes them.
+async function sampleQaUsers(
   qaPassword: string | undefined,
 ): Promise<Prisma.UserCreateManyInput[]> {
   if (!qaPassword) return [];
   const policyError = checkPasswordPolicy(qaPassword);
   if (policyError) throw new SeedConfigError(`QA_PASSWORD: ${policyError}`);
-
-  const existing = await prisma.user.findMany({
-    where: { username: { in: SAMPLE_QA_USERS.map((user) => user.username) } },
-    select: { username: true },
-  });
-  const missing = SAMPLE_QA_USERS.filter(
-    (user) => !existing.some((e) => e.username === user.username),
-  );
-  if (missing.length === 0) return [];
   const passwordHash = await hashPassword(qaPassword);
-  return missing.map((user) => ({ ...user, passwordHash }));
+  return SAMPLE_QA_USERS.map((user) => ({ ...user, passwordHash }));
 }
 
 async function seedSampleData(

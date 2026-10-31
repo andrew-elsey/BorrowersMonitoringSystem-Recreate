@@ -1,6 +1,6 @@
 import { PrismaPg } from '@prisma/adapter-pg';
 import request from 'supertest';
-import { afterAll, beforeEach, expect, test } from 'vitest';
+import { afterAll, beforeEach, expect, test, vi } from 'vitest';
 import { createApp } from '../src/app.ts';
 import { PrismaClient } from '../src/generated/prisma/client.ts';
 import { config } from '../src/lib/config.ts';
@@ -39,6 +39,16 @@ async function storedEpochMs(table: string, column: string, where: string): Prom
 test('precondition: the database defaults to Asia/Manila, so a UTC mix-up cannot pass by accident', async () => {
   const [row] = await bareClient.$queryRaw<{ TimeZone: string }[]>`SHOW timezone`;
   expect(row!.TimeZone).toBe('Asia/Manila');
+});
+
+test('a DATABASE_URL with options is refused, because it would silently replace TimeZone=UTC', async () => {
+  vi.stubEnv('DATABASE_URL', `${testDatabaseUrl}?options=-c%20statement_timeout%3D5000`);
+  vi.resetModules();
+  try {
+    await expect(import('../src/lib/prisma.ts')).rejects.toThrow(/must not set options/);
+  } finally {
+    vi.unstubAllEnvs();
+  }
 });
 
 test('@default(now()) and @updatedAt are stored as the correct UTC instant', async () => {
