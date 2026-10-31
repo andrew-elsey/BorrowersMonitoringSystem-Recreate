@@ -16,7 +16,15 @@ export type SeedOptions = {
   adminPassword: string | undefined;
   // Fake rooms, items, borrowers, and a semester. Never in production, so they never mix with real data.
   includeSampleData: boolean;
+  // Password for the sample QA accounts. Optional: without it they are not created.
+  qaPassword?: string;
 };
+
+// Role test accounts for QA until AUTH-3 adds user management. Sample data only, never production.
+const SAMPLE_QA_USERS = [
+  { username: 'qa-handler', name: 'QA Handler', role: 'HANDLER' },
+  { username: 'qa-viewer', name: 'QA Viewer', role: 'VIEWER' },
+] as const;
 
 const SAMPLE_CATEGORIES = ['Laptops', 'Projectors', 'Cables and power'];
 
@@ -54,6 +62,7 @@ const SAMPLE_BORROWERS = [
 export async function seed(options: SeedOptions): Promise<number> {
   const { adminUsername, adminPassword } = readAdminCredentials(options);
   const admin = await seedAdmin(adminUsername, adminPassword);
+  const qaUsers = options.includeSampleData ? await sampleQaUsers(options.qaPassword) : [];
 
   const created = await prisma.$transaction(async (tx) => {
     // Settings with the defaults from SPEC 4 (the column defaults). Always a single row with id 1.
@@ -62,7 +71,7 @@ export async function seed(options: SeedOptions): Promise<number> {
       'setting',
       await tx.setting.createManyAndReturn({ data: [{ id: 1 }], skipDuplicates: true }),
     );
-    if (options.includeSampleData) count += await seedSampleData(tx, admin.id);
+    if (options.includeSampleData) count += await seedSampleData(tx, admin.id, qaUsers);
     return count;
   });
 
@@ -99,8 +108,34 @@ async function seedAdmin(username: string, password: string) {
   });
 }
 
-async function seedSampleData(tx: Prisma.TransactionClient, adminId: string): Promise<number> {
+// The QA accounts with their password hashed, before the transaction like the admin's.
+// Existing accounts are skipped by the insert (skipDuplicates), so a re-run never changes them.
+async function sampleQaUsers(
+  qaPassword: string | undefined,
+): Promise<Prisma.UserCreateManyInput[]> {
+  if (!qaPassword) return [];
+  const policyError = checkPasswordPolicy(qaPassword);
+  if (policyError) throw new SeedConfigError(`QA_PASSWORD: ${policyError}`);
+  const passwordHash = await hashPassword(qaPassword);
+  return SAMPLE_QA_USERS.map((user) => ({ ...user, passwordHash }));
+}
+
+async function seedSampleData(
+  tx: Prisma.TransactionClient,
+  adminId: string,
+  qaUsers: Prisma.UserCreateManyInput[],
+): Promise<number> {
   let count = 0;
+
+  count += await auditCreated(
+    tx,
+    'user',
+    await tx.user.createManyAndReturn({
+      data: qaUsers,
+      skipDuplicates: true,
+      omit: { passwordHash: true },
+    }),
+  );
 
   count += await auditCreated(
     tx,
@@ -223,6 +258,7 @@ async function main(): Promise<void> {
       adminUsername: process.env.ADMIN_USERNAME,
       adminPassword: process.env.ADMIN_PASSWORD,
       includeSampleData: !config.isProduction,
+      qaPassword: process.env.QA_PASSWORD,
     });
     console.log(`Seed finished: ${created} record(s) created.`);
   } catch (error) {
