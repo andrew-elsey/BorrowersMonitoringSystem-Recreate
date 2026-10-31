@@ -2,3 +2,4 @@
 export const APP_NAME = 'Borrowers Monitoring System';
 export * from './enums.ts';
 export * from './auth.ts';
+export * from './permissions.ts';

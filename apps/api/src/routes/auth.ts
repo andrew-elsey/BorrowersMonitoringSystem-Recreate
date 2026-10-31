@@ -1,8 +1,8 @@
-import { changePasswordSchema, loginSchema } from '@bms/shared';
+import { changePasswordSchema, loginSchema, PERMISSIONS } from '@bms/shared';
 import { Router } from 'express';
 import { ApiError } from '../lib/errors.ts';
 import { SESSION_COOKIE_NAME } from '../lib/session.ts';
-import { requireAuth } from '../middleware/auth.ts';
+import { requireRole } from '../middleware/auth.ts';
 import { createLoginRateLimiters } from '../middleware/login-rate-limit.ts';
 import { authenticate, changePassword } from '../services/auth.ts';
 
@@ -33,7 +33,7 @@ export function createAuthRouter() {
   });
 
   // shortcut: no rate limit of its own (signed-in staff only, still behind the hash limiter); add one in SEC-1 if staff accounts are shared or exposed.
-  router.put('/auth/password', requireAuth, async (req, res) => {
+  router.put('/auth/password', requireRole(...PERMISSIONS.changeOwnPassword), async (req, res) => {
     const { currentPassword, newPassword } = changePasswordSchema.parse(req.body);
     await changePassword(req.session.userId!, currentPassword, newPassword);
     res.status(204).end();
