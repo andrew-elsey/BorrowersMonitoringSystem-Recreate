@@ -108,7 +108,13 @@ A ticket is ready for testing only when the Definition of Done above is met and 
 
 When all of that is true:
 1. Move the card to "Ready for Testing".
-2. Add a comment with: a two or three line summary of what changed, the commit hash or pull request, the test case IDs that were run and their results, and anything I should check by hand.
+2. Add a comment with: a two or three line summary of what changed, the branch name, the commit hash or pull request, the test case IDs that were run and their results, and numbered "How to QA" steps (setup, the commands to run, and each acceptance criterion with how to check it by hand or which test covers it, including anything that can only be checked by a test).
+
+QA tests the branch before it is merged, never `main`:
+- QA checks out the branch named in the card comment, follows the "How to QA" steps, and comments PASS or FAIL with what was run and the results. A failure includes the exact steps and output.
+- On PASS, I merge the pull request and move the card to "Done".
+- On FAIL, the card goes back to "In progress" and the fix starts from the steps above.
+- QA never merges, never moves a card to "Done", and never edits a card's description.
 
 If something is not ready (failing tests, a missing decision, a blocker):
 - Leave the card in "In progress" and comment what is blocking it.

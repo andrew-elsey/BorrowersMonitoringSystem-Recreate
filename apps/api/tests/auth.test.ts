@@ -109,6 +109,28 @@ test('logout ends the session', async () => {
   expect(afterLogout.body.error.code).toBe('UNAUTHENTICATED');
 });
 
+test('GET /api/auth/me returns the signed-in user, the same shape as login', async () => {
+  const agent = request.agent(app);
+  const loginResponse = await login(agent, 'ana', PASSWORD);
+
+  const response = await agent.get('/api/auth/me');
+  expect(response.status).toBe(200);
+  expect(response.body).toEqual({ user: loginResponse.body.user });
+});
+
+test('GET /api/auth/me answers 401 when signed out or after the user is deactivated', async () => {
+  const signedOut = await request(app).get('/api/auth/me');
+  expect(signedOut.status).toBe(401);
+  expect(signedOut.body.error.code).toBe('UNAUTHENTICATED');
+
+  const agent = request.agent(app);
+  await login(agent, 'ana', PASSWORD);
+  await prisma.user.update({ where: { username: 'ana' }, data: { active: false } });
+  const deactivated = await agent.get('/api/auth/me');
+  expect(deactivated.status).toBe(401);
+  expect(deactivated.body.error.code).toBe('UNAUTHENTICATED');
+});
+
 test('a signed-in user changes their own password, and the change is audited', async () => {
   const agent = request.agent(app);
   await login(agent, 'ana', PASSWORD);

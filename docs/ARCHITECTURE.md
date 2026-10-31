@@ -19,7 +19,7 @@ The browser only talks to nginx, so the app and API share one origin. There is n
 - **Backend**: Express 5, Zod (request validation), Prisma (ORM and migrations), pino (logging), helmet, express-rate-limit, node-cron (scheduler), Luxon (all timezone-aware date logic), argon2 (password hashing), multer (CSV upload with size limits), csv-parse (CSV parsing).
 - **Database**: PostgreSQL, current stable major version, pinned in `docker-compose.yml`.
 - **Frontend**: React, Vite, React Router, TanStack Query (server state), React Hook Form with Zod resolvers, Tailwind CSS.
-- **Testing**: Vitest, Supertest (API), React Testing Library (components), Playwright (end-to-end flow in HRD-2).
+- **Testing**: Vitest, Supertest (API), React Testing Library with user-event and jsdom (components, added in AUTH-4), Playwright (end-to-end flow in HRD-2).
 - **Tooling**: ESLint, Prettier, npm workspaces, autocannon (load and abuse testing, development only).
 
 Adding a dependency outside this list needs the owner's approval.
@@ -47,7 +47,12 @@ Adding a dependency outside this list needs the owner's approval.
       Dockerfile
       nginx.conf         rate limits, timeouts, proxy rules (section 12.2)
       src/
-        pages/  components/  api/  hooks/
+        pages/           one file per screen, with its component test
+        components/      small shared pieces (FND-5 adds the form and table components)
+        api.ts           fetch wrapper: CSRF header, standard errors, Retry-After
+        auth.tsx         signed-in user (GET /api/auth/me), 401 handling, role labels
+        App.tsx          routes and route guards (RequireSignIn, RequireRole)
+        AppShell.tsx     top bar and the role-filtered menu
   packages/
     shared/              Zod schemas, enums, and types used by both api and web
   scripts/               backup.sh, restore.sh (HRD-3)
@@ -79,7 +84,7 @@ Adding a dependency outside this list needs the owner's approval.
 **Decision: server-side sessions, not JWT.** After login the server stores the session in PostgreSQL and gives the browser an opaque cookie. Why: the app is one origin behind one nginx; sessions can be revoked immediately (deactivating a user or logging out takes effect at once); there are no refresh tokens or token storage problems. JWTs are better for separate services or mobile clients, which this project does not have.
 
 - Library: `express-session` with `@quixo3/prisma-session-store` (adopted in AUTH-1), so the session table is managed by Prisma migrations. Setup is in `apps/api/src/lib/session.ts`.
-- Endpoints: `POST /api/auth/login` (`{ username, password }`, returns `{ user }`), `POST /api/auth/logout` (204), `PUT /api/auth/password` (`{ currentPassword, newPassword }`, 204, signed in only). `GET /api/auth/me` (returns `{ user }` or 401) is added in FND-5.
+- Endpoints: `POST /api/auth/login` (`{ username, password }`, returns `{ user }`), `POST /api/auth/logout` (204), `PUT /api/auth/password` (`{ currentPassword, newPassword }`, 204, signed in only). `GET /api/auth/me` (returns `{ user }`, or 401 when signed out or the account is deactivated), added in AUTH-4.
 - Cookie: `httpOnly`, `SameSite=Lax`, `Secure` controlled by `COOKIE_SECURE`. On a LAN served over plain HTTP, `COOKIE_SECURE` must be `false` or the browser will drop the cookie.
 - Lifetime: rolling, `SESSION_TTL_HOURS` (default 8). Expired sessions are pruned every 15 minutes.
 - `saveUninitialized: false`: a session row is created only after a successful login, never for anonymous visitors (otherwise an attacker could fill the session table). Regenerate the session ID on login and destroy it on logout. Keep session data small (user ID and role).
@@ -173,7 +178,7 @@ Moving to a department PC means copying the repo, creating `.env`, and running `
 
 - **Unit tests** (Vitest) for pure logic: availability math, strike counting, time helpers.
 - **Integration tests** (Vitest and Supertest) against a real PostgreSQL database, started through a Docker Compose test profile. Each test file starts from a clean schema. Every scenario S1 to S21 in `BUSINESS_RULES.md` becomes a test.
-- **Component tests** for the checkout and return forms.
+- **Component tests** (React Testing Library in jsdom, with `fetch` replaced by a fake API) for the login and change-password forms (AUTH-4) and the checkout and return forms.
 - **End-to-end** (Playwright, HRD-2): checkout, partial return, flagging, strike, block, override.
 - **Abuse and load tests** (autocannon, SEC-2): login flood, slow connections, oversized bodies and uploads, maximum-range reports, all run from a separate container against the compose stack. Pass criteria are in section 12.7.
 - Use an injected clock for anything involving closing time or semesters.
@@ -270,3 +275,47 @@ Record the results and any tuned limits in this section.
 | Anonymous visitors | No session rows until login | Prevents filling the session table |
 | Exposure | LAN only, web port only, VPN for remote access | Application limits cannot stop a flood that saturates the network link |
 | Resource limits | Per-container memory, CPU, and log caps | One misbehaving service cannot take the host down |
+| UI colors | College of Fine Arts and Design logo colors (section 14) | The handout room belongs to the college; contrast checked against WCAG AA |
+| College logo | Not used | No license to use it |
+| UI font | System font stack (Segoe UI Variable on Windows 11) | No download, works offline on the LAN, no new dependency |
+
+## 14. UI theme
+
+The web app uses the colors of the College of Fine Arts and Design logo. Define them once as Tailwind theme tokens in the web app's CSS (`@theme`) and use the token names in components (`bg-primary`, `text-danger`). Never write a hex value in a component.
+
+| Token | Hex | Use |
+|---|---|---|
+| `primary` | `#005423` (deep forest green) | Top bar, main buttons, links, active menu item text, login screen accent |
+| `primary-hover` | `#003D19` | Hover and pressed state of primary buttons and links |
+| `primary-tint` | `#E6F0EA` | Active menu item background, success message background |
+| `danger` | `#4C0A0A` (dark maroon) | Errors, flags, strikes, "Blocked" status, destructive buttons and confirmations |
+| `danger-tint` | `#F7ECEC` | Error and flag message backgrounds |
+| `accent` | `#FFD52C` (sun gold) | Highlights only: role badges, the top bar's bottom edge, focus rings on dark backgrounds |
+| `accent-tint` | `#FFF6CC` | Warning message background, selected table rows |
+| `ink` | `#000000` | Body text |
+| `muted` | `#4A4A4A` | Secondary text and hints |
+| `page` | `#F5F5F5` | Page background |
+| `surface` | `#FFFFFF` | Cards, forms, table rows |
+| `divider` | `#CFCFCF` | Card borders and table dividers (decoration only) |
+| `field-border` | `#767676` | Input and select borders |
+
+Contrast rules (WCAG AA: 4.5:1 for text, 3:1 for field borders and focus rings):
+
+- White text on `primary` (9.2:1) and on `danger` (15.5:1) is safe for buttons and the top bar.
+- Gold is never text or a thin line on white (1.4:1). Use it as a background with `ink` text (14.8:1), or as an accent on `primary` (6.5:1) or `danger` (10.9:1).
+- Focus rings: a 2px `primary` outline with a 2px offset on light backgrounds, and an `accent` outline on `primary` or `danger` backgrounds. Every interactive element shows one.
+- `divider` (1.6:1 on white) is too light for input borders, so inputs use `field-border` (4.5:1).
+- The logo's foliage green (`#048136`) is not used. It is too close to `primary` to tell success apart from the brand.
+- Never use color alone. Every message pairs its color with an icon and a text label, and selected rows also get a check mark or bold text, because `accent-tint` is close to white.
+
+Strike levels (thresholds come from settings, BR 11) differ in lightness and label, not only in hue:
+
+| Level | Look |
+|---|---|
+| Warning | `accent-tint` background, `ink` text, warning icon, "Warning: N strikes" |
+| Stricter notice | `danger-tint` background, `danger` text, alert icon, "Notice: N strikes" |
+| Blocked | `danger` background, white text, block icon, "Blocked: N strikes" |
+
+The app does not use the college logo, because the project has no license for it. The top bar and login screen show the app name with a generic icon.
+
+Font: the system font stack, `"Segoe UI Variable", "Segoe UI", system-ui, sans-serif`, set as Tailwind's `--font-sans`. The department PC runs Windows 11, which ships Segoe UI Variable, so nothing is downloaded and the app works without internet access. Body text is at least 16px.

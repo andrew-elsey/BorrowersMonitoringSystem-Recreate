@@ -36,6 +36,13 @@ export async function authenticate(
   return { id: user.id, name: user.name, username: user.username, role: user.role };
 }
 
+// The user behind a session, or null when the account is gone or deactivated.
+export async function getSignedInUser(userId: string): Promise<SignedInUser | null> {
+  const user = await prisma.user.findUnique({ where: { id: userId } });
+  if (!user || !user.active) return null;
+  return { id: user.id, name: user.name, username: user.username, role: user.role };
+}
+
 // shortcut: the user's other sessions stay signed in after a password change; sign them out when AUTH-3 adds session revocation.
 export async function changePassword(
   userId: string,

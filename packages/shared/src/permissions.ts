@@ -5,7 +5,7 @@ const ADMIN_AND_HANDLER = [Role.ADMIN, Role.HANDLER] as const;
 const ADMIN_ONLY = [Role.ADMIN] as const;
 
 // The permission table in SPEC.md 3: which roles may use each capability.
-// The api passes these to requireRole; the web uses them to hide navigation (FND-5).
+// The api passes these to requireRole; the web uses them to hide navigation (AUTH-4).
 export const PERMISSIONS = {
   checkoutAndReturn: ADMIN_AND_HANDLER,
   addLocationAtCheckout: ADMIN_AND_HANDLER,
