@@ -166,6 +166,7 @@ Environment variables (all documented in `.env.example`):
 | `COOKIE_SECURE` | Secure cookie flag | false |
 | `APP_TIMEZONE`, `TZ` | Timezone | Asia/Manila |
 | `ADMIN_USERNAME`, `ADMIN_PASSWORD` | First admin for the seed script | none |
+| `QA_PASSWORD` | Development only: password for the seed's role test accounts `qa-handler` and `qa-viewer` (skipped when empty) | none |
 | `WEB_PORT` | Published web port | 8080 |
 | `WEB_BIND_ADDRESS` | Host address the web port is bound to (LAN address on the department PC, section 12.1) | 127.0.0.1 |
 | `TRUST_PROXY_HOPS` | Number of proxies in front of the API (nginx = 1) | 1 |

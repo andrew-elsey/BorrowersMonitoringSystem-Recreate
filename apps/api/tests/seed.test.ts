@@ -91,6 +91,41 @@ test('production seeds only the admin and settings', async () => {
   });
 });
 
+test('development sample data adds the QA role accounts when QA_PASSWORD is set, never overwriting them', async () => {
+  await seed({ ...credentials, includeSampleData: true, qaPassword: 'qa-password-1' });
+
+  for (const [username, role] of [
+    ['qa-handler', 'HANDLER'],
+    ['qa-viewer', 'VIEWER'],
+  ]) {
+    const user = await prisma.user.findUniqueOrThrow({ where: { username } });
+    expect(user).toMatchObject({ role, active: true });
+    expect(await verifyPassword(user.passwordHash, 'qa-password-1')).toBe(true);
+    const entry = await prisma.auditLog.findFirstOrThrow({ where: { entityId: user.id } });
+    expect(JSON.stringify(entry.after)).not.toContain('argon2');
+  }
+
+  const created = await seed({
+    ...credentials,
+    includeSampleData: true,
+    qaPassword: 'other-qa-password',
+  });
+  expect(created).toBe(0);
+  const handler = await prisma.user.findUniqueOrThrow({ where: { username: 'qa-handler' } });
+  expect(await verifyPassword(handler.passwordHash, 'qa-password-1')).toBe(true);
+});
+
+test('QA accounts are skipped without QA_PASSWORD and never created in production', async () => {
+  await seed({ ...credentials, includeSampleData: true });
+  await seed({ ...credentials, includeSampleData: false, qaPassword: 'qa-password-1' });
+  expect(await prisma.user.count({ where: { username: { startsWith: 'qa-' } } })).toBe(0);
+});
+
+test('a too-short QA_PASSWORD fails clearly', async () => {
+  const run = seed({ ...credentials, includeSampleData: true, qaPassword: 'short' });
+  await expect(run).rejects.toThrow(/QA_PASSWORD: .*at least 10 characters/);
+});
+
 describe('fails clearly without valid admin credentials', () => {
   test.each([
     [
