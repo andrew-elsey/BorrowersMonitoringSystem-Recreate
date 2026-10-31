@@ -46,7 +46,7 @@ export function AppShell() {
         </div>
       </header>
 
-      <div className="flex flex-1 flex-wrap items-start">
+      <div className="flex flex-1 flex-wrap content-start items-start">
         <nav
           aria-label="Main"
           className="flex max-w-[260px] flex-[1_1_220px] flex-col gap-1 px-3 py-5"
