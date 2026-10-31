@@ -270,3 +270,43 @@ Record the results and any tuned limits in this section.
 | Anonymous visitors | No session rows until login | Prevents filling the session table |
 | Exposure | LAN only, web port only, VPN for remote access | Application limits cannot stop a flood that saturates the network link |
 | Resource limits | Per-container memory, CPU, and log caps | One misbehaving service cannot take the host down |
+| UI colors | College of Fine Arts and Design logo colors (section 14) | The handout room belongs to the college; contrast checked against WCAG AA |
+
+## 14. UI theme
+
+The web app uses the colors of the College of Fine Arts and Design logo. Define them once as Tailwind theme tokens in the web app's CSS (`@theme`) and use the token names in components (`bg-primary`, `text-danger`). Never write a hex value in a component.
+
+| Token | Hex | Use |
+|---|---|---|
+| `primary` | `#005423` (deep forest green) | Top bar, main buttons, links, active menu item text, login screen accent |
+| `primary-hover` | `#003D19` | Hover and pressed state of primary buttons and links |
+| `primary-tint` | `#E6F0EA` | Active menu item background, success message background |
+| `danger` | `#4C0A0A` (dark maroon) | Errors, flags, strikes, "Blocked" status, destructive buttons and confirmations |
+| `danger-tint` | `#F7ECEC` | Error and flag message backgrounds |
+| `accent` | `#FFD52C` (sun gold) | Highlights only: role badges, the top bar's bottom edge, focus rings on dark backgrounds |
+| `accent-tint` | `#FFF6CC` | Warning message background, selected table rows |
+| `ink` | `#000000` | Body text |
+| `muted` | `#4A4A4A` | Secondary text and hints |
+| `page` | `#F5F5F5` | Page background |
+| `surface` | `#FFFFFF` | Cards, forms, table rows |
+| `divider` | `#CFCFCF` | Card borders and table dividers (decoration only) |
+| `field-border` | `#767676` | Input and select borders |
+
+Contrast rules (WCAG AA: 4.5:1 for text, 3:1 for field borders and focus rings):
+
+- White text on `primary` (9.2:1) and on `danger` (15.5:1) is safe for buttons and the top bar.
+- Gold is never text or a thin line on white (1.4:1). Use it as a background with `ink` text (14.8:1), or as an accent on `primary` (6.5:1) or `danger` (10.9:1).
+- Focus rings: a 2px `primary` outline with a 2px offset on light backgrounds, and an `accent` outline on `primary` or `danger` backgrounds. Every interactive element shows one.
+- `divider` (1.6:1 on white) is too light for input borders, so inputs use `field-border` (4.5:1).
+- The logo's foliage green (`#048136`) is not used. It is too close to `primary` to tell success apart from the brand.
+- Never use color alone. Every message pairs its color with an icon and a text label, and selected rows also get a check mark or bold text, because `accent-tint` is close to white.
+
+Strike levels (thresholds come from settings, BR 11) differ in lightness and label, not only in hue:
+
+| Level | Look |
+|---|---|
+| Warning | `accent-tint` background, `ink` text, warning icon, "Warning: N strikes" |
+| Stricter notice | `danger-tint` background, `danger` text, alert icon, "Notice: N strikes" |
+| Blocked | `danger` background, white text, block icon, "Blocked: N strikes" |
+
+The college logo file is supplied by the owner. Until then, the top bar shows the app name with a generic icon.
