@@ -12,14 +12,14 @@ Document references: `BR` = `BUSINESS_RULES.md`, `ARCH` = `ARCHITECTURE.md`, `SP
 
 | Sprint | Goal | Tickets | Points |
 |---|---|---|---|
-| 1 | Foundation and sign-in: running Docker environment, schema, seed data, role-based login with protected hashing, sign-in screens and app shell | FND-1, FND-2, FND-3, FND-4, AUTH-1, AUTH-2, AUTH-4 | 23 |
+| 1 | Foundation and sign-in: running Docker environment, schema, seed data, role-based login with protected hashing, sign-in screens and app shell, UTC timestamp fix | FND-1, FND-2, FND-3, FND-4, AUTH-1, AUTH-2, AUTH-4, FND-6 | 25 |
 | 2 | Shared components and master data: shared form and table components, admins manage items, rooms, borrowers, semesters, settings | FND-5, MD-1, MD-2, MD-3, MD-4, MD-5, MD-7 | 21 |
 | 3 | Checkout: handlers can check items out; return API works; rate limits and request limits in place | BRW-1, BRW-2, BRW-3, BRW-4, SEC-1 | 21 |
 | 4 | Returns and flagging: full return flow, end-of-day flagging, strikes, blocking, override | BRW-5, FLG-1, FLG-2, FLG-3, FLG-4 | 19 |
 | 5 | Dashboard, reports, admin tools | BRW-6, RPT-1, RPT-2, RPT-3, RPT-4, AUTH-3, MD-6 | 20 |
 | 6 | Hardening, abuse testing, and release | HRD-1, HRD-2, HRD-3, HRD-4, HRD-5, SEC-2 | 20 |
 
-Total: 124 points. Sprints 1 (23), 2 (21), and 3 (21) are over the working capacity of about 20; that is accepted for now and will be revisited once Sprint 1 shows the real velocity.
+Total: 126 points. Sprints 1 (25), 2 (21), and 3 (21) are over the working capacity of about 20; that is accepted for now and will be revisited once Sprint 1 shows the real velocity.
 
 ## Epic FND: Foundation
 
@@ -40,6 +40,10 @@ Acceptance: the seed creates the first admin from `ADMIN_USERNAME` and `ADMIN_PA
 **FND-5 · Shared form and table components** (2 pts, Sprint 2). Depends on: AUTH-4.
 Reusable pieces for the CRUD screens in Sprint 2 and later: form fields wired to React Hook Form and the shared Zod schemas, a data table, a confirm dialog, and notifications.
 Acceptance: form fields show inline validation errors, including field errors from the API `details`; components are labeled and keyboard accessible; the data table supports pagination, loading, and empty states; a confirm dialog guards destructive actions; success and error notifications show the API error `message`; each component has a component test, and usage is documented in the README. Refs: SPEC 5, 8, ARCH 2, 7.
+
+**FND-6 · Bug: stored timestamps are 8 hours early** (2 pts, Sprint 1). Depends on: FND-3.
+Found in AUTH-4 QA on 2026-10-31. Every timestamp the API writes is stored 8 hours earlier than the real UTC time, because the db session time zone is Asia/Manila and `@prisma/adapter-pg` sends and reads timestamps as if the session were UTC. Breaks CLAUDE.md rule 4 and ARCH 6.
+Acceptance: every timestamp the API writes (`@default(now())`, `@updatedAt`, explicit `new Date()` values, and session expiry) is stored as the correct UTC instant, whatever the Postgres session time zone or the container `TZ`; the fix is in one shared place (the Prisma client or adapter setup, or the connection settings), not in each query; the API still returns ISO 8601 UTC strings; an integration test against the real test database fails on the old code and passes after the fix, writing a row and checking the stored instant is within a few seconds of `Date.now()` with the database session time zone at Asia/Manila so it cannot pass by accident; existing wrong rows in the dev database are handled (a documented reset, or a new append-only migration, never an edited one; the owner decides); ARCH 6 records how UTC storage is guaranteed; full suite, lint, and typecheck pass, and the app works under `docker compose up`. Refs: ARCH 6, CLAUDE.md rules 4 and 5.
 
 ## Epic AUTH: Authentication and users
 

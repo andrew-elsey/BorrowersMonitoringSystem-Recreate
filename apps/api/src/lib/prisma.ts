@@ -13,6 +13,11 @@ const adapter = new PrismaPg({
   connectionString: databaseUrl,
   max: 10,
   connectionTimeoutMillis: 10_000,
+  // Rule 4 (FND-6): every connection uses UTC, whatever the database's own time zone (the db
+  // container runs with TZ=Asia/Manila). The adapter sends Date values as UTC digits with no offset
+  // and reads timestamptz values as if they were UTC, so any other session time zone stores
+  // every timestamp shifted. See ARCHITECTURE.md 6.
+  options: '-c TimeZone=UTC',
 });
 
 export const prisma = new PrismaClient({
