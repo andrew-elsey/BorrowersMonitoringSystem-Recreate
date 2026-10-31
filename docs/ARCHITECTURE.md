@@ -19,7 +19,7 @@ The browser only talks to nginx, so the app and API share one origin. There is n
 - **Backend**: Express 5, Zod (request validation), Prisma (ORM and migrations), pino (logging), helmet, express-rate-limit, node-cron (scheduler), Luxon (all timezone-aware date logic), argon2 (password hashing), multer (CSV upload with size limits), csv-parse (CSV parsing).
 - **Database**: PostgreSQL, current stable major version, pinned in `docker-compose.yml`.
 - **Frontend**: React, Vite, React Router, TanStack Query (server state), React Hook Form with Zod resolvers, Tailwind CSS.
-- **Testing**: Vitest, Supertest (API), React Testing Library (components), Playwright (end-to-end flow in HRD-2).
+- **Testing**: Vitest, Supertest (API), React Testing Library with user-event and jsdom (components, added in AUTH-4), Playwright (end-to-end flow in HRD-2).
 - **Tooling**: ESLint, Prettier, npm workspaces, autocannon (load and abuse testing, development only).
 
 Adding a dependency outside this list needs the owner's approval.
@@ -47,7 +47,12 @@ Adding a dependency outside this list needs the owner's approval.
       Dockerfile
       nginx.conf         rate limits, timeouts, proxy rules (section 12.2)
       src/
-        pages/  components/  api/  hooks/
+        pages/           one file per screen, with its component test
+        components/      small shared pieces (FND-5 adds the form and table components)
+        api.ts           fetch wrapper: CSRF header, standard errors, Retry-After
+        auth.tsx         signed-in user (GET /api/auth/me), 401 handling, role labels
+        App.tsx          routes and route guards (RequireSignIn, RequireRole)
+        AppShell.tsx     top bar and the role-filtered menu
   packages/
     shared/              Zod schemas, enums, and types used by both api and web
   scripts/               backup.sh, restore.sh (HRD-3)
@@ -173,7 +178,7 @@ Moving to a department PC means copying the repo, creating `.env`, and running `
 
 - **Unit tests** (Vitest) for pure logic: availability math, strike counting, time helpers.
 - **Integration tests** (Vitest and Supertest) against a real PostgreSQL database, started through a Docker Compose test profile. Each test file starts from a clean schema. Every scenario S1 to S21 in `BUSINESS_RULES.md` becomes a test.
-- **Component tests** for the checkout and return forms.
+- **Component tests** (React Testing Library in jsdom, with `fetch` replaced by a fake API) for the login and change-password forms (AUTH-4) and the checkout and return forms.
 - **End-to-end** (Playwright, HRD-2): checkout, partial return, flagging, strike, block, override.
 - **Abuse and load tests** (autocannon, SEC-2): login flood, slow connections, oversized bodies and uploads, maximum-range reports, all run from a separate container against the compose stack. Pass criteria are in section 12.7.
 - Use an injected clock for anything involving closing time or semesters.

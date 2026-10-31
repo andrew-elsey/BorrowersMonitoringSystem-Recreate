@@ -8,15 +8,34 @@ export const PASSWORD_MAX_LENGTH = 200;
 // Names are at most 200 characters (SPEC.md 7).
 const USERNAME_MAX_LENGTH = 200;
 
+// Messages are shown to staff by the web forms and in the API's VALIDATION_ERROR field details.
+const tooLong = (max: number) => `Too long: at most ${max} characters.`;
+
 // No minimum length here on purpose: a short password just fails with the generic login error.
 export const loginSchema = z.object({
-  username: z.string().trim().min(1).max(USERNAME_MAX_LENGTH),
-  password: z.string().min(1).max(PASSWORD_MAX_LENGTH),
+  username: z
+    .string()
+    .trim()
+    .min(1, 'Enter your username.')
+    .max(USERNAME_MAX_LENGTH, tooLong(USERNAME_MAX_LENGTH)),
+  password: z
+    .string()
+    .min(1, 'Enter your password.')
+    .max(PASSWORD_MAX_LENGTH, tooLong(PASSWORD_MAX_LENGTH)),
 });
 export type LoginInput = z.infer<typeof loginSchema>;
 
 export const changePasswordSchema = z.object({
-  currentPassword: z.string().min(1).max(PASSWORD_MAX_LENGTH),
-  newPassword: z.string().min(PASSWORD_MIN_LENGTH).max(PASSWORD_MAX_LENGTH),
+  currentPassword: z
+    .string()
+    .min(1, 'Enter your current password.')
+    .max(PASSWORD_MAX_LENGTH, tooLong(PASSWORD_MAX_LENGTH)),
+  newPassword: z
+    .string()
+    .min(PASSWORD_MIN_LENGTH, {
+      error: (issue) =>
+        `Too short: ${String(issue.input).length} of at least ${PASSWORD_MIN_LENGTH} characters.`,
+    })
+    .max(PASSWORD_MAX_LENGTH, tooLong(PASSWORD_MAX_LENGTH)),
 });
 export type ChangePasswordInput = z.infer<typeof changePasswordSchema>;

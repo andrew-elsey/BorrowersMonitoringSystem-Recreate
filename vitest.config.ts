@@ -20,7 +20,12 @@ export default defineConfig({
           fileParallelism: false,
         },
       },
-      { extends: true, test: { name: 'web', root: 'apps/web' } },
+      {
+        extends: true,
+        // Component tests run in jsdom and load @bms/shared from source, as the Vite build does.
+        resolve: { conditions: ['source', 'module', 'browser', 'development|production'] },
+        test: { name: 'web', root: 'apps/web', environment: 'jsdom' },
+      },
     ],
   },
   // Tests load @bms/shared from its TypeScript source, so no build is needed first.

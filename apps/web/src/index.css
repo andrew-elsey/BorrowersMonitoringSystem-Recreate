@@ -1,0 +1,29 @@
+@import 'tailwindcss';
+
+/* College theme (ARCHITECTURE.md 14). Components use these token names, never hex values. */
+@theme {
+  --color-primary: #005423;
+  --color-primary-hover: #003d19;
+  --color-primary-tint: #e6f0ea;
+  --color-danger: #4c0a0a;
+  --color-danger-tint: #f7ecec;
+  --color-accent: #ffd52c;
+  --color-accent-tint: #fff6cc;
+  --color-ink: #000000;
+  --color-muted: #4a4a4a;
+  --color-page: #f5f5f5;
+  --color-surface: #ffffff;
+  --color-divider: #cfcfcf;
+  --color-field-border: #767676;
+
+  --font-sans: 'Segoe UI Variable', 'Segoe UI', system-ui, sans-serif;
+}
+
+/* Focus rings: 2px primary with a 2px offset on light backgrounds (ARCHITECTURE.md 14).
+   Elements on the green top bar switch to the accent color with `focus-visible:outline-accent`. */
+@layer base {
+  :focus-visible {
+    outline: 2px solid var(--color-primary);
+    outline-offset: 2px;
+  }
+}
