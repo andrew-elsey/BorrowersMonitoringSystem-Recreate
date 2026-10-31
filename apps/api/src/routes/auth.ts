@@ -1,10 +1,12 @@
-import { changePasswordSchema, loginSchema, PERMISSIONS } from '@bms/shared';
+import { changePasswordSchema, loginSchema, PERMISSIONS, Role } from '@bms/shared';
 import { Router } from 'express';
 import { ApiError } from '../lib/errors.ts';
 import { SESSION_COOKIE_NAME } from '../lib/session.ts';
 import { requireRole } from '../middleware/auth.ts';
 import { createLoginRateLimiters } from '../middleware/login-rate-limit.ts';
-import { authenticate, changePassword } from '../services/auth.ts';
+import { authenticate, changePassword, getSignedInUser } from '../services/auth.ts';
+
+const ALL_ROLES = Object.values(Role);
 
 export function createAuthRouter() {
   const router = Router();
@@ -30,6 +32,13 @@ export function createAuthRouter() {
     );
     res.clearCookie(SESSION_COOKIE_NAME);
     res.status(204).end();
+  });
+
+  // Lets the web app restore the signed-in user after a reload (AUTH-4). Same `{ user }` shape as login.
+  router.get('/auth/me', requireRole(...ALL_ROLES), async (req, res) => {
+    const user = await getSignedInUser(req.session.userId!);
+    if (!user) throw new ApiError(401, 'UNAUTHENTICATED', 'Please sign in.');
+    res.json({ user });
   });
 
   // shortcut: no rate limit of its own (signed-in staff only, still behind the hash limiter); add one in SEC-1 if staff accounts are shared or exposed.
