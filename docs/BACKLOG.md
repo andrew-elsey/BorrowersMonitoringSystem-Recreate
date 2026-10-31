@@ -12,14 +12,14 @@ Document references: `BR` = `BUSINESS_RULES.md`, `ARCH` = `ARCHITECTURE.md`, `SP
 
 | Sprint | Goal | Tickets | Points |
 |---|---|---|---|
-| 1 | Foundation and sign-in: running Docker environment, schema, seed data, role-based login with protected hashing, sign-in screens and app shell, UTC timestamp fix | FND-1, FND-2, FND-3, FND-4, AUTH-1, AUTH-2, AUTH-4, FND-6 | 25 |
+| 1 | Foundation and sign-in: running Docker environment, schema, seed data, role-based login with protected hashing, sign-in screens and app shell, UTC timestamp fix, login limiter memory fix | FND-1, FND-2, FND-3, FND-4, AUTH-1, AUTH-2, AUTH-4, FND-6, AUTH-5 | 26 |
 | 2 | Shared components and master data: shared form and table components, admins manage items, rooms, borrowers, semesters, settings | FND-5, MD-1, MD-2, MD-3, MD-4, MD-5, MD-7 | 21 |
 | 3 | Checkout: handlers can check items out; return API works; rate limits and request limits in place | BRW-1, BRW-2, BRW-3, BRW-4, SEC-1 | 21 |
 | 4 | Returns and flagging: full return flow, end-of-day flagging, strikes, blocking, override | BRW-5, FLG-1, FLG-2, FLG-3, FLG-4 | 19 |
 | 5 | Dashboard, reports, admin tools | BRW-6, RPT-1, RPT-2, RPT-3, RPT-4, AUTH-3, MD-6 | 20 |
 | 6 | Hardening, abuse testing, and release | HRD-1, HRD-2, HRD-3, HRD-4, HRD-5, SEC-2 | 20 |
 
-Total: 126 points. Sprints 1 (25), 2 (21), and 3 (21) are over the working capacity of about 20; that is accepted for now and will be revisited once Sprint 1 shows the real velocity.
+Total: 127 points. Sprints 1 (26), 2 (21), and 3 (21) are over the working capacity of about 20; that is accepted for now and will be revisited once Sprint 1 shows the real velocity.
 
 ## Epic FND: Foundation
 
@@ -60,6 +60,10 @@ Acceptance: admins create, edit, and deactivate users and reset passwords; users
 **AUTH-4 · Sign-in screens and app shell** (3 pts, Sprint 1). Depends on: AUTH-1, AUTH-2.
 The screens that Sprint 1 features need, plus the web app shell they sit in. No mock-ups are provided: Claude Code designs the layout and styling, keeping it simple, readable, and keyboard friendly.
 Acceptance: a React Router layout with navigation that shows only the items the user's role may use (SPEC 3, 5), with items for screens not built yet hidden; the login and change-password screens work against the AUTH-1 API, show the password rules from ARCH 5, and give a generic error on a failed login; users can sign out; the signed-in user (name and role) is loaded from `GET /api/auth/me` into an auth context (add the endpoint if AUTH-1 did not; it returns the same `{ user }` shape as login, or 401 `UNAUTHENTICATED`), so a reload keeps the user signed in; route guards send signed-out users to login and show a clear "not allowed" page when a role may not open a page; the API client sends `X-Requested-With: fetch`, understands the standard error format, and shows the error `message`; a 401 returns the user to login, and a 429 or 503 shows "try again in N seconds" from `Retry-After`; TanStack Query is set up; it works under `docker compose up` through nginx; component tests cover the login and change-password forms. Refs: SPEC 3, 5, ARCH 2, 5, 7.
+
+**AUTH-5 · Bug: blocked logins still grow the API's memory** (1 pt, Sprint 1). Depends on: AUTH-1.
+Found in a code review on 2026-10-31 (denial of service). The per-IP-and-username login limiter ran before the per-IP limiter and keyed on the raw username (up to 100 KB), so a blocked machine kept adding memory: 121 MB per 1,000 blocked requests against a 512 MB container.
+Acceptance: after an IP reaches the per-IP limit, further failed logins from it store nothing new in the limiters; the username part of a limiter key is at most 200 characters; throttling still works as before (10 per IP and username, 30 per IP, 429 `RATE_LIMITED` with `Retry-After`, never locked; BR 16, S20); a test fails on the old order and passes after the fix; full suite, lint, and typecheck pass, and the app works under `docker compose up`. Refs: ARCH 12.4, BR 16.
 
 ## Epic MD: Master data
 

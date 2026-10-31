@@ -5,9 +5,6 @@ import { config } from './config.ts';
 // All password hashing and verifying goes through this file (CLAUDE.md rule 11, ARCHITECTURE.md 12.4).
 // argon2 is deliberately slow and memory hungry, so a limiter caps how many hashes run at once.
 
-// The password policy constant lives in @bms/shared so the web forms use the same value.
-export { PASSWORD_MIN_LENGTH };
-
 // argon2id parameters from ARCHITECTURE.md 5. They are stored inside each hash.
 const HASH_OPTIONS = {
   type: argon2.argon2id,

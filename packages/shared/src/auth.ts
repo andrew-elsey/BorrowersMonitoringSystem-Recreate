@@ -6,7 +6,7 @@ export const PASSWORD_MIN_LENGTH = 10;
 // shortcut: 200 is borrowed from the name limit in SPEC.md 7 and not yet confirmed by the owner; record the final value in SPEC.md 7.
 export const PASSWORD_MAX_LENGTH = 200;
 // Names are at most 200 characters (SPEC.md 7).
-const USERNAME_MAX_LENGTH = 200;
+export const USERNAME_MAX_LENGTH = 200;
 
 // Messages are shown to staff by the web forms and in the API's VALIDATION_ERROR field details.
 const tooLong = (max: number) => `Too long: at most ${max} characters.`;

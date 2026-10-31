@@ -1,3 +1,4 @@
+import { USERNAME_MAX_LENGTH } from '@bms/shared';
 import type { Request } from 'express';
 import { ipKeyGenerator, rateLimit } from 'express-rate-limit';
 import { ApiError } from '../lib/errors.ts';
@@ -33,12 +34,14 @@ function createFailedLoginLimiter(limit: number, keyGenerator: (req: Request) =>
 // Built per app so each app (and each test) starts with empty counters.
 export function createLoginRateLimiters() {
   return [
+    // Per IP: one machine trying many usernames. Runs first, so a blocked IP stores nothing
+    // more in the per-username limiter below (AUTH-5).
+    createFailedLoginLimiter(FAILURES_PER_IP, clientIp),
     // Per IP and username: an attacker guessing one account. The same user on another machine is unaffected.
     createFailedLoginLimiter(FAILURES_PER_IP_AND_USERNAME, (req) => {
       const username = typeof req.body?.username === 'string' ? req.body.username : '';
-      return `${clientIp(req)}|${username.trim().toLowerCase()}`;
+      // No valid username is longer (loginSchema), so a longer key only wastes memory.
+      return `${clientIp(req)}|${username.trim().toLowerCase().slice(0, USERNAME_MAX_LENGTH)}`;
     }),
-    // Per IP: one machine trying many usernames.
-    createFailedLoginLimiter(FAILURES_PER_IP, clientIp),
   ];
 }
