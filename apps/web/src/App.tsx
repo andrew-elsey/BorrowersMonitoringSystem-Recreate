@@ -1,6 +1,6 @@
 import { APP_NAME } from '@bms/shared';
 
-// Placeholder page. The real app shell is built in FND-5.
+// Placeholder page. The real app shell is built in AUTH-4.
 export function pageTitle(): string {
   return APP_NAME;
 }

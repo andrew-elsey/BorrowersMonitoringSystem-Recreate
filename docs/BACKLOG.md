@@ -1,10 +1,10 @@
 # Backlog and Sprint Plan
 
-Tickets are tracked in Trello (board: "Borrowers Monitoring System", https://trello.com/b/uo6MS7IX/borrowers-monitoring-system). This file is the same plan in a form Claude Code can read offline. The Trello cards were synced with this file on 2026-10-29. If a card and this file disagree, this file is current.
+Tickets are tracked in Trello (board: "Borrowers Monitoring System", https://trello.com/b/uo6MS7IX/borrowers-monitoring-system). This file is the same plan in a form Claude Code can read offline. The Trello cards were synced with this file on 2026-10-31. If a card and this file disagree, this file is current.
 
 Estimates are story points. Sprints are two weeks with a working capacity of about 20 points. Both are provisional and will be adjusted after Sprint 1.
 
-Scope note: unless a ticket says API or UI only, it includes both its API and its screens (see SPEC 5). All screens are built on the web app shell from FND-5.
+Scope note: unless a ticket says API or UI only, it includes both its API and its screens (see SPEC 5). All screens are built on the web app shell from AUTH-4.
 
 Document references: `BR` = `BUSINESS_RULES.md`, `ARCH` = `ARCHITECTURE.md`, `SPEC` = `SPEC.md`.
 
@@ -12,14 +12,14 @@ Document references: `BR` = `BUSINESS_RULES.md`, `ARCH` = `ARCHITECTURE.md`, `SP
 
 | Sprint | Goal | Tickets | Points |
 |---|---|---|---|
-| 1 | Foundation and sign-in: running Docker environment, schema, seed data, role-based login with protected hashing | FND-1, FND-2, FND-3, FND-4, AUTH-1, AUTH-2 | 20 |
-| 2 | Web app shell and master data: sign-in screens, admins manage items, rooms, borrowers, semesters, settings | FND-5, MD-1, MD-2, MD-3, MD-4, MD-5, MD-7 | 22 |
+| 1 | Foundation and sign-in: running Docker environment, schema, seed data, role-based login with protected hashing, sign-in screens and app shell | FND-1, FND-2, FND-3, FND-4, AUTH-1, AUTH-2, AUTH-4 | 23 |
+| 2 | Shared components and master data: shared form and table components, admins manage items, rooms, borrowers, semesters, settings | FND-5, MD-1, MD-2, MD-3, MD-4, MD-5, MD-7 | 21 |
 | 3 | Checkout: handlers can check items out; return API works; rate limits and request limits in place | BRW-1, BRW-2, BRW-3, BRW-4, SEC-1 | 21 |
 | 4 | Returns and flagging: full return flow, end-of-day flagging, strikes, blocking, override | BRW-5, FLG-1, FLG-2, FLG-3, FLG-4 | 19 |
 | 5 | Dashboard, reports, admin tools | BRW-6, RPT-1, RPT-2, RPT-3, RPT-4, AUTH-3, MD-6 | 20 |
 | 6 | Hardening, abuse testing, and release | HRD-1, HRD-2, HRD-3, HRD-4, HRD-5, SEC-2 | 20 |
 
-Total: 122 points. Sprints 2 (22) and 3 (21) are over the working capacity of about 20; that is accepted for now and will be revisited once Sprint 1 shows the real velocity.
+Total: 124 points. Sprints 1 (23), 2 (21), and 3 (21) are over the working capacity of about 20; that is accepted for now and will be revisited once Sprint 1 shows the real velocity.
 
 ## Epic FND: Foundation
 
@@ -37,21 +37,25 @@ Acceptance: the initial migration applies on a clean database; relations, constr
 **FND-4 · Seed data** (2 pts, Sprint 1). Depends on: FND-3.
 Acceptance: the seed creates the first admin from `ADMIN_USERNAME` and `ADMIN_PASSWORD` (fails clearly if missing), settings with default values, sample categories, rooms, items of both tracking types, borrowers, and a current semester; it is safe to re-run; `npm run admin:reset-password` resets any user's password from the command line. Refs: ARCH 5, 12.4.
 
-**FND-5 · Web app shell and API client** (3 pts, Sprint 2). Depends on: AUTH-1, AUTH-2.
-React Router layout with navigation, an API client wrapper, TanStack Query setup, an auth context, the login and change-password screens, and shared form and table components for the CRUD screens. Also adds `GET /api/auth/me`, which the auth context uses to restore the signed-in user after a page reload.
-Acceptance: users can sign in, sign out, and change their password from the browser; `GET /api/auth/me` returns the signed-in user (id, name, username, role, the same shape as the login response) or 401 `UNAUTHENTICATED`, and a reload keeps the user signed in; navigation shows only what the user's role may use (SPEC 3, 5); the API client sends `X-Requested-With: fetch`, understands the standard error format, and shows the error `message`; a 401 returns the user to the login screen; a 429 or 503 shows a "try again in N seconds" message from `Retry-After`. Refs: SPEC 3, 5, ARCH 2, 5, 7.
+**FND-5 · Shared form and table components** (2 pts, Sprint 2). Depends on: AUTH-4.
+Reusable pieces for the CRUD screens in Sprint 2 and later: form fields wired to React Hook Form and the shared Zod schemas, a data table, a confirm dialog, and notifications.
+Acceptance: form fields show inline validation errors, including field errors from the API `details`; components are labeled and keyboard accessible; the data table supports pagination, loading, and empty states; a confirm dialog guards destructive actions; success and error notifications show the API error `message`; each component has a component test, and usage is documented in the README. Refs: SPEC 5, 8, ARCH 2, 7.
 
 ## Epic AUTH: Authentication and users
 
 **AUTH-1 · Login, logout, and password change** (5 pts, Sprint 1). Depends on: FND-3, FND-4.
-Server-side sessions and argon2id hashing behind a concurrency limiter, as decided in ARCH 5 and 12.4. This ticket is API only; the login and change-password screens are built in FND-5.
+Server-side sessions and argon2id hashing behind a concurrency limiter, as decided in ARCH 5 and 12.4. This ticket is API only; the login and change-password screens are built in AUTH-4.
 Acceptance: valid login works; invalid login shows a generic error; logout ends the session; inactive users cannot log in; a logged-in user can change their own password; cookie settings follow ARCH 5 and the CSRF header is enforced; sessions are created only after a successful login and the session ID is regenerated at login; all hashing goes through the limiter, and a full queue returns 503 `SERVER_BUSY` with `Retry-After`; failed logins are throttled per IP and username and per IP, never locked (BR 16, scenario S20); `trust proxy` is configured; an unknown username costs the same as a wrong password. Refs: ARCH 5, 12.3, 12.4.
 
 **AUTH-2 · Role-based access** (3 pts, Sprint 1). Depends on: AUTH-1.
-Acceptance: `requireRole` middleware enforces the permission table in SPEC 3; unauthorized API calls return 403 with `FORBIDDEN`; tests cover each role (BR scenario S18). Hiding navigation by role is part of FND-5.
+Acceptance: `requireRole` middleware enforces the permission table in SPEC 3; unauthorized API calls return 403 with `FORBIDDEN`; tests cover each role (BR scenario S18). Hiding navigation by role is part of AUTH-4.
 
 **AUTH-3 · User management** (3 pts, Sprint 5). Depends on: AUTH-2.
 Acceptance: admins create, edit, and deactivate users and reset passwords; users with transactions are deactivated, never deleted (BR 15); an admin cannot deactivate themselves; changes are audited.
+
+**AUTH-4 · Sign-in screens and app shell** (3 pts, Sprint 1). Depends on: AUTH-1, AUTH-2.
+The screens that Sprint 1 features need, plus the web app shell they sit in. No mock-ups are provided: Claude Code designs the layout and styling, keeping it simple, readable, and keyboard friendly.
+Acceptance: a React Router layout with navigation that shows only the items the user's role may use (SPEC 3, 5), with items for screens not built yet hidden; the login and change-password screens work against the AUTH-1 API, show the password rules from ARCH 5, and give a generic error on a failed login; users can sign out; the signed-in user (name and role) is loaded from `GET /api/auth/me` into an auth context (add the endpoint if AUTH-1 did not; it returns the same `{ user }` shape as login, or 401 `UNAUTHENTICATED`), so a reload keeps the user signed in; route guards send signed-out users to login and show a clear "not allowed" page when a role may not open a page; the API client sends `X-Requested-With: fetch`, understands the standard error format, and shows the error `message`; a 401 returns the user to login, and a 429 or 503 shows "try again in N seconds" from `Retry-After`; TanStack Query is set up; it works under `docker compose up` through nginx; component tests cover the login and change-password forms. Refs: SPEC 3, 5, ARCH 2, 5, 7.
 
 ## Epic MD: Master data
 

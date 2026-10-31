@@ -79,7 +79,7 @@ Adding a dependency outside this list needs the owner's approval.
 **Decision: server-side sessions, not JWT.** After login the server stores the session in PostgreSQL and gives the browser an opaque cookie. Why: the app is one origin behind one nginx; sessions can be revoked immediately (deactivating a user or logging out takes effect at once); there are no refresh tokens or token storage problems. JWTs are better for separate services or mobile clients, which this project does not have.
 
 - Library: `express-session` with `@quixo3/prisma-session-store` (adopted in AUTH-1), so the session table is managed by Prisma migrations. Setup is in `apps/api/src/lib/session.ts`.
-- Endpoints: `POST /api/auth/login` (`{ username, password }`, returns `{ user }`), `POST /api/auth/logout` (204), `PUT /api/auth/password` (`{ currentPassword, newPassword }`, 204, signed in only). `GET /api/auth/me` (returns `{ user }` or 401) is added in FND-5.
+- Endpoints: `POST /api/auth/login` (`{ username, password }`, returns `{ user }`), `POST /api/auth/logout` (204), `PUT /api/auth/password` (`{ currentPassword, newPassword }`, 204, signed in only). `GET /api/auth/me` (returns `{ user }` or 401) is added in AUTH-4.
 - Cookie: `httpOnly`, `SameSite=Lax`, `Secure` controlled by `COOKIE_SECURE`. On a LAN served over plain HTTP, `COOKIE_SECURE` must be `false` or the browser will drop the cookie.
 - Lifetime: rolling, `SESSION_TTL_HOURS` (default 8). Expired sessions are pruned every 15 minutes.
 - `saveUninitialized: false`: a session row is created only after a successful login, never for anonymous visitors (otherwise an attacker could fill the session table). Regenerate the session ID on login and destroy it on logout. Keep session data small (user ID and role).
