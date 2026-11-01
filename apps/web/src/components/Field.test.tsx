@@ -3,7 +3,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { cleanup, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { useForm } from 'react-hook-form';
-import { afterEach, expect, test } from 'vitest';
+import { afterEach, expect, test, vi } from 'vitest';
 import { z } from 'zod';
 import { ApiRequestError } from '../api';
 import { Field, SelectField, showApiFieldErrors, TextAreaField } from './Field';
@@ -27,7 +27,9 @@ function TestForm({ apiError }: { apiError: unknown }) {
   return (
     <form
       noValidate
-      onSubmit={form.handleSubmit(() => showApiFieldErrors(form.setError, apiError))}
+      onSubmit={form.handleSubmit(() =>
+        showApiFieldErrors(form.setError, apiError, ['username', 'password', 'type', 'note']),
+      )}
     >
       <Field
         id="username"
@@ -119,8 +121,27 @@ test('field errors from the API details show next to their fields (TC-FND-22)', 
 test('showApiFieldErrors returns false for an error without field details', () => {
   const setError = () => {};
   const conflict = new ApiRequestError(409, 'HAS_HISTORY', 'Retire it instead.', {}, null);
-  expect(showApiFieldErrors(setError, conflict)).toBe(false);
-  expect(showApiFieldErrors(setError, new Error('offline'))).toBe(false);
+  expect(showApiFieldErrors(setError, conflict, ['name'])).toBe(false);
+  expect(showApiFieldErrors(setError, new Error('offline'), ['name'])).toBe(false);
+});
+
+test('an API field error with no field on the form returns false, so the message is still shown', () => {
+  const setError = vi.fn();
+  // The API reports a bad checkout line under its top-level name, "lines".
+  const error = new ApiRequestError(
+    400,
+    'VALIDATION_ERROR',
+    'Some fields are invalid.',
+    {
+      fields: { borrowerId: ['Choose a borrower.'], lines: ['Too many: at most 10000.'] },
+    },
+    null,
+  );
+
+  expect(showApiFieldErrors(setError, error, ['borrowerId'])).toBe(false);
+  expect(setError).toHaveBeenCalledTimes(1);
+  expect(setError).toHaveBeenCalledWith('borrowerId', { message: 'Choose a borrower.' });
+  expect(showApiFieldErrors(vi.fn(), error, ['borrowerId', 'lines'])).toBe(true);
 });
 
 test('every field can be reached and filled with the keyboard (TC-FND-23)', async () => {

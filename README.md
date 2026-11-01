@@ -79,7 +79,7 @@ Building blocks for the screens, in `apps/web/src/components/` (FND-5). Use thes
 
 ### Form fields
 
-`Field` (input), `SelectField`, and `TextAreaField` take a label, an optional hint, an error, and React Hook Form's `register()` props. Validate with the shared Zod schema from `@bms/shared`, and send the API's field errors back to the form with `showApiFieldErrors`:
+`Field` (input), `SelectField`, and `TextAreaField` take a label, an optional hint, an error, and React Hook Form's `register()` props. Validate with the shared Zod schema from `@bms/shared`, and send the API's field errors back to the form with `showApiFieldErrors`. Give it the fields the form shows: the API reports nested errors under the top-level name (for example `lines`), and an error with no matching field must still reach the user as a notification.
 
 ```tsx
 const form = useForm<RoomInput>({ resolver: zodResolver(roomSchema), defaultValues: { name: '' } });
@@ -87,7 +87,7 @@ const save = useMutation({
   mutationFn: (input: RoomInput) => apiFetch('POST', '/rooms', input),
   onSuccess: () => notify.success('Room saved.'),
   // VALIDATION_ERROR field details go next to their fields; anything else becomes a notification.
-  onError: (error) => showApiFieldErrors(form.setError, error) || notify.error(error),
+  onError: (error) => showApiFieldErrors(form.setError, error, ['name', 'type']) || notify.error(error),
 });
 
 <Field id="name" label="Name" error={form.formState.errors.name?.message} {...form.register('name')} />
@@ -132,4 +132,4 @@ const save = useMutation({
 
 ### Notifications
 
-`useNotify()` shows a message at the bottom of the screen until it is dismissed. `notify.success(text)` for a saved change; `notify.error(error)` shows the API error `message`, or "Try again in N seconds" on 429 and 503. `NotificationProvider` is already mounted in `main.tsx` and in the test helper `renderApp`.
+`useNotify()` shows a message at the bottom of the screen until it is dismissed. Only the newest three are kept. `notify.success(text)` for a saved change; `notify.error(error)` shows the API error `message`, or "Try again in N seconds" on 429 and 503. `NotificationProvider` is already mounted in `main.tsx` and in the test helper `renderApp`.

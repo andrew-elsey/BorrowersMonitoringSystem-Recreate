@@ -4,9 +4,9 @@ import { useMutation } from '@tanstack/react-query';
 import { useForm } from 'react-hook-form';
 import { Link } from 'react-router';
 import { z } from 'zod';
-import { apiFetch, ApiRequestError, errorText, fieldErrors } from '../api';
+import { apiFetch, ApiRequestError, errorText } from '../api';
 import { Alert } from '../components/Alert';
-import { Field, showApiFieldErrors } from '../components/Field';
+import { Field, fieldErrorsAllShown, showApiFieldErrors } from '../components/Field';
 
 // The confirm field is checked in the browser only; the API takes { currentPassword, newPassword }.
 // It is here because a typo in a masked field would lock the user out until an admin resets it.
@@ -17,6 +17,8 @@ const formSchema = changePasswordSchema
     path: ['confirmPassword'],
   });
 type FormInput = z.infer<typeof formSchema>;
+// The fields the API can report errors for (confirmPassword is checked in the browser only).
+const API_FIELDS = ['currentPassword', 'newPassword'] as const;
 
 export function ChangePasswordPage() {
   const form = useForm<FormInput>({
@@ -27,12 +29,12 @@ export function ChangePasswordPage() {
     mutationFn: (input: ChangePasswordInput) => apiFetch<void>('PUT', '/auth/password', input),
     onSuccess: () => form.reset(),
     // A wrong current password comes back as a field error (VALIDATION_ERROR details).
-    onError: (error) => showApiFieldErrors(form.setError, error),
+    onError: (error) => showApiFieldErrors(form.setError, error, API_FIELDS),
   });
 
   const { errors } = form.formState;
   // Field errors are shown next to their fields; anything else goes in the alert above the form.
-  const showFormError = change.isError && Object.keys(fieldErrors(change.error)).length === 0;
+  const showFormError = change.isError && !fieldErrorsAllShown(change.error, API_FIELDS);
   const isWait = change.error instanceof ApiRequestError && change.error.retryAfterSeconds !== null;
 
   return (

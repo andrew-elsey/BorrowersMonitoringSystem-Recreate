@@ -46,11 +46,15 @@ function controlProps({ id, error, hint }: Omit<FieldShellProps, 'label'>) {
 type FieldProps = ComponentProps<'input'> & FieldShellProps;
 
 // A text, number, date, or password input.
-export function Field({ id, label, error, hint, ...inputProps }: FieldProps) {
+export function Field({ id, label, error, hint, className, ...inputProps }: FieldProps) {
   const control = controlProps({ id, error, hint });
   return (
     <FieldShell id={id} label={label} error={error} hint={hint}>
-      <input {...control} className={`h-11 ${control.className}`} {...inputProps} />
+      <input
+        {...control}
+        className={`h-11 ${control.className} ${className ?? ''}`}
+        {...inputProps}
+      />
     </FieldShell>
   );
 }
@@ -59,11 +63,23 @@ type SelectFieldProps = ComponentProps<'select'> &
   FieldShellProps & { options: readonly { value: string; label: string }[] };
 
 // A drop-down list. Add a first option with an empty value for "choose one".
-export function SelectField({ id, label, error, hint, options, ...selectProps }: SelectFieldProps) {
+export function SelectField({
+  id,
+  label,
+  error,
+  hint,
+  options,
+  className,
+  ...selectProps
+}: SelectFieldProps) {
   const control = controlProps({ id, error, hint });
   return (
     <FieldShell id={id} label={label} error={error} hint={hint}>
-      <select {...control} className={`h-11 ${control.className}`} {...selectProps}>
+      <select
+        {...control}
+        className={`h-11 ${control.className} ${className ?? ''}`}
+        {...selectProps}
+      >
         {options.map((option) => (
           <option key={option.value} value={option.value}>
             {option.label}
@@ -77,22 +93,44 @@ export function SelectField({ id, label, error, hint, options, ...selectProps }:
 type TextAreaFieldProps = ComponentProps<'textarea'> & FieldShellProps;
 
 // Multi-line text, such as a description or a note.
-export function TextAreaField({ id, label, error, hint, ...textAreaProps }: TextAreaFieldProps) {
+export function TextAreaField({
+  id,
+  label,
+  error,
+  hint,
+  className,
+  ...textAreaProps
+}: TextAreaFieldProps) {
   const control = controlProps({ id, error, hint });
   return (
     <FieldShell id={id} label={label} error={error} hint={hint}>
-      <textarea {...control} rows={3} className={`py-2 ${control.className}`} {...textAreaProps} />
+      <textarea
+        {...control}
+        rows={3}
+        className={`py-2 ${control.className} ${className ?? ''}`}
+        {...textAreaProps}
+      />
     </FieldShell>
   );
 }
 
-// Puts the field errors of a VALIDATION_ERROR response (details.fields) next to their fields.
-// Returns false when the error has none, so the caller shows the error message instead.
+// True when the error has field errors (VALIDATION_ERROR details.fields) and every one belongs to
+// a field the form shows. The API keys nested errors by their top-level name, such as "lines", so a
+// form may get errors it has no field for; those must be shown as a message instead.
+export function fieldErrorsAllShown(error: unknown, shownFields: readonly string[]): boolean {
+  const names = Object.keys(fieldErrors(error));
+  return names.length > 0 && names.every((name) => shownFields.includes(name));
+}
+
+// Puts the API's field errors next to the fields the form shows. Returns false when some error
+// has no field (or there are none), so the caller also shows the error message.
 export function showApiFieldErrors<T extends FieldValues>(
   setError: UseFormSetError<T>,
   error: unknown,
+  shownFields: readonly Path<T>[],
 ): boolean {
-  const errors = Object.entries(fieldErrors(error));
-  for (const [name, message] of errors) setError(name as Path<T>, { message });
-  return errors.length > 0;
+  for (const [name, message] of Object.entries(fieldErrors(error))) {
+    if ((shownFields as readonly string[]).includes(name)) setError(name as Path<T>, { message });
+  }
+  return fieldErrorsAllShown(error, shownFields);
 }
