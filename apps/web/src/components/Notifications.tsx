@@ -26,7 +26,8 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
   const add = useCallback((kind: Notice['kind'], text: string) => {
     nextId.current += 1;
     const id = nextId.current;
-    setNotices((current) => [...current, { id, kind, text }]);
+    // Only the newest three, so unread messages never cover the screen.
+    setNotices((current) => [...current, { id, kind, text }].slice(-3));
   }, []);
 
   const notify = useMemo<Notify>(
@@ -47,7 +48,11 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
     <NotifyContext.Provider value={notify}>
       {children}
       {/* Fixed to the bottom of the screen, full width on a phone, narrow on a desktop. */}
-      <div className="fixed inset-x-4 bottom-4 z-10 flex flex-col gap-2 sm:left-auto sm:w-96">
+      {/* Always rendered, so screen readers announce messages added to it (aria-live). */}
+      <div
+        aria-live="polite"
+        className="fixed inset-x-4 bottom-4 z-10 flex flex-col gap-2 sm:left-auto sm:w-96"
+      >
         {notices.map((notice) => (
           <div key={notice.id} className="shadow-lg">
             <Alert kind={notice.kind} onDismiss={() => dismiss(notice.id)}>

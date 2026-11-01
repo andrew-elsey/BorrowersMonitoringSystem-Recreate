@@ -91,6 +91,19 @@ test('messages stay until dismissed, one at a time (TC-FND-23)', async () => {
   expect(screen.getByRole('alert')).toBeTruthy();
 });
 
+test('only the newest three messages are kept, so they never cover the screen', async () => {
+  const user = renderWithProvider();
+  await user.click(screen.getByRole('button', { name: 'Delete' }));
+  for (let i = 0; i < 3; i++) await user.click(screen.getByRole('button', { name: 'Save' }));
+  expect(screen.getAllByRole('button', { name: 'Dismiss' })).toHaveLength(3);
+  expect(screen.queryByRole('alert')).toBeNull(); // the oldest, the error, was dropped
+});
+
+test('messages appear inside a live region that is always on the page', () => {
+  renderWithProvider();
+  expect(document.querySelector('[aria-live="polite"]')).toBeTruthy();
+});
+
 test('useNotify outside the provider fails clearly', () => {
   expect(() => render(<Buttons />)).toThrow('useNotify needs a NotificationProvider above it');
 });
