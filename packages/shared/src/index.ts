@@ -2,3 +2,4 @@
 export * from './enums.ts';
 export * from './auth.ts';
 export * from './permissions.ts';
+export * from './categories.ts';
