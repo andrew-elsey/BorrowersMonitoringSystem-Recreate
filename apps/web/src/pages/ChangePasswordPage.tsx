@@ -6,7 +6,7 @@ import { Link } from 'react-router';
 import { z } from 'zod';
 import { apiFetch, ApiRequestError, errorText, fieldErrors } from '../api';
 import { Alert } from '../components/Alert';
-import { Field } from '../components/Field';
+import { Field, showApiFieldErrors } from '../components/Field';
 
 // The confirm field is checked in the browser only; the API takes { currentPassword, newPassword }.
 // It is here because a typo in a masked field would lock the user out until an admin resets it.
@@ -26,12 +26,8 @@ export function ChangePasswordPage() {
   const change = useMutation({
     mutationFn: (input: ChangePasswordInput) => apiFetch<void>('PUT', '/auth/password', input),
     onSuccess: () => form.reset(),
-    onError: (error) => {
-      // A wrong current password comes back as a field error (VALIDATION_ERROR details).
-      for (const [name, message] of Object.entries(fieldErrors(error))) {
-        form.setError(name as keyof FormInput, { message });
-      }
-    },
+    // A wrong current password comes back as a field error (VALIDATION_ERROR details).
+    onError: (error) => showApiFieldErrors(form.setError, error),
   });
 
   const { errors } = form.formState;
