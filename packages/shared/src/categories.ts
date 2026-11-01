@@ -10,7 +10,8 @@ export const pageQuerySchema = z.object({
   pageSize: z.coerce.number().int().min(1).max(100).default(25),
 });
 
-// Create and rename take the same body. Names are unique (SPEC.md 4); the API answers DUPLICATE_VALUE.
+// Create and rename take the same body. Names are unique regardless of case (SPEC.md 4); the API
+// answers DUPLICATE_VALUE.
 export const categorySchema = z.object({
   name: z
     .string()

@@ -194,6 +194,15 @@ test('TC-MD-24: names are unique regardless of case; a category can change its o
   expect(names).toEqual([{ name: 'AUDIO' }, { name: 'Video' }]);
 });
 
+test('renaming to the same name changes nothing and writes no audit entry (BR 14)', async () => {
+  const audio = await prisma.category.create({ data: { name: 'Audio' } });
+
+  const response = await put(admin, audio.id, { name: ' Audio ' }).expect(200);
+
+  expect(response.body.category).toEqual({ id: audio.id, name: 'Audio', itemCount: 0 });
+  expect(await auditFor(audio.id)).toEqual([]);
+});
+
 test('an unknown id gets NOT_FOUND and a malformed id gets VALIDATION_ERROR', async () => {
   const unknown = '00000000-0000-4000-8000-000000000000';
   expect((await put(admin, unknown, { name: 'Audio' })).body.error.code).toBe('NOT_FOUND');

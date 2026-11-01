@@ -56,8 +56,10 @@ export async function createCategory(actorId: string, name: string): Promise<Cat
 export async function renameCategory(actorId: string, id: string, name: string): Promise<Category> {
   try {
     return await prisma.$transaction(async (tx) => {
-      const before = await tx.category.findUnique({ where: { id } });
+      const before = await tx.category.findUnique({ where: { id }, include: withItemCount });
       if (!before) throw notFound();
+      // Same name: nothing changes, so nothing is written or audited.
+      if (before.name === name) return toCategory(before);
       const row = await tx.category.update({
         where: { id },
         data: { name },
