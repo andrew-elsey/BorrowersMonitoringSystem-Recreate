@@ -143,6 +143,20 @@ test('renaming fills the field with the current name, sends PUT, and returns to 
   expect(screen.getByLabelText('New category')).toBeTruthy();
 });
 
+test('clicking Rename again on the same category moves focus back to the field and keeps the typing', async () => {
+  fakeApi();
+  const user = userEvent.setup();
+  renderApp('/inventory');
+
+  await user.click(await screen.findByRole('button', { name: 'Rename Audio' }));
+  const field = screen.getByLabelText('New name for Audio') as HTMLInputElement;
+  await user.type(field, ' gear');
+  await user.click(screen.getByRole('button', { name: 'Rename Audio' }));
+
+  expect(document.activeElement).toBe(field);
+  expect(field.value).toBe('Audio gear');
+});
+
 test('Cancel stops renaming without sending anything', async () => {
   const fetchMock = fakeApi();
   const user = userEvent.setup();

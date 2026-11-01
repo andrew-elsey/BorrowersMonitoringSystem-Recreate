@@ -71,6 +71,8 @@ export function InventoryPage() {
   }, [editing, form]);
 
   function startEditing(category: Category) {
+    // Already renaming this one: the state does not change, so the effect above would not run.
+    if (editing?.id === category.id) return form.setFocus('name');
     setEditing(category);
     form.reset({ name: category.name });
   }
