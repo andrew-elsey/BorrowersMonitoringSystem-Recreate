@@ -132,7 +132,7 @@ Adding a dependency outside this list needs the owner's approval.
 | 500 | Unexpected | `INTERNAL_ERROR` |
 | 503 | Server is busy (hashing queue full) | `SERVER_BUSY` |
 
-`RATE_LIMITED` and `SERVER_BUSY` responses include a `Retry-After` header. nginx also answers 429 when its own limits trigger; it returns the same JSON shape.
+`RATE_LIMITED` and `SERVER_BUSY` responses include a `Retry-After` header. nginx also answers 429 when its own limits trigger, and 413 when a body is over its `client_max_body_size`; both return the same JSON shape, never nginx's HTML error page.
 
 ## 8. Data conventions
 
@@ -203,7 +203,7 @@ Required settings, kept in `apps/web/nginx.conf` and tuned on the department PC:
 
 - `limit_req_zone` per client IP: general API 10 requests per second (burst 30), login endpoint 5 per minute (burst 5), CSV import 2 per minute.
 - `limit_conn` 30 connections per IP.
-- `limit_req_status 429` and `limit_conn_status 429`, answered with the standard JSON error body.
+- `limit_req_status 429` and `limit_conn_status 429`, answered with the standard JSON error body. nginx's own 413 is answered with the standard JSON error body too (`PAYLOAD_TOO_LARGE`).
 - `client_max_body_size 100k`, except 2m on the CSV import location.
 - Slow-connection protection: `client_header_timeout 10s`, `client_body_timeout 10s`, `send_timeout 15s`, `keepalive_timeout 15s`, `proxy_read_timeout 30s`.
 - Set `X-Forwarded-For` to `$remote_addr` (overwrite, never append) so a client cannot fake its address.

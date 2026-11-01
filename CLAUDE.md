@@ -95,7 +95,7 @@ Code should be easy for a student to read: small functions, descriptive names, c
 
 ## Project documents
 - Spec and backlog: `docs/SPEC.md` and `docs/BACKLOG.md` (tickets such as FND-1, BRW-2, FLG-4). Business rules are numbered 1 to 16 in `docs/BUSINESS_RULES.md`.
-- Test cases: `TEST_CASES.md` (IDs like TC-BRW-07; each lists its ticket and rule). It is not in the repo yet.
+- Test cases: `TEST_CASES.md` (IDs like TC-BRW-07; each lists its ticket and rule). Add cases there when a ticket's acceptance criteria change.
 
 ## Trello workflow
 The backlog and sprints live on the Trello board for this project. Use the Trello MCP tools to read and update it. Cards are named with their ticket ID (for example "BRW-2 Checkout API").

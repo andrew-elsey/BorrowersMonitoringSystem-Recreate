@@ -13,13 +13,13 @@ Document references: `BR` = `BUSINESS_RULES.md`, `ARCH` = `ARCHITECTURE.md`, `SP
 | Sprint | Goal | Tickets | Points |
 |---|---|---|---|
 | 1 | Foundation and sign-in: running Docker environment, schema, seed data, role-based login with protected hashing, sign-in screens and app shell, UTC timestamp fix, login limiter memory fix | FND-1, FND-2, FND-3, FND-4, AUTH-1, AUTH-2, AUTH-4, FND-6, AUTH-5 | 26 |
-| 2 | Shared components and master data: shared form and table components, admins manage items, rooms, borrowers, semesters, settings | FND-5, MD-1, MD-2, MD-3, MD-4, MD-5, MD-7 | 21 |
+| 2 | Shared components and master data: shared form and table components, admins manage items, rooms, borrowers, semesters, settings | FND-5, MD-1, MD-2, MD-3, MD-4, MD-5, MD-7, DOC-1 | 22 |
 | 3 | Checkout: handlers can check items out; return API works; rate limits and request limits in place | BRW-1, BRW-2, BRW-3, BRW-4, SEC-1 | 21 |
 | 4 | Returns and flagging: full return flow, end-of-day flagging, strikes, blocking, override | BRW-5, FLG-1, FLG-2, FLG-3, FLG-4 | 19 |
 | 5 | Dashboard, reports, admin tools | BRW-6, RPT-1, RPT-2, RPT-3, RPT-4, AUTH-3, MD-6 | 20 |
 | 6 | Hardening, abuse testing, and release | HRD-1, HRD-2, HRD-3, HRD-4, HRD-5, SEC-2 | 20 |
 
-Total: 127 points. Sprints 1 (26), 2 (21), and 3 (21) are over the working capacity of about 20; that is accepted for now and will be revisited once Sprint 1 shows the real velocity.
+Total: 128 points. Sprints 1 (26), 2 (22), and 3 (21) are over the working capacity of about 20; that is accepted for now and will be revisited once Sprint 1 shows the real velocity.
 
 ## Epic FND: Foundation
 
@@ -140,7 +140,7 @@ Most borrowed items for a chosen period (capped at 366 days), with counts by cat
 ## Epic SEC: Security and resilience
 
 **SEC-1 · Edge rate limits and request limits** (3 pts, Sprint 3). Depends on: FND-2, AUTH-1.
-Acceptance: nginx rate limits and connection limits per ARCH 12.2, answering 429 with the standard JSON error and `Retry-After`; Express global and expensive-endpoint limiters per ARCH 12.3; `trust proxy` verified so limits key on the real client IP (test: two clients with different addresses are limited independently, and nginx overwrites `X-Forwarded-For`); Node server timeouts set; one central error handler, with crash-and-restart on unhandled errors; the input limits in SPEC 7 are enforced in the shared Zod schemas; `RATE_LIMITED`, `PAYLOAD_TOO_LARGE`, and `SERVER_BUSY` are tested. Refs: ARCH 12.2, 12.3, SPEC 7.
+Acceptance: nginx rate limits and connection limits per ARCH 12.2, with `Retry-After` on 429; nginx answers its own 413 (body too large) and 429 with the standard JSON error (`PAYLOAD_TOO_LARGE`, `RATE_LIMITED`), never an HTML page, tested through nginx and not only against Express; `/assets` sends a single `Cache-Control: public, max-age=31536000, immutable` header; Express global and expensive-endpoint limiters per ARCH 12.3; `trust proxy` verified so limits key on the real client IP (test: two clients with different addresses are limited independently, and nginx overwrites `X-Forwarded-For`); Node server timeouts set; one central error handler, with crash-and-restart on unhandled errors; the input limits in SPEC 7 are enforced in the shared Zod schemas; `RATE_LIMITED`, `PAYLOAD_TOO_LARGE`, and `SERVER_BUSY` are tested. Refs: ARCH 12.2, 12.3, SPEC 7.
 
 **SEC-2 · Abuse and load testing** (5 pts, Sprint 6). Depends on: SEC-1, FLG-4, MD-6.
 Acceptance: autocannon scripts in `tests/load` run against the compose stack from a separate container; all five pass criteria in ARCH 12.7 are met (login flood, slow connections, oversized input, maximum-range reports and search, flagging under load); results and any tuned limits are recorded in ARCH 12.7. Refs: ARCH 12.7.
@@ -161,6 +161,12 @@ Step-by-step instructions to run on a department PC and reach it from other mach
 
 **HRD-5 · UX and error handling pass** (3 pts, Sprint 6). Depends on: BRW-5.
 Clear validation and error messages; keyboard-friendly checkout; consistent loading and empty states.
+
+## Epic DOC: Documentation
+
+**DOC-1 · Test cases and SEC-1 AC update** (1 pt, Sprint 2). Depends on: none.
+Added 2026-11-01 at the owner's request.
+Acceptance: `TEST_CASES.md` exists at the repo root with cases for every ticket in this file; each case has an ID (`TC-<EPIC>-NN`), ticket, rule or scenario, level, steps, expected result, and what automates it; every BR rule 1 to 16 and scenario S1 to S21 maps to at least one case; Sprint 1 cases point at existing tests, and those tests pass; the SEC-1 acceptance above includes nginx's own 413 as JSON and the single `/assets` `Cache-Control` header (built in SEC-1, not here); `CLAUDE.md` no longer says `TEST_CASES.md` is missing.
 
 ## Unscheduled
 
