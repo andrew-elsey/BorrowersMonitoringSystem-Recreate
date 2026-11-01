@@ -12,7 +12,7 @@ One list of test cases for every ticket in `docs/BACKLOG.md`. Cases come from ea
 - Unless a case says otherwise, "closing" is 17:00 `Asia/Manila`, a current semester is set, and thresholds are the defaults (3, 4, 5).
 - When a ticket's acceptance criteria change, update its cases in the same change.
 
-Paths are shortened: `api/` is `apps/api/tests/`, `web/` is `apps/web/src/pages/`.
+Paths are shortened: `api/` is `apps/api/tests/`, `web/` is `apps/web/src/pages/`, and `web/components/` is `apps/web/src/components/`.
 
 ## FND: Foundation
 
@@ -39,11 +39,11 @@ Paths are shortened: `api/` is `apps/api/tests/`, `web/` is `apps/web/src/pages/
 | TC-FND-19 | FND-4 | ARCH 5 | integration | Run the seed without admin credentials or with a too-short password | It fails with a clear message | `api/seed.test.ts` |
 | TC-FND-20 | FND-4 | ARCH 5 | integration | Run the seed in production mode | Only the admin and settings are created; no QA accounts | `api/seed.test.ts` |
 | TC-FND-21 | FND-4 | ARCH 12.4 | integration | `admin:reset-password` for a known user, an unknown user, and with a short password | Known: reset and audited without the hash; unknown and short: refused, old password kept | `api/admin-reset-password.test.ts` |
-| TC-FND-22 | FND-5 | SPEC 8, ARCH 7 | component | Submit a form field with an invalid value, then with a field error returned in the API `details` | Both errors show inline next to the field | not yet |
-| TC-FND-23 | FND-5 | SPEC 8 | component | Use each shared component with the keyboard only and query it by label | Every control has a label and works with the keyboard | not yet |
-| TC-FND-24 | FND-5 | SPEC 7 | component | Render the data table loading, with zero rows, and with more rows than one page | Loading state, empty state, and pagination all show | not yet |
-| TC-FND-25 | FND-5 | SPEC 5 | component | Start a destructive action, cancel, then confirm | Cancel does nothing; confirm runs the action | not yet |
-| TC-FND-26 | FND-5 | ARCH 7 | component | Trigger a success and an API error | Success notification; error notification shows the API error `message` | not yet |
+| TC-FND-22 | FND-5 | SPEC 8, ARCH 7 | component | Submit a form field with an invalid value, then with a field error returned in the API `details` | Both errors show inline next to the field | `web/components/Field.test.tsx` |
+| TC-FND-23 | FND-5 | SPEC 8 | component | Use each shared component with the keyboard only and query it by label | Every control has a label and works with the keyboard | `web/components/Field.test.tsx`, `web/components/DataTable.test.tsx`, `web/components/ConfirmDialog.test.tsx`, `web/components/Notifications.test.tsx` |
+| TC-FND-24 | FND-5 | SPEC 7 | component | Render the data table loading, with zero rows, and with more rows than one page | Loading state, empty state, and pagination all show | `web/components/DataTable.test.tsx` |
+| TC-FND-25 | FND-5 | SPEC 5 | component | Start a destructive action, cancel, then confirm | Cancel does nothing; confirm runs the action | `web/components/ConfirmDialog.test.tsx` |
+| TC-FND-26 | FND-5 | ARCH 7 | component | Trigger a success and an API error | Success notification; error notification shows the API error `message` | `web/components/Notifications.test.tsx` |
 | TC-FND-27 | FND-6 | ARCH 6 | integration | With the database session time zone at Asia/Manila, write rows using `@default(now())`, `@updatedAt`, and `new Date()` | Stored instants are within a few seconds of `Date.now()` | `api/timestamps.test.ts` |
 | TC-FND-28 | FND-6 | ARCH 6 | integration | Create a session | Expiry stored as now plus `SESSION_TTL_HOURS` | `api/timestamps.test.ts` |
 | TC-FND-29 | FND-6 | ARCH 6 | integration | Start the API with a `DATABASE_URL` that has `options` | Refused, because it would replace `TimeZone=UTC` | `api/timestamps.test.ts` |

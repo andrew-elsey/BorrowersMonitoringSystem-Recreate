@@ -72,3 +72,64 @@ npm run db:seed             # needs DATABASE_URL in .env, pointing at 127.0.0.1:
 Rows written before FND-6 (2026-10-31) are stored 8 hours early. Resetting is the fix for them; there is no correcting migration.
 
 **Role test accounts for QA** (until AUTH-3 adds user management): set `QA_PASSWORD` in `.env` (at least 10 characters), then run `npm run db:seed`. It creates `qa-handler` (Handler) and `qa-viewer` (View-only) if they do not exist, and never changes them afterwards. To set a new password for one of them: `docker compose exec api npm run admin:reset-password -- qa-handler`.
+
+## Shared web components
+
+Building blocks for the screens, in `apps/web/src/components/` (FND-5). Use these instead of writing new ones, so every screen is labeled, keyboard friendly, and shows errors the same way. Colors come from the theme tokens in ARCHITECTURE section 14.
+
+### Form fields
+
+`Field` (input), `SelectField`, and `TextAreaField` take a label, an optional hint, an error, and React Hook Form's `register()` props. Validate with the shared Zod schema from `@bms/shared`, and send the API's field errors back to the form with `showApiFieldErrors`:
+
+```tsx
+const form = useForm<RoomInput>({ resolver: zodResolver(roomSchema), defaultValues: { name: '' } });
+const save = useMutation({
+  mutationFn: (input: RoomInput) => apiFetch('POST', '/rooms', input),
+  onSuccess: () => notify.success('Room saved.'),
+  // VALIDATION_ERROR field details go next to their fields; anything else becomes a notification.
+  onError: (error) => showApiFieldErrors(form.setError, error) || notify.error(error),
+});
+
+<Field id="name" label="Name" error={form.formState.errors.name?.message} {...form.register('name')} />
+<SelectField id="type" label="Type" options={[{ value: '', label: 'Choose one' }, ...]} {...form.register('type')} />
+```
+
+### Data table
+
+`DataTable` shows one page from a list endpoint (`{ data, page, pageSize, total }`, ARCHITECTURE section 7) with loading and empty states and Previous and Next buttons. Keep the page number in state and pass it to the query; page size is at most 100 (SPEC section 7).
+
+```tsx
+<DataTable
+  caption="Rooms and labs"
+  columns={[{ header: 'Name', cell: (room) => room.name }]}
+  rows={rooms.data?.data}
+  rowKey={(room) => room.id}
+  isLoading={rooms.isPending}
+  emptyText="No rooms yet."
+  page={page}
+  pageSize={25}
+  total={rooms.data?.total ?? 0}
+  onPageChange={setPage}
+/>
+```
+
+### Confirm dialog
+
+`ConfirmDialog` asks before a destructive action. Cancel has focus when it opens, Escape cancels, and both buttons are disabled while `isPending` is true so the request is sent once.
+
+```tsx
+<ConfirmDialog
+  open={toDelete !== null}
+  title="Delete category?"
+  confirmLabel="Delete category"
+  onConfirm={() => remove.mutate(toDelete!.id)}
+  onCancel={() => setToDelete(null)}
+  isPending={remove.isPending}
+>
+  {toDelete?.name} will be deleted. This cannot be undone.
+</ConfirmDialog>
+```
+
+### Notifications
+
+`useNotify()` shows a message at the bottom of the screen until it is dismissed. `notify.success(text)` for a saved change; `notify.error(error)` shows the API error `message`, or "Try again in N seconds" on 429 and 503. `NotificationProvider` is already mounted in `main.tsx` and in the test helper `renderApp`.
