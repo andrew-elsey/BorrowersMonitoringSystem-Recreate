@@ -185,6 +185,24 @@ test('Rename opens a dialog with the name filled in and focused; Enter saves and
   expect(screen.getByLabelText('New category')).toBeTruthy();
 });
 
+test('a rename still succeeds when the browser closes the dialog while it is saving', async () => {
+  fakeApi((method) => {
+    if (method !== 'PUT') return undefined;
+    // Chrome closes a modal dialog itself on a repeated Escape, even while a request runs.
+    screen.getByRole('dialog').dispatchEvent(new Event('close'));
+    return { status: 200, body: { category: { ...AUDIO, name: 'Sound' } } };
+  });
+  const user = userEvent.setup();
+  renderApp('/inventory');
+
+  await user.click(await screen.findByRole('button', { name: 'Rename Audio' }));
+  const field = screen.getByLabelText('New name');
+  await user.clear(field);
+  await user.type(field, 'Sound{Enter}');
+
+  expect(await screen.findByText('Category "Audio" renamed to "Sound".')).toBeTruthy();
+});
+
 test('a duplicate name on rename shows the API error under the dialog field and keeps it open', async () => {
   const message = 'A category named "Laptops" already exists.';
   fakeApi((method) =>

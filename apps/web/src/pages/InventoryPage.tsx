@@ -53,11 +53,13 @@ export function InventoryPage() {
   });
 
   const renameForm = useForm<CategoryInput>({ resolver: zodResolver(categorySchema) });
+  // The category travels with the request, not read from state: the browser can close the dialog
+  // (and clear toRename) while the request runs.
   const rename = useMutation({
-    mutationFn: (input: CategoryInput) =>
-      apiFetch<CategoryReply>('PUT', `/categories/${toRename!.id}`, input),
-    onSuccess: ({ category }) => {
-      notify.success(`Category "${toRename!.name}" renamed to "${category.name}".`);
+    mutationFn: ({ category, input }: { category: Category; input: CategoryInput }) =>
+      apiFetch<CategoryReply>('PUT', `/categories/${category.id}`, input),
+    onSuccess: ({ category }, { category: before }) => {
+      notify.success(`Category "${before.name}" renamed to "${category.name}".`);
       setToRename(null);
       return refresh();
     },
@@ -157,7 +159,7 @@ export function InventoryPage() {
         open={toRename !== null}
         title={`Rename ${toRename?.name}`}
         submitLabel="Save name"
-        onSubmit={renameForm.handleSubmit((input) => rename.mutate(input))}
+        onSubmit={renameForm.handleSubmit((input) => rename.mutate({ category: toRename!, input }))}
         onCancel={() => setToRename(null)}
         isPending={rename.isPending}
       >
