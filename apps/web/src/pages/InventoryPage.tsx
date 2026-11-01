@@ -1,33 +1,32 @@
 import { categorySchema, type Category, type CategoryInput } from '@bms/shared';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { useForm } from 'react-hook-form';
-import { apiFetch } from '../api';
+import { apiFetch, errorText } from '../api';
+import { Alert } from '../components/Alert';
 import { ConfirmDialog } from '../components/ConfirmDialog';
 import { DataTable } from '../components/DataTable';
 import { Field, showApiFieldErrors } from '../components/Field';
+import { FormDialog } from '../components/FormDialog';
 import { useNotify } from '../components/Notifications';
 
 // Inventory and categories (SPEC.md 5, admin only). MD-1 builds the categories part; MD-2 adds items.
 // The server enforces every rule (CLAUDE.md rule 2): names are unique, and a category in use cannot
-// be deleted (BR 15). The disabled Delete button only saves a pointless request.
+// be deleted (BR 15). The unavailable Delete button only saves a pointless request.
 
 type CategoryPage = { data: Category[]; page: number; pageSize: number; total: number };
+type CategoryReply = { category: Category };
 const PAGE_SIZE = 25;
 const CATEGORIES_KEY = ['categories'];
 
-const buttonClass =
-  'h-11 cursor-pointer rounded-lg px-5 text-base font-semibold transition-colors duration-150 disabled:cursor-wait disabled:opacity-80';
-const linkButtonClass =
-  'h-9 cursor-pointer rounded-lg px-2.5 text-[15px] font-semibold disabled:cursor-not-allowed';
+const linkButtonClass = 'h-9 cursor-pointer rounded-lg px-2.5 text-[15px] font-semibold';
 
 export function InventoryPage() {
   const notify = useNotify();
   const queryClient = useQueryClient();
   const [page, setPage] = useState(1);
-  // The category being renamed, or null while the form adds a new one.
-  const [editing, setEditing] = useState<Category | null>(null);
+  const [toRename, setToRename] = useState<Category | null>(null);
   const [toDelete, setToDelete] = useState<Category | null>(null);
 
   const categories = useQuery({
@@ -37,48 +36,54 @@ export function InventoryPage() {
   });
   const refresh = () => queryClient.invalidateQueries({ queryKey: CATEGORIES_KEY });
 
-  const form = useForm<CategoryInput>({
+  const addForm = useForm<CategoryInput>({
     resolver: zodResolver(categorySchema),
     defaultValues: { name: '' },
   });
-  const save = useMutation({
-    mutationFn: (input: CategoryInput) =>
-      editing
-        ? apiFetch('PUT', `/categories/${editing.id}`, input)
-        : apiFetch('POST', '/categories', input),
-    onSuccess: () => {
-      notify.success(editing ? 'Category renamed.' : 'Category added.');
-      stopEditing();
+  const add = useMutation({
+    mutationFn: (input: CategoryInput) => apiFetch<CategoryReply>('POST', '/categories', input),
+    onSuccess: ({ category }) => {
+      notify.success(`Category "${category.name}" added.`);
+      addForm.reset({ name: '' });
       return refresh();
     },
     // A duplicate name (DUPLICATE_VALUE) comes back as a field error under the name.
-    onError: (error) => showApiFieldErrors(form.setError, error, ['name']) || notify.error(error),
+    onError: (error) =>
+      showApiFieldErrors(addForm.setError, error, ['name']) || notify.error(error),
   });
-  const remove = useMutation({
-    mutationFn: (category: Category) => apiFetch('DELETE', `/categories/${category.id}`),
-    onSuccess: () => {
-      notify.success('Category deleted.');
+
+  const renameForm = useForm<CategoryInput>({ resolver: zodResolver(categorySchema) });
+  const rename = useMutation({
+    mutationFn: (input: CategoryInput) =>
+      apiFetch<CategoryReply>('PUT', `/categories/${toRename!.id}`, input),
+    onSuccess: ({ category }) => {
+      notify.success(`Category "${toRename!.name}" renamed to "${category.name}".`);
+      setToRename(null);
       return refresh();
     },
-    // HAS_HISTORY: someone added an item to it since the list loaded.
-    onError: (error) => notify.error(error),
-    onSettled: () => setToDelete(null),
+    onError: (error) =>
+      showApiFieldErrors(renameForm.setError, error, ['name']) || notify.error(error),
   });
 
-  // After Rename, move focus to the name field. Done after the render, once reset() has finished.
-  useEffect(() => {
-    if (editing) form.setFocus('name');
-  }, [editing, form]);
+  const remove = useMutation({
+    mutationFn: (category: Category) => apiFetch('DELETE', `/categories/${category.id}`),
+    onSuccess: async (_reply, category) => {
+      notify.success(`Category "${category.name}" deleted.`);
+      setToDelete(null);
+      await refresh();
+      // Its row and Delete button are gone, so focus would drop to the page start.
+      addForm.setFocus('name');
+    },
+    // HAS_HISTORY: someone added an item to it since the list loaded.
+    onError: (error) => {
+      notify.error(error);
+      setToDelete(null);
+    },
+  });
 
-  function startEditing(category: Category) {
-    // Already renaming this one: the state does not change, so the effect above would not run.
-    if (editing?.id === category.id) return form.setFocus('name');
-    setEditing(category);
-    form.reset({ name: category.name });
-  }
-  function stopEditing() {
-    setEditing(null);
-    form.reset({ name: '' });
+  function startRenaming(category: Category) {
+    renameForm.reset({ name: category.name });
+    setToRename(category);
   }
 
   return (
@@ -87,56 +92,82 @@ export function InventoryPage() {
 
       <form
         noValidate
-        onSubmit={form.handleSubmit((input) => save.mutate(input))}
+        onSubmit={addForm.handleSubmit((input) => add.mutate(input))}
         className="flex flex-wrap items-start gap-3"
       >
         <div className="flex-[0_1_320px]">
           <Field
             id="name"
-            label={editing ? `New name for ${editing.name}` : 'New category'}
-            error={form.formState.errors.name?.message}
-            {...form.register('name')}
+            label="New category"
+            error={addForm.formState.errors.name?.message}
+            {...addForm.register('name')}
           />
         </div>
-        {/* The label above the field is 27px tall, so the buttons line up with the input. */}
-        <div className="flex gap-3 pt-[29px]">
+        {/* The label above the field is 27px tall, so the button lines up with the input. */}
+        <div className="pt-[29px]">
           <button
             type="submit"
-            disabled={save.isPending}
-            className={`${buttonClass} bg-primary text-white hover:bg-primary-hover`}
+            disabled={add.isPending}
+            className="h-11 cursor-pointer rounded-lg bg-primary px-5 text-base font-semibold text-white transition-colors duration-150 hover:bg-primary-hover disabled:cursor-wait disabled:opacity-80"
           >
-            {editing ? 'Save name' : 'Add category'}
+            Add category
           </button>
-          {editing && (
-            <button
-              type="button"
-              onClick={stopEditing}
-              className={`${buttonClass} border border-field-border font-medium hover:bg-page`}
-            >
-              Cancel
-            </button>
-          )}
         </div>
       </form>
 
       <div className="max-w-[760px]">
-        <DataTable
-          caption="Categories"
-          columns={[
-            { header: 'Category', cell: (category) => <strong>{category.name}</strong> },
-            { header: 'Items', cell: (category) => category.itemCount },
-            { header: 'Actions', cell: (category) => actions(category) },
-          ]}
-          rows={categories.data?.data}
-          rowKey={(category) => category.id}
-          isLoading={categories.isPending}
-          emptyText="No categories yet."
-          page={page}
-          pageSize={PAGE_SIZE}
-          total={categories.data?.total ?? 0}
-          onPageChange={setPage}
-        />
+        {categories.isError ? (
+          // Without this, a failed load would look like "No categories yet."
+          <Alert kind="error">
+            {errorText(categories.error)}{' '}
+            <button
+              type="button"
+              disabled={categories.isFetching}
+              onClick={() => categories.refetch()}
+              className="cursor-pointer font-semibold underline underline-offset-4 disabled:cursor-wait"
+            >
+              Retry
+            </button>
+          </Alert>
+        ) : (
+          <DataTable
+            caption="Categories"
+            columns={[
+              {
+                header: 'Category',
+                // A long name with no spaces must wrap, or it pushes the buttons out of sight.
+                cell: (category) => <strong className="wrap-anywhere">{category.name}</strong>,
+              },
+              { header: 'Items', cell: (category) => category.itemCount },
+              { header: 'Actions', cell: (category) => actions(category) },
+            ]}
+            rows={categories.data?.data}
+            rowKey={(category) => category.id}
+            isLoading={categories.isPending}
+            emptyText="No categories yet."
+            page={page}
+            pageSize={PAGE_SIZE}
+            total={categories.data?.total ?? 0}
+            onPageChange={setPage}
+          />
+        )}
       </div>
+
+      <FormDialog
+        open={toRename !== null}
+        title={`Rename ${toRename?.name}`}
+        submitLabel="Save name"
+        onSubmit={renameForm.handleSubmit((input) => rename.mutate(input))}
+        onCancel={() => setToRename(null)}
+        isPending={rename.isPending}
+      >
+        <Field
+          id="new-name"
+          label="New name"
+          error={renameForm.formState.errors.name?.message}
+          {...renameForm.register('name')}
+        />
+      </FormDialog>
 
       <ConfirmDialog
         open={toDelete !== null}
@@ -153,27 +184,34 @@ export function InventoryPage() {
 
   function actions(category: Category) {
     const inUse = category.itemCount > 0;
+    const reasonId = `in-use-${category.id}`;
     return (
       <div className="flex flex-wrap items-center gap-1 whitespace-nowrap">
         <button
           type="button"
           aria-label={`Rename ${category.name}`}
-          onClick={() => startEditing(category)}
+          onClick={() => startRenaming(category)}
           className={`${linkButtonClass} text-primary hover:bg-primary-tint`}
         >
           Rename
         </button>
-        {/* BR 15: a category in use keeps its history, so only unused ones can be deleted. */}
+        {/* BR 15: a category in use keeps its history, so only unused ones can be deleted.
+            aria-disabled, not disabled, so keyboard and screen reader users still reach the reason. */}
         <button
           type="button"
           aria-label={`Delete ${category.name}`}
-          disabled={inUse}
-          onClick={() => setToDelete(category)}
-          className={`${linkButtonClass} text-danger hover:bg-danger-tint disabled:text-muted disabled:hover:bg-transparent`}
+          aria-disabled={inUse || undefined}
+          aria-describedby={inUse ? reasonId : undefined}
+          onClick={() => !inUse && setToDelete(category)}
+          className={`${linkButtonClass} ${inUse ? 'cursor-not-allowed text-muted' : 'text-danger hover:bg-danger-tint'}`}
         >
           Delete
         </button>
-        {inUse && <span className="text-[13px] text-muted">In use, cannot delete</span>}
+        {inUse && (
+          <span id={reasonId} className="text-sm text-muted">
+            Used by {category.itemCount} {category.itemCount === 1 ? 'item' : 'items'}
+          </span>
+        )}
       </div>
     );
   }

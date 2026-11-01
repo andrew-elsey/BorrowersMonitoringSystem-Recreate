@@ -3,19 +3,18 @@ import { cleanup, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeAll, expect, test, vi } from 'vitest';
 import type { SignedInUser } from '../auth';
-import { apiError, HANDLER, mockApi, renderApp, signedInAs } from '../test-utils';
+import {
+  apiError,
+  emulateModalDialogs,
+  HANDLER,
+  mockApi,
+  renderApp,
+  signedInAs,
+} from '../test-utils';
 
 // MD-1: the categories part of the Inventory and categories screen.
 
-// jsdom has no modal dialogs. Browsers provide these; here they only toggle `open`.
-beforeAll(() => {
-  HTMLDialogElement.prototype.showModal = function (this: HTMLDialogElement) {
-    this.open = true;
-  };
-  HTMLDialogElement.prototype.close = function (this: HTMLDialogElement) {
-    this.open = false;
-  };
-});
+beforeAll(emulateModalDialogs);
 
 afterEach(() => {
   cleanup();
@@ -25,13 +24,19 @@ afterEach(() => {
 const ADMIN: SignedInUser = { id: 'u0', name: 'Ma. Teresa Lim', username: 'tlim', role: 'ADMIN' };
 const AUDIO: Category = { id: 'c1', name: 'Audio', itemCount: 0 };
 const LAPTOPS: Category = { id: 'c2', name: 'Laptops', itemCount: 14 };
+const CAMERAS: Category = { id: 'c3', name: 'Cameras', itemCount: 1 };
 
 // A fake API holding the categories list. `answer` overrides the reply to a change request.
 function fakeApi(answer?: (method: string, path: string, body: unknown) => object | undefined) {
   return mockApi((method, path, body) => {
     if (path === '/auth/me') return signedInAs(ADMIN);
     if (method === 'GET' && path.startsWith('/categories')) {
-      return { status: 200, body: { data: [AUDIO, LAPTOPS], page: 1, pageSize: 25, total: 2 } };
+      const reply = answer?.(method, path, body);
+      if (reply) return reply as { status: number; body?: unknown };
+      return {
+        status: 200,
+        body: { data: [AUDIO, CAMERAS, LAPTOPS], page: 1, pageSize: 25, total: 3 },
+      };
     }
     const reply = answer?.(method, path, body);
     if (reply) return reply as { status: number; body?: unknown };
@@ -50,19 +55,49 @@ const categoryListLoads = (fetchMock: ReturnType<typeof mockApi>) =>
   ).length;
 
 test('lists categories with their item counts; a category in use cannot be deleted (BR 15)', async () => {
-  fakeApi();
+  const fetchMock = fakeApi();
+  const user = userEvent.setup();
   renderApp('/inventory');
 
   const table = await screen.findByRole('table', { name: 'Categories' });
   const laptops = await within(table).findByRole('row', { name: /Laptops 14/ });
+  // Still focusable, so keyboard and screen reader users hear why it does nothing.
+  const deleteLaptops = within(laptops).getByRole('button', { name: 'Delete Laptops' });
+  expect(deleteLaptops.getAttribute('aria-disabled')).toBe('true');
+  expect(deleteLaptops.hasAttribute('disabled')).toBe(false);
   expect(
-    (within(laptops).getByRole('button', { name: 'Delete Laptops' }) as HTMLButtonElement).disabled,
-  ).toBe(true);
-  expect(within(laptops).getByText('In use, cannot delete')).toBeTruthy();
+    document.getElementById(deleteLaptops.getAttribute('aria-describedby')!)!.textContent,
+  ).toBe('Used by 14 items');
+  expect(within(table).getByText('Used by 1 item')).toBeTruthy();
+  await user.click(deleteLaptops);
+  expect(screen.queryByRole('dialog')).toBeNull();
+  expect(changeRequests(fetchMock)).toEqual([]);
+
   const audio = within(table).getByRole('row', { name: /Audio 0/ });
   expect(
-    (within(audio).getByRole('button', { name: 'Delete Audio' }) as HTMLButtonElement).disabled,
+    within(audio).getByRole('button', { name: 'Delete Audio' }).hasAttribute('aria-disabled'),
   ).toBe(false);
+});
+
+test('a failed list load shows the error and a Retry button, not the empty state', async () => {
+  let fail = true;
+  const fetchMock = fakeApi((method) =>
+    method === 'GET' && fail
+      ? { status: 500, body: apiError('INTERNAL', 'Something went wrong. Try again.') }
+      : undefined,
+  );
+  const user = userEvent.setup();
+  renderApp('/inventory');
+
+  expect(await screen.findByText('Something went wrong. Try again.')).toBeTruthy();
+  expect(screen.queryByText('No categories yet.')).toBeNull();
+  expect(screen.queryByText(/Showing/)).toBeNull();
+
+  fail = false;
+  const loadsBefore = categoryListLoads(fetchMock);
+  await user.click(screen.getByRole('button', { name: 'Retry' }));
+  expect(await screen.findByRole('table', { name: 'Categories' })).toBeTruthy();
+  expect(categoryListLoads(fetchMock)).toBe(loadsBefore + 1);
 });
 
 test('the screen is in the admin menu only; other roles get the not-allowed page (SPEC 3)', async () => {
@@ -83,9 +118,11 @@ test('the screen is in the admin menu only; other roles get the not-allowed page
   ).toBeNull();
 });
 
-test('adding a category sends the name, confirms, clears the field, and reloads the list', async () => {
+test('adding a category sends the name, names it in the confirmation, clears the field, and reloads', async () => {
   const fetchMock = fakeApi((method) =>
-    method === 'POST' ? { status: 201, body: { category: AUDIO } } : undefined,
+    method === 'POST'
+      ? { status: 201, body: { category: { id: 'c9', name: 'Projectors', itemCount: 0 } } }
+      : undefined,
   );
   const user = userEvent.setup();
   renderApp('/inventory');
@@ -95,7 +132,7 @@ test('adding a category sends the name, confirms, clears the field, and reloads 
   await user.type(screen.getByLabelText('New category'), 'Projectors');
   await user.click(screen.getByRole('button', { name: 'Add category' }));
 
-  expect(await screen.findByText('Category added.')).toBeTruthy();
+  expect(await screen.findByText('Category "Projectors" added.')).toBeTruthy();
   expect(changeRequests(fetchMock)).toEqual([['POST', '/api/categories', { name: 'Projectors' }]]);
   expect((screen.getByLabelText('New category') as HTMLInputElement).value).toBe('');
   expect(categoryListLoads(fetchMock)).toBeGreaterThan(loadsBefore);
@@ -103,10 +140,11 @@ test('adding a category sends the name, confirms, clears the field, and reloads 
 
 test('an empty name is refused in the browser; a duplicate name shows the API error under the field', async () => {
   const message = 'A category named "Audio" already exists.';
-  const fetchMock = fakeApi(() => ({
-    status: 409,
-    body: apiError('DUPLICATE_VALUE', message, { fields: { name: [message] } }),
-  }));
+  const fetchMock = fakeApi((method) =>
+    method === 'POST'
+      ? { status: 409, body: apiError('DUPLICATE_VALUE', message, { fields: { name: [message] } }) }
+      : undefined,
+  );
   const user = userEvent.setup();
   renderApp('/inventory');
   await screen.findByRole('row', { name: /Audio/ });
@@ -122,54 +160,68 @@ test('an empty name is refused in the browser; a duplicate name shows the API er
   expect(field.getAttribute('aria-invalid')).toBe('true');
 });
 
-test('renaming fills the field with the current name, sends PUT, and returns to adding', async () => {
+test('Rename opens a dialog with the name filled in and focused; Enter saves and focus returns to Rename', async () => {
   const fetchMock = fakeApi((method) =>
     method === 'PUT' ? { status: 200, body: { category: { ...AUDIO, name: 'Sound' } } } : undefined,
   );
   const user = userEvent.setup();
   renderApp('/inventory');
 
-  await user.click(await screen.findByRole('button', { name: 'Rename Audio' }));
-  const field = screen.getByLabelText('New name for Audio') as HTMLInputElement;
+  const renameButton = await screen.findByRole('button', { name: 'Rename Audio' });
+  await user.click(renameButton);
+  const dialog = screen.getByRole('dialog', { name: 'Rename Audio' });
+  const field = within(dialog).getByLabelText('New name') as HTMLInputElement;
   expect(field.value).toBe('Audio');
   expect(document.activeElement).toBe(field);
 
   await user.clear(field);
-  await user.type(field, 'Sound');
-  await user.click(screen.getByRole('button', { name: 'Save name' }));
+  await user.type(field, 'Sound{Enter}');
 
-  expect(await screen.findByText('Category renamed.')).toBeTruthy();
+  expect(await screen.findByText('Category "Audio" renamed to "Sound".')).toBeTruthy();
   expect(changeRequests(fetchMock)).toEqual([['PUT', '/api/categories/c1', { name: 'Sound' }]]);
+  expect(screen.queryByRole('dialog')).toBeNull();
+  expect(document.activeElement).toBe(renameButton);
+  // The top form stays for adding.
   expect(screen.getByLabelText('New category')).toBeTruthy();
 });
 
-test('clicking Rename again on the same category moves focus back to the field and keeps the typing', async () => {
-  fakeApi();
+test('a duplicate name on rename shows the API error under the dialog field and keeps it open', async () => {
+  const message = 'A category named "Laptops" already exists.';
+  fakeApi((method) =>
+    method === 'PUT'
+      ? { status: 409, body: apiError('DUPLICATE_VALUE', message, { fields: { name: [message] } }) }
+      : undefined,
+  );
   const user = userEvent.setup();
   renderApp('/inventory');
 
   await user.click(await screen.findByRole('button', { name: 'Rename Audio' }));
-  const field = screen.getByLabelText('New name for Audio') as HTMLInputElement;
-  await user.type(field, ' gear');
-  await user.click(screen.getByRole('button', { name: 'Rename Audio' }));
+  const dialog = screen.getByRole('dialog', { name: 'Rename Audio' });
+  const field = within(dialog).getByLabelText('New name');
+  await user.clear(field);
+  await user.type(field, 'Laptops');
+  await user.click(within(dialog).getByRole('button', { name: 'Save name' }));
 
-  expect(document.activeElement).toBe(field);
-  expect(field.value).toBe('Audio gear');
+  expect(await within(dialog).findByText(message)).toBeTruthy();
+  expect(field.getAttribute('aria-invalid')).toBe('true');
+  expect(screen.getByRole('dialog', { name: 'Rename Audio' })).toBeTruthy();
 });
 
-test('Cancel stops renaming without sending anything', async () => {
+test('Cancel closes the rename dialog without sending anything and returns focus to Rename', async () => {
   const fetchMock = fakeApi();
   const user = userEvent.setup();
   renderApp('/inventory');
 
-  await user.click(await screen.findByRole('button', { name: 'Rename Audio' }));
+  const renameButton = await screen.findByRole('button', { name: 'Rename Audio' });
+  await user.click(renameButton);
   await user.click(screen.getByRole('button', { name: 'Cancel' }));
 
-  expect((screen.getByLabelText('New category') as HTMLInputElement).value).toBe('');
+  expect(screen.queryByRole('dialog')).toBeNull();
+  expect(document.activeElement).toBe(renameButton);
   expect(changeRequests(fetchMock)).toEqual([]);
 });
 
-test('delete asks first, then deletes; a HAS_HISTORY refusal is shown as a notification', async () => {
+test('delete asks first, then deletes and focuses the name field; a HAS_HISTORY refusal is shown as a notification', async () => {
   let refuse = false;
   const fetchMock = fakeApi((method) => {
     if (method !== 'DELETE') return undefined;
@@ -186,8 +238,12 @@ test('delete asks first, then deletes; a HAS_HISTORY refusal is shown as a notif
   const dialog = screen.getByRole('dialog', { name: 'Delete category?' });
   expect(within(dialog).getByText('Audio will be deleted. This cannot be undone.')).toBeTruthy();
   await user.click(within(dialog).getByRole('button', { name: 'Delete category' }));
-  expect(await screen.findByText('Category deleted.')).toBeTruthy();
+  expect(await screen.findByText('Category "Audio" deleted.')).toBeTruthy();
   expect(changeRequests(fetchMock)).toEqual([['DELETE', '/api/categories/c1', undefined]]);
+  // Its row is gone, so focus goes to the name field instead of the page start.
+  await vi.waitFor(() =>
+    expect(document.activeElement).toBe(screen.getByLabelText('New category')),
+  );
 
   // Someone added an item to it after the list loaded: the server refuses (BR 15).
   refuse = true;
@@ -196,4 +252,17 @@ test('delete asks first, then deletes; a HAS_HISTORY refusal is shown as a notif
   expect(
     await screen.findByText('This category is used by items, so it cannot be deleted.'),
   ).toBeTruthy();
+});
+
+test('the first Tab reaches a "Skip to main content" link that targets the main area', async () => {
+  fakeApi();
+  const user = userEvent.setup();
+  renderApp('/inventory');
+  await screen.findByRole('table', { name: 'Categories' });
+
+  await user.tab();
+  const skip = screen.getByRole('link', { name: 'Skip to main content' });
+  expect(document.activeElement).toBe(skip);
+  expect(skip.getAttribute('href')).toBe('#main');
+  expect(screen.getByRole('main').id).toBe('main');
 });
