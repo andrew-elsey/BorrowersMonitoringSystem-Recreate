@@ -321,3 +321,23 @@ Strike levels (thresholds come from settings, BR 11) differ in lightness and lab
 The app does not use the college logo, because the project has no license for it. The top bar and login screen show the app name with a generic icon.
 
 Font: the system font stack, `"Segoe UI Variable", "Segoe UI", system-ui, sans-serif`, set as Tailwind's `--font-sans`. The department PC runs Windows 11, which ships Segoe UI Variable, so nothing is downloaded and the app works without internet access. Body text is at least 16px.
+
+### 14.1 Approved screen designs
+
+Every screen follows an owner-approved mockup. Open the mockup before building or changing a screen, and match its layout, states, and wording. The mockups are private claude.ai pages, readable by the owner and by Claude Code sessions in the owner's account (Artifact tool, `read` action).
+
+| Mockup | Screens | Tickets |
+|---|---|---|
+| [Sign-in screens](https://claude.ai/artifact/V5rxz4djYHtTg1yDyEW87b) (approved 2026-10-31) | Login, app shell and home, change password, not allowed | AUTH-4 |
+| [All other screens](https://claude.ai/artifact/9FampTJnZj8twygeqD8iao) (approved 2026-11-01) | Dashboard; Checkout; Return; Flag review; Inventory and categories; Borrowers; Rooms and labs; Users; Settings and semesters; Reports; Audit log | RPT-1, BRW-3, FLG-3, BRW-5, BRW-6, FLG-4, FLG-2, MD-2, MD-1, MD-5, MD-6, MD-3, AUTH-3, MD-7, RPT-2, RPT-3, RPT-4, HRD-1 |
+
+Decisions the owner made with the second mockup:
+
+- Notes on open lines are edited on the Return screen only. The Dashboard only shows them.
+- "Run flagging now" is on Flag review, asks for confirmation, and shows the API's refusal when pressed again within a minute.
+- New users get a starting password typed by the admin, who tells the user in person. The user changes it on the Change password screen. No forced change at first sign-in.
+- The audit sweep in HRD-1 is a script and a test, not a screen.
+- The usage summary (RPT-4) uses bar charts. ARCHITECTURE section 2 names no chart library, so adding one needs the owner's approval. The mockup's light and dark chart switch is ignored: the app has light colors only.
+- The banner and message wording in the mockup is approved as written.
+
+The rules in this document and `BUSINESS_RULES.md` win over a mockup. If a ticket's acceptance criteria and a mockup disagree, ask the owner.

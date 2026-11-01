@@ -4,6 +4,7 @@ import { createMemoryRouter, RouterProvider } from 'react-router';
 import { vi } from 'vitest';
 import { routes } from './App';
 import { AuthProvider, createQueryClient, type SignedInUser } from './auth';
+import { NotificationProvider } from './components/Notifications';
 
 export const HANDLER: SignedInUser = {
   id: 'u1',
@@ -41,7 +42,9 @@ export function renderApp(path = '/') {
   render(
     <QueryClientProvider client={createQueryClient()}>
       <AuthProvider>
-        <RouterProvider router={router} />
+        <NotificationProvider>
+          <RouterProvider router={router} />
+        </NotificationProvider>
       </AuthProvider>
     </QueryClientProvider>,
   );
