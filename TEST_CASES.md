@@ -35,12 +35,12 @@ Paths are shortened: `api/` is `apps/api/tests/`, `web/` is `apps/web/src/pages/
 | TC-FND-15 | FND-3 | BR 14 | integration | Make a change with `audit(tx, ...)`; make a change that fails after auditing; audit a system action | Entry written with the change; rolled back with a failed change; null actor allowed | `api/audit.test.ts` |
 | TC-FND-16 | FND-3 | SPEC 4 | unit | Compare each shared enum with the Prisma schema | They match | `api/enums.test.ts` |
 | TC-FND-17 | FND-4 | ARCH 5 | integration | Run the seed with `ADMIN_USERNAME` and `ADMIN_PASSWORD` | First admin, default settings, sample categories, rooms, items of both types, borrowers, and a current semester exist; every record is audited without the hash | `api/seed.test.ts` |
-| TC-FND-18 | FND-4 | ARCH 5 | integration | Run the seed twice | Nothing duplicated or overwritten | `api/seed.test.ts` |
+| TC-FND-18 | FND-4 | ARCH 5 | integration | Run the seed twice | Nothing duplicated or overwritten | `api/seed.test.ts`, `api/qa-md1-seed-rerun.test.ts` (after a case-only rename of a sample category) |
 | TC-FND-19 | FND-4 | ARCH 5 | integration | Run the seed without admin credentials or with a too-short password | It fails with a clear message | `api/seed.test.ts` |
 | TC-FND-20 | FND-4 | ARCH 5 | integration | Run the seed in production mode | Only the admin and settings are created; no QA accounts | `api/seed.test.ts` |
 | TC-FND-21 | FND-4 | ARCH 12.4 | integration | `admin:reset-password` for a known user, an unknown user, and with a short password | Known: reset and audited without the hash; unknown and short: refused, old password kept | `api/admin-reset-password.test.ts` |
 | TC-FND-22 | FND-5 | SPEC 8, ARCH 7 | component | Submit a form field with an invalid value, then with a field error returned in the API `details` | Both errors show inline next to the field | `web/components/Field.test.tsx` |
-| TC-FND-23 | FND-5 | SPEC 8 | component | Use each shared component with the keyboard only and query it by label | Every control has a label and works with the keyboard | `web/components/Field.test.tsx`, `web/components/DataTable.test.tsx`, `web/components/ConfirmDialog.test.tsx`, `web/components/Notifications.test.tsx` |
+| TC-FND-23 | FND-5 | SPEC 8 | component | Use each shared component with the keyboard only and query it by label | Every control has a label and works with the keyboard | `web/components/Field.test.tsx`, `web/components/DataTable.test.tsx`, `web/components/ConfirmDialog.test.tsx`, `web/components/FormDialog.test.tsx`, `web/components/Notifications.test.tsx` |
 | TC-FND-24 | FND-5 | SPEC 7 | component | Render the data table loading, with zero rows, and with more rows than one page | Loading state, empty state, and pagination all show | `web/components/DataTable.test.tsx` |
 | TC-FND-25 | FND-5 | SPEC 5 | component | Start a destructive action, cancel, then confirm | Cancel does nothing; confirm runs the action | `web/components/ConfirmDialog.test.tsx` |
 | TC-FND-26 | FND-5 | ARCH 7 | component | Trigger a success and an API error | Success notification; error notification shows the API error `message` | `web/components/Notifications.test.tsx` |
@@ -93,9 +93,9 @@ Paths are shortened: `api/` is `apps/api/tests/`, `web/` is `apps/web/src/pages/
 
 | ID | Ticket | Rule | Level | Steps | Expected | Automated by |
 |---|---|---|---|---|---|---|
-| TC-MD-01 | MD-1 | BR 14 | integration | Admin creates and renames a category | Saved and audited | `api/categories.test.ts` |
-| TC-MD-02 | MD-1 | BR 15 | integration | Admin deletes an unused category, then one in use | Unused: deleted; in use: `HAS_HISTORY` | `api/categories.test.ts` |
-| TC-MD-03 | MD-1 | SPEC 3 | integration | Handler creates a category | 403 | `api/categories.test.ts` |
+| TC-MD-01 | MD-1 | BR 14 | integration | Admin creates and renames a category | Saved and audited | `api/categories.test.ts`, `api/qa-md1-gaps.test.ts`, `web/InventoryPage.test.tsx` |
+| TC-MD-02 | MD-1 | BR 15 | integration | Admin deletes an unused category, then one in use | Unused: deleted; in use: `HAS_HISTORY` | `api/categories.test.ts`, `api/qa-md1-gaps.test.ts` |
+| TC-MD-03 | MD-1 | SPEC 3 | integration | Handler creates a category | 403 | `api/categories.test.ts`, `api/qa-md1-gaps.test.ts` (signed out: 401 on every endpoint) |
 | TC-MD-04 | MD-2 | SPEC 4 | integration | Create a UNIT item without an asset tag, with a duplicate asset tag, with quantity other than 1 | Each rejected with `VALIDATION_ERROR` or `DUPLICATE_VALUE` | not yet |
 | TC-MD-05 | MD-2 | SPEC 4 | integration | Create a QUANTITY item with an asset tag, with a negative quantity; then with quantity 0 | First two rejected; quantity 0 accepted | not yet |
 | TC-MD-06 | MD-2 | SPEC 4, 7 | integration | Search and filter items by name, category, status, and tracking type with `pageSize=100` and `101` | Filters work; 100 allowed, 101 rejected | not yet |
@@ -116,7 +116,9 @@ Paths are shortened: `api/` is `apps/api/tests/`, `web/` is `apps/web/src/pages/
 | TC-MD-21 | MD-7 | SPEC 4 | integration | Admin creates semesters and sets one current, then another | Exactly one is current; audited | not yet |
 | TC-MD-22 | MD-7 | SPEC 4 | integration | Save thresholds 4, 3, 5 and 3, 3, 5 | Rejected (warning < notice < block) | not yet |
 | TC-MD-23 | MD-7 | CLAUDE.md rule 3 | integration | Change closing time and thresholds | Saved and audited; checkout and flagging read the new values | not yet |
-| TC-MD-24 | MD-1 | SPEC 4 | integration | Create "audio" when "Audio" exists; rename another category to "AUDIO"; rename "Audio" to "AUDIO" | First two: `DUPLICATE_VALUE`; changing its own case is saved | `api/categories.test.ts` |
+| TC-MD-24 | MD-1 | SPEC 4 | integration | Create "audio" when "Audio" exists; rename another category to "AUDIO"; rename "Audio" to "AUDIO" | First two: `DUPLICATE_VALUE`; changing its own case is saved | `api/categories.test.ts`, `api/qa-md1-gaps.test.ts` |
+| TC-MD-25 | MD-1 | SPEC 5 | component | Open Inventory and categories while the categories API fails (500 or down), then press Retry | An error message and a Retry button, no "No categories yet." and no row count; Retry loads the list again | `web/InventoryPage.test.tsx` |
+| TC-MD-26 | MD-1 | SPEC 8 | component | With the keyboard only: Rename a category from its row, save with Enter; Rename again and press Escape; Tab to Delete on a category in use | The dialog opens with the name filled in and focused; Enter saves; Escape closes without saving; focus returns to the row Rename button; the in-use Delete is focusable, does nothing, and reads "Used by N items" | `web/InventoryPage.test.tsx`, `web/components/FormDialog.test.tsx` |
 
 ## BRW: Borrowing
 

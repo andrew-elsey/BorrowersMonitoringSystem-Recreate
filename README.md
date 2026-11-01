@@ -96,7 +96,7 @@ const save = useMutation({
 
 ### Data table
 
-`DataTable` shows one page from a list endpoint (`{ data, page, pageSize, total }`, ARCHITECTURE section 7) with loading and empty states and Previous and Next buttons. Keep the page number in state and pass it to the query; page size is at most 100 (SPEC section 7).
+`DataTable` shows one page from a list endpoint (`{ data, page, pageSize, total }`, ARCHITECTURE section 7) with loading and empty states and Previous and Next buttons. The row count is hidden while loading or empty, and a page change moves focus to the table. When the query fails, show an `Alert` with the error and a Retry button instead of the table, so a failed load does not look like an empty list. Keep the page number in state and pass it to the query; page size is at most 100 (SPEC section 7).
 
 ```tsx
 <DataTable
@@ -129,6 +129,31 @@ const save = useMutation({
   {toDelete?.name} will be deleted. This cannot be undone.
 </ConfirmDialog>
 ```
+
+### Form dialog
+
+`FormDialog` edits a record in a modal dialog opened from its table row: renaming a category now, and editing items, rooms, and borrowers later. The children are the fields of a React Hook Form form. The browser focuses the first field when it opens, Enter saves, Escape and Cancel close it, and focus goes back to the row button that opened it. Both buttons are disabled while `isPending` is true. Reset the form with the record before opening it, and send API errors to the fields with `showApiFieldErrors`.
+
+```tsx
+const editForm = useForm<CategoryInput>({ resolver: zodResolver(categorySchema) });
+function startRenaming(category: Category) {
+  editForm.reset({ name: category.name });
+  setToRename(category);
+}
+
+<FormDialog
+  open={toRename !== null}
+  title={`Rename ${toRename?.name}`}
+  submitLabel="Save name"
+  onSubmit={editForm.handleSubmit((input) => rename.mutate(input))}
+  onCancel={() => setToRename(null)}
+  isPending={rename.isPending}
+>
+  <Field id="new-name" label="New name" error={editForm.formState.errors.name?.message} {...editForm.register('name')} />
+</FormDialog>
+```
+
+`ConfirmDialog` and `FormDialog` share the modal shell in `Dialog.tsx`. In component tests, call `emulateModalDialogs` from `test-utils.tsx` in `beforeAll`: jsdom has no modal dialogs, and it acts like a browser's `showModal()` and `close()`.
 
 ### Notifications
 
