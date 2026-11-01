@@ -93,9 +93,9 @@ Paths are shortened: `api/` is `apps/api/tests/`, `web/` is `apps/web/src/pages/
 
 | ID | Ticket | Rule | Level | Steps | Expected | Automated by |
 |---|---|---|---|---|---|---|
-| TC-MD-01 | MD-1 | BR 14 | integration | Admin creates and renames a category | Saved and audited | not yet |
-| TC-MD-02 | MD-1 | BR 15 | integration | Admin deletes an unused category, then one in use | Unused: deleted; in use: `HAS_HISTORY` | not yet |
-| TC-MD-03 | MD-1 | SPEC 3 | integration | Handler creates a category | 403 | not yet |
+| TC-MD-01 | MD-1 | BR 14 | integration | Admin creates and renames a category | Saved and audited | `api/categories.test.ts` |
+| TC-MD-02 | MD-1 | BR 15 | integration | Admin deletes an unused category, then one in use | Unused: deleted; in use: `HAS_HISTORY` | `api/categories.test.ts` |
+| TC-MD-03 | MD-1 | SPEC 3 | integration | Handler creates a category | 403 | `api/categories.test.ts` |
 | TC-MD-04 | MD-2 | SPEC 4 | integration | Create a UNIT item without an asset tag, with a duplicate asset tag, with quantity other than 1 | Each rejected with `VALIDATION_ERROR` or `DUPLICATE_VALUE` | not yet |
 | TC-MD-05 | MD-2 | SPEC 4 | integration | Create a QUANTITY item with an asset tag, with a negative quantity; then with quantity 0 | First two rejected; quantity 0 accepted | not yet |
 | TC-MD-06 | MD-2 | SPEC 4, 7 | integration | Search and filter items by name, category, status, and tracking type with `pageSize=100` and `101` | Filters work; 100 allowed, 101 rejected | not yet |
