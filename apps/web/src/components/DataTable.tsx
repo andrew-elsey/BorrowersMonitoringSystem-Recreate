@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react';
+import { useEffect, type ReactNode } from 'react';
 
 // A paginated table for list screens. The page passes one page of rows from a list endpoint
 // ({ data, page, pageSize, total }, ARCHITECTURE.md 7) and loads another page on onPageChange.
@@ -24,6 +24,12 @@ export function DataTable<T>(props: DataTableProps<T>) {
   const first = total === 0 ? 0 : (page - 1) * pageSize + 1;
   const last = Math.min(page * pageSize, total);
 
+  // After deleting the only row on the last page, that page no longer exists: show the new last one.
+  const { onPageChange } = props;
+  useEffect(() => {
+    if (!isLoading && page > pageCount) onPageChange(pageCount);
+  }, [isLoading, page, pageCount, onPageChange]);
+
   return (
     <div className="flex flex-col gap-3">
       <div className="overflow-x-auto rounded-xl border border-divider bg-surface">
@@ -31,8 +37,8 @@ export function DataTable<T>(props: DataTableProps<T>) {
           <caption className="sr-only">{props.caption}</caption>
           <thead>
             <tr className="border-b border-divider bg-page">
-              {columns.map((column) => (
-                <th key={column.header} scope="col" className="px-4 py-3 font-semibold">
+              {columns.map((column, i) => (
+                <th key={i} scope="col" className="px-4 py-3 font-semibold">
                   {column.header}
                 </th>
               ))}
@@ -48,8 +54,8 @@ export function DataTable<T>(props: DataTableProps<T>) {
             ) : (
               rows.map((row) => (
                 <tr key={props.rowKey(row)} className="border-b border-divider last:border-b-0">
-                  {columns.map((column) => (
-                    <td key={column.header} className="px-4 py-3">
+                  {columns.map((column, i) => (
+                    <td key={i} className="px-4 py-3">
                       {column.cell(row)}
                     </td>
                   ))}

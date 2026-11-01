@@ -79,6 +79,11 @@ test('pages forward and back, with the buttons disabled at each end (TC-FND-24)'
   expect(onLastPage).toHaveBeenCalledWith(2);
 });
 
+test('a page past the end (after deleting its last row) moves to the new last page', () => {
+  const onPageChange = renderTable({ rows: [], page: 3, pageSize: 25, total: 50 });
+  expect(onPageChange).toHaveBeenCalledWith(2);
+});
+
 test('the page buttons work from the keyboard (TC-FND-23)', async () => {
   const user = userEvent.setup();
   const onPageChange = renderTable({ page: 2, pageSize: 25, total: 60 });
