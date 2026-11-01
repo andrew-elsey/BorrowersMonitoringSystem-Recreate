@@ -60,6 +60,13 @@ test('Escape cancels (TC-FND-23)', () => {
   expect(onCancel).toHaveBeenCalledTimes(1);
 });
 
+test('a dialog the browser closes on its own tells the parent', () => {
+  const { onCancel } = renderDialog();
+  // Chrome closes the dialog without "cancel" when Escape is pressed twice in a row.
+  fireEvent(screen.getByRole('dialog'), new Event('close'));
+  expect(onCancel).toHaveBeenCalledTimes(1);
+});
+
 test('while the request runs, both buttons are disabled so it is sent once', () => {
   const { onCancel } = renderDialog({ isPending: true });
   expect(screen.getByRole('button', { name: 'Delete category' }).hasAttribute('disabled')).toBe(

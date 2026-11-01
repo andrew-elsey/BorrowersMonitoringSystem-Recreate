@@ -35,6 +35,11 @@ export function ConfirmDialog(props: ConfirmDialogProps) {
         event.preventDefault();
         if (!props.isPending) props.onCancel();
       }}
+      // Chrome closes the dialog itself on a second Escape, skipping "cancel". Tell the parent,
+      // or it keeps `open` true and the dialog can never be opened again.
+      onClose={() => {
+        if (props.open) props.onCancel();
+      }}
       className="m-auto w-[min(440px,calc(100vw-32px))] rounded-xl border border-divider bg-surface p-6 text-ink backdrop:bg-ink/40"
     >
       {/* Rendered only while open, so autoFocus on Cancel runs each time the dialog opens. */}
