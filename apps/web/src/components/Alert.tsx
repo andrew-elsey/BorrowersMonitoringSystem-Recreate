@@ -16,7 +16,15 @@ const KINDS = {
   },
 } as const;
 
-export function Alert({ kind, children }: { kind: keyof typeof KINDS; children: ReactNode }) {
+export function Alert({
+  kind,
+  children,
+  onDismiss,
+}: {
+  kind: keyof typeof KINDS;
+  children: ReactNode;
+  onDismiss?: () => void;
+}) {
   const { role, icon, className } = KINDS[kind];
   return (
     <div
@@ -24,7 +32,16 @@ export function Alert({ kind, children }: { kind: keyof typeof KINDS; children: 
       className={`flex items-start gap-2.5 rounded-lg border px-3.5 py-3 text-[15px] leading-normal ${className}`}
     >
       {icon}
-      <span>{children}</span>
+      <span className="flex-1">{children}</span>
+      {onDismiss && (
+        <button
+          type="button"
+          onClick={onDismiss}
+          className="-my-1 cursor-pointer rounded px-2 py-1 text-sm font-semibold underline-offset-4 hover:underline"
+        >
+          Dismiss
+        </button>
+      )}
     </div>
   );
 }
