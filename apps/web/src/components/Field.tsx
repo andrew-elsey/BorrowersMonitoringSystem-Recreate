@@ -25,6 +25,8 @@ function FieldShell({
       {(error || hint) && (
         <p
           id={`${id}-message`}
+          // An error is announced when it appears, even if focus is already on the field (FND-7).
+          role={error ? 'alert' : undefined}
           className={`text-sm leading-normal ${error ? 'text-danger' : 'text-muted'}`}
         >
           {error ?? hint}
@@ -122,15 +124,18 @@ export function fieldErrorsAllShown(error: unknown, shownFields: readonly string
   return names.length > 0 && names.every((name) => shownFields.includes(name));
 }
 
-// Puts the API's field errors next to the fields the form shows. Returns false when some error
-// has no field (or there are none), so the caller also shows the error message.
+// Puts the API's field errors next to the fields the form shows, and moves focus to the first of
+// them in form order, as a browser-side error does (FND-7). Returns false when some error has no
+// field (or there are none), so the caller also shows the error message.
 export function showApiFieldErrors<T extends FieldValues>(
   setError: UseFormSetError<T>,
   error: unknown,
   shownFields: readonly Path<T>[],
 ): boolean {
-  for (const [name, message] of Object.entries(fieldErrors(error))) {
-    if ((shownFields as readonly string[]).includes(name)) setError(name as Path<T>, { message });
-  }
+  const errors = fieldErrors(error);
+  const withError = shownFields.filter((name) => name in errors);
+  withError.forEach((name, index) =>
+    setError(name, { message: errors[name] }, { shouldFocus: index === 0 }),
+  );
   return fieldErrorsAllShown(error, shownFields);
 }

@@ -79,7 +79,7 @@ Building blocks for the screens, in `apps/web/src/components/` (FND-5). Use thes
 
 ### Form fields
 
-`Field` (input), `SelectField`, and `TextAreaField` take a label, an optional hint, an error, and React Hook Form's `register()` props. Validate with the shared Zod schema from `@bms/shared`, and send the API's field errors back to the form with `showApiFieldErrors`. Give it the fields the form shows: the API reports nested errors under the top-level name (for example `lines`), and an error with no matching field must still reach the user as a notification.
+`Field` (input), `SelectField`, and `TextAreaField` take a label, an optional hint, an error, and React Hook Form's `register()` props. Validate with the shared Zod schema from `@bms/shared`, and send the API's field errors back to the form with `showApiFieldErrors`, which also moves focus to the first errored field. Field errors are announced to screen readers (`role="alert"`). Give it the fields the form shows: the API reports nested errors under the top-level name (for example `lines`), and an error with no matching field must still reach the user as a notification.
 
 ```tsx
 const form = useForm<RoomInput>({ resolver: zodResolver(roomSchema), defaultValues: { name: '' } });
