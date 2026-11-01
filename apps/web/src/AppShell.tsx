@@ -5,7 +5,10 @@ import { BoxIcon } from './components/icons';
 
 // The menu, in SPEC.md 5 order. Each item lists the roles that may open it (SPEC.md 3), and an item
 // is added only when its screen is built: Checkout, Return, and the rest join in their own tickets.
-const NAV_ITEMS = [{ to: '/', label: 'Home', roles: PERMISSIONS.viewDashboardAndReports }];
+const NAV_ITEMS = [
+  { to: '/', label: 'Home', roles: PERMISSIONS.viewDashboardAndReports },
+  { to: '/inventory', label: 'Inventory and categories', roles: PERMISSIONS.manageMasterData },
+];
 
 // Top bar elements sit on green, so their focus ring is gold (ARCHITECTURE.md 14).
 const onBarFocus = 'focus-visible:outline-accent';

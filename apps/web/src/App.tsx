@@ -5,6 +5,7 @@ import { AppShell } from './AppShell';
 import { useAuth } from './auth';
 import { ChangePasswordPage } from './pages/ChangePasswordPage';
 import { HomePage } from './pages/HomePage';
+import { InventoryPage } from './pages/InventoryPage';
 import { LoginPage } from './pages/LoginPage';
 import { NotAllowedPage } from './pages/NotAllowedPage';
 
@@ -46,6 +47,14 @@ export const routes: RouteObject[] = [
         element: (
           <RequireRole roles={PERMISSIONS.viewDashboardAndReports} pageName="Home">
             <HomePage />
+          </RequireRole>
+        ),
+      },
+      {
+        path: 'inventory',
+        element: (
+          <RequireRole roles={PERMISSIONS.manageMasterData} pageName="Inventory and categories">
+            <InventoryPage />
           </RequireRole>
         ),
       },
