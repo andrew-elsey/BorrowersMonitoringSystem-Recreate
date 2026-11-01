@@ -116,6 +116,7 @@ Paths are shortened: `api/` is `apps/api/tests/`, `web/` is `apps/web/src/pages/
 | TC-MD-21 | MD-7 | SPEC 4 | integration | Admin creates semesters and sets one current, then another | Exactly one is current; audited | not yet |
 | TC-MD-22 | MD-7 | SPEC 4 | integration | Save thresholds 4, 3, 5 and 3, 3, 5 | Rejected (warning < notice < block) | not yet |
 | TC-MD-23 | MD-7 | CLAUDE.md rule 3 | integration | Change closing time and thresholds | Saved and audited; checkout and flagging read the new values | not yet |
+| TC-MD-24 | MD-1 | SPEC 4 | integration | Create "audio" when "Audio" exists; rename another category to "AUDIO"; rename "Audio" to "AUDIO" | First two: `DUPLICATE_VALUE`; changing its own case is saved | `api/categories.test.ts` |
 
 ## BRW: Borrowing
 

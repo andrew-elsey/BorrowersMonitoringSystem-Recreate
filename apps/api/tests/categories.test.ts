@@ -5,7 +5,7 @@ import { hashPassword } from '../src/lib/password.ts';
 import { prisma } from '../src/lib/prisma.ts';
 import { resetDatabase } from './setup/reset-database.ts';
 
-// MD-1: categories CRUD. Test cases TC-MD-01 to TC-MD-03 in TEST_CASES.md.
+// MD-1: categories CRUD. Test cases TC-MD-01 to TC-MD-03 and TC-MD-24 in TEST_CASES.md.
 
 const PASSWORD = 'correct-horse-battery';
 let passwordHash: string;
@@ -172,6 +172,26 @@ test('a duplicate name gets DUPLICATE_VALUE on the name field, on create and on 
     ]);
   }
   expect(await prisma.auditLog.count()).toBe(0);
+});
+
+test('TC-MD-24: names are unique regardless of case; a category can change its own case (SPEC 4)', async () => {
+  const audio = await prisma.category.create({ data: { name: 'Audio' } });
+  const video = await prisma.category.create({ data: { name: 'Video' } });
+
+  for (const response of [
+    await post(admin, { name: 'audio' }),
+    await put(admin, video.id, { name: 'AUDIO' }),
+  ]) {
+    expect(response.status).toBe(409);
+    expect(response.body.error.code).toBe('DUPLICATE_VALUE');
+  }
+
+  await put(admin, audio.id, { name: 'AUDIO' }).expect(200);
+  const names = await prisma.category.findMany({
+    select: { name: true },
+    orderBy: { name: 'asc' },
+  });
+  expect(names).toEqual([{ name: 'AUDIO' }, { name: 'Video' }]);
 });
 
 test('an unknown id gets NOT_FOUND and a malformed id gets VALIDATION_ERROR', async () => {

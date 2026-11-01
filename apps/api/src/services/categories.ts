@@ -11,7 +11,8 @@ function toCategory(row: { id: string; name: string; _count: { items: number } }
   return { id: row.id, name: row.name, itemCount: row._count.items };
 }
 
-// Names are unique (SPEC.md 4). Reported as a field error, so the form shows it under the name.
+// Names are unique regardless of case (SPEC.md 4, index on lower(name)).
+// Reported as a field error, so the form shows it under the name.
 function duplicateName(name: string): ApiError {
   const message = `A category named "${name}" already exists.`;
   return new ApiError(409, 'DUPLICATE_VALUE', message, { fields: { name: [message] } });
