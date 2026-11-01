@@ -17,3 +17,9 @@ export class ApiError extends Error {
     this.details = details;
   }
 }
+
+// True when Prisma rejected a query with this error code, for example 'P2002' (a unique value is
+// already used) or 'P2003' (a foreign key still points at the row).
+export function isPrismaError(error: unknown, code: string): boolean {
+  return (error as { code?: unknown } | null)?.code === code;
+}
