@@ -50,3 +50,18 @@ export function renderApp(path = '/') {
   );
   return router;
 }
+
+// jsdom has no modal dialogs. This acts like a browser's showModal() and close(): it focuses the
+// first field or button inside, and on close puts focus back where it was when the dialog opened.
+export function emulateModalDialogs() {
+  const opener = new WeakMap<HTMLDialogElement, Element | null>();
+  HTMLDialogElement.prototype.showModal = function (this: HTMLDialogElement) {
+    opener.set(this, document.activeElement);
+    this.open = true;
+    this.querySelector<HTMLElement>('input, select, textarea, button')?.focus();
+  };
+  HTMLDialogElement.prototype.close = function (this: HTMLDialogElement) {
+    this.open = false;
+    (opener.get(this) as HTMLElement | null)?.focus();
+  };
+}
