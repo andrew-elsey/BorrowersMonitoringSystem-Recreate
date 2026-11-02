@@ -8,7 +8,10 @@ import { expect, test } from 'vitest';
 
 const API_ROOT = join(import.meta.dirname, '..');
 const ALLOWED = 'src/services/borrowers.ts';
-const BORROWER_QUERY = /\.borrower\.|\b(from|join|update|into)\s+"?borrowers\b/i;
+// shortcut: catches `include: { borrower: true }` but not a nested `borrower: { select: ... }`;
+// review relation reads by hand until a caller needs a stricter check.
+const BORROWER_QUERY =
+  /\.borrower\.|\bborrower\s*:\s*true\b|\b(from|join|update|into)\s+"?borrowers\b/i;
 
 function sourceFiles(dir: string): string[] {
   return readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
@@ -32,6 +35,7 @@ test('TC-MD-13: no code outside LocalBorrowerService queries the borrowers table
 test('the check catches a borrower query', () => {
   expect(BORROWER_QUERY.test('await prisma.borrower.findMany()')).toBe(true);
   expect(BORROWER_QUERY.test('SELECT * FROM "borrowers"')).toBe(true);
+  expect(BORROWER_QUERY.test('include: { borrower: true }')).toBe(true);
   expect(BORROWER_QUERY.test('// staff manage borrowers here')).toBe(false);
   expect(readFileSync(join(API_ROOT, ALLOWED), 'utf8')).toMatch(BORROWER_QUERY);
 });
