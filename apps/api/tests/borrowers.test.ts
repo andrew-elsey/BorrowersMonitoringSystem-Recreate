@@ -6,7 +6,8 @@ import { prisma } from '../src/lib/prisma.ts';
 import { borrowerService, updateBorrower } from '../src/services/borrowers.ts';
 import { resetDatabase } from './setup/reset-database.ts';
 
-// MD-5: borrowers CRUD and search. Test cases TC-MD-15 to TC-MD-17 and TC-MD-27 in TEST_CASES.md.
+// MD-5: borrowers CRUD and search. Test cases TC-MD-15 to TC-MD-17, TC-MD-27, and TC-MD-28 in
+// TEST_CASES.md.
 
 const PASSWORD = 'correct-horse-battery';
 let passwordHash: string;
@@ -176,6 +177,23 @@ test('TC-MD-16: search by name or school ID with 1, 2, and 101 characters; resul
   const all = await admin.get('/api/borrowers').expect(200);
   expect(all.body).toMatchObject({ page: 1, pageSize: 25, total: 3 });
   expect(names(all.body)).toEqual(['Ana Santos', 'Ben Reyes', 'Cora Santos']);
+
+  // The Type and Status filters (TC-MD-28), together and with q.
+  const filtered = await admin.get('/api/borrowers?type=STUDENT&active=false').expect(200);
+  expect(filtered.body).toMatchObject({ total: 1, data: [{ name: 'Cora Santos' }] });
+  expect(names((await admin.get('/api/borrowers?q=santos&active=true').expect(200)).body)).toEqual([
+    'Ana Santos',
+  ]);
+  for (const [field, query] of [
+    ['type', 'type=ALUMNI'],
+    ['type', 'type=student'],
+    ['active', 'active=yes'],
+    ['active', 'active=1'],
+  ] as const) {
+    const response = await admin.get(`/api/borrowers?${query}`).expect(400);
+    expect(response.body.error.code).toBe('VALIDATION_ERROR');
+    expect(response.body.error.details.fields[field]).toHaveLength(1);
+  }
 
   await admin.get(`/api/borrowers?q=${'a'.repeat(100)}`).expect(200);
   for (const q of ['a', 'a'.repeat(101), '', 'an%00']) {

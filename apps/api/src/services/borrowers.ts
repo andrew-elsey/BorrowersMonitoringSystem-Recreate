@@ -1,6 +1,7 @@
 import {
   type Borrower,
   type BorrowerInput,
+  type BorrowerListQuery,
   type BorrowerPage,
   type BorrowerUpdate,
   CONTROL_CHARACTER,
@@ -24,8 +25,9 @@ export interface BorrowerService {
   findById(id: string): Promise<Borrower | null>;
   // Matches name or school ID. `query` is 2 to 100 characters, `limit` 1 to 100 (SPEC.md 7).
   search(query: string, limit?: number): Promise<Borrower[]>;
-  // One page for the Borrowers screen: everyone, or those matching `q` (same bounds as search).
-  list(params: { q?: string; page: number; pageSize: number }): Promise<BorrowerPage>;
+  // One page for the Borrowers screen: everyone, or those matching `q` (same bounds as search),
+  // narrowed to one `type` and to active or inactive borrowers when those are given.
+  list(params: BorrowerListQuery): Promise<BorrowerPage>;
   // `reason` is the error code checkout should answer with, such as BORROWER_INACTIVE.
   isEligible(id: string): Promise<{ eligible: boolean; reason?: string }>;
 }
@@ -97,12 +99,12 @@ export class LocalBorrowerService implements BorrowerService {
   }
 
   // Like search, but paginated with a total. The route schema checks page and pageSize.
-  async list({ q, page, pageSize }: { q?: string; page: number; pageSize: number }) {
-    let where = {};
+  async list({ q, type, active, page, pageSize }: BorrowerListQuery) {
+    let where: Prisma.BorrowerWhereInput = { type, active };
     if (q !== undefined) {
       const text = q.trim();
       checkSearchBounds(text, pageSize);
-      where = matching(text);
+      where = { ...where, ...matching(text) };
     }
     const [data, total] = await prisma.$transaction([
       prisma.borrower.findMany({

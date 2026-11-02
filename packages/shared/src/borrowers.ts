@@ -35,5 +35,15 @@ export type BorrowerInput = z.infer<typeof borrowerSchema>;
 export const borrowerUpdateSchema = borrowerSchema.extend({ active: z.boolean() }).partial();
 export type BorrowerUpdate = z.infer<typeof borrowerUpdateSchema>;
 
-// GET /api/borrowers?q=&page=&pageSize=. BorrowerService checks q against the search bounds.
-export const borrowerListQuerySchema = pageQuerySchema.extend({ q: z.string().optional() });
+// GET /api/borrowers?q=&type=&active=&page=&pageSize=. BorrowerService checks q against the search
+// bounds. type and active are filters from the Borrowers screen; left out, they match everyone.
+export const borrowerListQuerySchema = pageQuerySchema.extend({
+  q: z.string().optional(),
+  type: z.enum(BorrowerType).optional(),
+  // Query strings are text: only "true" or "false" (z.coerce.boolean would read "false" as true).
+  active: z
+    .enum(['true', 'false'])
+    .transform((value) => value === 'true')
+    .optional(),
+});
+export type BorrowerListQuery = z.infer<typeof borrowerListQuerySchema>;
