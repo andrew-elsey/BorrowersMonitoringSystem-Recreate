@@ -8,8 +8,10 @@ import { expect, test } from 'vitest';
 
 const API_ROOT = join(import.meta.dirname, '..');
 const ALLOWED = 'src/services/borrowers.ts';
-// shortcut: catches `include: { borrower: true }` but not a nested `borrower: { select: ... }`;
-// review relation reads by hand until a caller needs a stricter check.
+// shortcut: a tripwire, not proof. It misses a nested `borrower: { select: ... }`, relation
+// filters (`where: { borrower: {...} }`), `prisma['borrower']`, a chain broken before `.findMany`,
+// schema-qualified SQL (`public.borrowers`) and SQL built from strings. Code review covers those;
+// tighten the pattern when reports (RPT tickets) start reading transactions with borrowers.
 const BORROWER_QUERY =
   /\.borrower\.|\bborrower\s*:\s*true\b|\b(from|join|update|into)\s+"?borrowers\b/i;
 
