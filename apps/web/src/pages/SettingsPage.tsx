@@ -124,6 +124,8 @@ function SettingsSection() {
               type="time"
               hint={settings.data.timezone}
               autoFocus={retried}
+              // Used once: a later reload after a background failure must not steal focus.
+              onFocus={() => setRetried(false)}
               error={errors.closingTime?.message}
               {...form.register('closingTime')}
             />

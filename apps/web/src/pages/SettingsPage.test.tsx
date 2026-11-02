@@ -1,4 +1,5 @@
 import type { Semester, Settings } from '@bms/shared';
+import { focusManager } from '@tanstack/react-query';
 import { cleanup, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeAll, expect, test, vi } from 'vitest';
@@ -226,4 +227,21 @@ test('TC-MD-25 / SPEC 8: after a failed load, a working Retry moves focus to the
   await vi.waitFor(() =>
     expect(document.activeElement).toBe(screen.getByLabelText('Closing time')),
   );
+
+  // The focus move happens once. A background reload (window focus) fails and hides the form;
+  // the next one works and shows it again, without taking focus from where the admin is.
+  const newName = screen.getByLabelText('New semester name');
+  await user.click(newName);
+  const refocusWindow = () => {
+    focusManager.setFocused(false);
+    focusManager.setFocused(true);
+  };
+  fail = true;
+  refocusWindow();
+  expect(await screen.findAllByRole('button', { name: 'Retry' })).toHaveLength(2);
+  fail = false;
+  refocusWindow();
+  expect(await screen.findByLabelText('Closing time')).toBeTruthy();
+  expect(document.activeElement).toBe(newName);
+  focusManager.setFocused(undefined);
 });
