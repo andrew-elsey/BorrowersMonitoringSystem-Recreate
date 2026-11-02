@@ -83,6 +83,8 @@ describe.each(implementations)('%s', (_name, makeService) => {
       active: true,
     });
     expect(await service.findById('00000000-0000-4000-8000-000000000000')).toBeNull();
+    // A malformed id is not found, the same in every implementation.
+    expect(await service.findById('abc')).toBeNull();
   });
 
   test('search matches name or school ID, ignoring case, sorted by name', async () => {

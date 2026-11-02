@@ -1,4 +1,5 @@
 import type { Borrower } from '@bms/shared';
+import { z } from 'zod';
 import { ApiError } from '../lib/errors.ts';
 import { prisma } from '../lib/prisma.ts';
 
@@ -17,9 +18,9 @@ export interface BorrowerService {
 }
 
 // Bounds from SPEC.md 7 (CLAUDE.md rule 12): search text 2 to 100 characters, at most 100 rows.
-export const SEARCH_MIN_LENGTH = 2;
-export const SEARCH_MAX_LENGTH = 100;
-export const SEARCH_MAX_LIMIT = 100;
+const SEARCH_MIN_LENGTH = 2;
+const SEARCH_MAX_LENGTH = 100;
+const SEARCH_MAX_LIMIT = 100;
 const SEARCH_DEFAULT_LIMIT = 25;
 
 // Only these columns leave the service, so callers never see local-only fields.
@@ -46,7 +47,9 @@ export function checkSearchBounds(query: string, limit: number): void {
 
 // Reads the local `borrowers` table.
 export class LocalBorrowerService implements BorrowerService {
-  findById(id: string): Promise<Borrower | null> {
+  async findById(id: string): Promise<Borrower | null> {
+    // PostgreSQL rejects a malformed uuid with an error; an id that cannot exist is simply not found.
+    if (!z.uuid().safeParse(id).success) return null;
     return prisma.borrower.findUnique({ where: { id }, select: borrowerFields });
   }
 
