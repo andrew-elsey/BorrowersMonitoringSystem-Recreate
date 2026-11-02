@@ -93,8 +93,8 @@ Paths are shortened: `api/` is `apps/api/tests/`, `web/` is `apps/web/src/pages/
 
 | ID | Ticket | Rule | Level | Steps | Expected | Automated by |
 |---|---|---|---|---|---|---|
-| TC-MD-01 | MD-1 | BR 14 | integration | Admin creates and renames a category | Saved and audited | `api/categories.test.ts`, `api/qa-md1-gaps.test.ts`, `web/InventoryPage.test.tsx` |
-| TC-MD-02 | MD-1 | BR 15 | integration | Admin deletes an unused category, then one in use | Unused: deleted; in use: `HAS_HISTORY` | `api/categories.test.ts`, `api/qa-md1-gaps.test.ts` |
+| TC-MD-01 | MD-1 | BR 14 | integration | Admin creates and renames a category | Saved and audited | `api/categories.test.ts`, `api/qa-md1-gaps.test.ts`, `web/InventoryPage.test.tsx`, `web/qa-md1-r3-gaps.test.tsx` (same-name rename: no toast; rename NOT_FOUND closes and reloads) |
+| TC-MD-02 | MD-1 | BR 15 | integration | Admin deletes an unused category, then one in use | Unused: deleted; in use: `HAS_HISTORY` | `api/categories.test.ts`, `api/qa-md1-gaps.test.ts`, `web/InventoryPage.test.tsx` (NOT_FOUND reloads the list) |
 | TC-MD-03 | MD-1 | SPEC 3 | integration | Handler creates a category | 403 | `api/categories.test.ts`, `api/qa-md1-gaps.test.ts` (signed out: 401 on every endpoint) |
 | TC-MD-04 | MD-2 | SPEC 4 | integration | Create a UNIT item without an asset tag, with a duplicate asset tag, with quantity other than 1 | Each rejected with `VALIDATION_ERROR` or `DUPLICATE_VALUE` | not yet |
 | TC-MD-05 | MD-2 | SPEC 4 | integration | Create a QUANTITY item with an asset tag, with a negative quantity; then with quantity 0 | First two rejected; quantity 0 accepted | not yet |
@@ -117,8 +117,8 @@ Paths are shortened: `api/` is `apps/api/tests/`, `web/` is `apps/web/src/pages/
 | TC-MD-22 | MD-7 | SPEC 4 | integration | Save thresholds 4, 3, 5 and 3, 3, 5 | Rejected (warning < notice < block) | not yet |
 | TC-MD-23 | MD-7 | CLAUDE.md rule 3 | integration | Change closing time and thresholds | Saved and audited; checkout and flagging read the new values | not yet |
 | TC-MD-24 | MD-1 | SPEC 4 | integration | Create "audio" when "Audio" exists; rename another category to "AUDIO"; rename "Audio" to "AUDIO" | First two: `DUPLICATE_VALUE`; changing its own case is saved | `api/categories.test.ts`, `api/qa-md1-gaps.test.ts` |
-| TC-MD-25 | MD-1 | SPEC 5 | component | Open Inventory and categories while the categories API fails (500 or down), then press Retry | An error message and a Retry button, no "No categories yet." and no row count; Retry loads the list again | `web/InventoryPage.test.tsx` |
-| TC-MD-26 | MD-1 | SPEC 8 | component | With the keyboard only: Rename a category from its row, save with Enter; Rename again and press Escape; Tab to Delete on a category in use | The dialog opens with the name filled in and focused; Enter saves; Escape closes without saving; focus returns to the row Rename button; the in-use Delete is focusable, does nothing, and reads "Used by N items" | `web/InventoryPage.test.tsx`, `web/components/FormDialog.test.tsx` |
+| TC-MD-25 | MD-1 | SPEC 5 | component | Open Inventory and categories while the categories API fails (500 or down), then press Retry | An error message and a Retry button, no "No categories yet." and no row count; Retry loads the list again | `web/InventoryPage.test.tsx` (focus moves to the name field after Retry), `web/qa-md1-r3-gaps.test.tsx` (API down) |
+| TC-MD-26 | MD-1 | SPEC 8 | component | With the keyboard only: Rename a category from its row, save with Enter; Rename again and press Escape; Tab to Delete on a category in use | The dialog opens with the name filled in and focused; Enter saves; Escape closes without saving; focus returns to the row Rename button; the in-use Delete is focusable, does nothing, and reads "Used by N items" | `web/InventoryPage.test.tsx`, `web/components/FormDialog.test.tsx`, `web/qa-md1-r3-gaps.test.tsx` (keyboard only), `web/components/qa-md1-r3-dialog-isolation.test.tsx` |
 
 ## BRW: Borrowing
 
