@@ -20,7 +20,7 @@ A web-based Inventory and Borrowing System for a college department. It tracks e
 | Capability | Admin | Handler | View-only |
 |---|---|---|---|
 | Check out and return items | yes | yes | no |
-| Add a room or lab at checkout | yes | yes | no |
+| Pick or add a room or lab at checkout (handlers see only active rooms) | yes | yes | no |
 | Add or edit a note on an open line | yes | yes | no |
 | Dashboard and reports | yes | yes | yes |
 | Manage inventory, categories, borrowers, rooms | yes | no | no |
