@@ -76,6 +76,8 @@ Adding a dependency outside this list needs the owner's approval.
   ```
 
   `LocalBorrowerService` reads the local `borrowers` table. Checkout, reports, and the CSV import use the interface. A future implementation for an external school database must be addable without editing callers. Keep a test double in the tests to prove it.
+
+  Built in MD-4 in `apps/api/src/services/borrowers.ts`. Callers import the `borrowerService` instance; swapping the implementation is the one line that creates it. The `Borrower` type (id, schoolId, name, type, department, active) is in `packages/shared`. `search` matches name or school ID (case-insensitive, sorted by name) and rejects text outside 2 to 100 characters or a `limit` outside 1 to 100 (default 25) with `VALIDATION_ERROR` (SPEC 7). `isEligible` returns `reason` as an error code: `NOT_FOUND` or `BORROWER_INACTIVE` (BR 3); `BORROWER_BLOCKED` (BR 11) is added in FLG-3. `apps/api/tests/borrower-reads.test.ts` fails if other api code queries the borrowers table (the seed only inserts sample rows and is not scanned).
 - Everything else uses Prisma directly. Do not build extra repository layers.
 - **Audit helper**: `audit(tx, { actorId, action, entity, entityId, before, after })` is called with the transaction client so the audit entry commits or rolls back with the change.
 
