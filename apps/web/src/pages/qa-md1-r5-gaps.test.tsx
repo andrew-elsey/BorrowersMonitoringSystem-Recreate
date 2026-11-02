@@ -40,7 +40,7 @@ test('a delete refused with HAS_HISTORY reloads the list, and the row then shows
     };
   });
   const user = userEvent.setup();
-  renderApp('/inventory');
+  renderApp('/inventory?tab=categories');
 
   await user.click(await screen.findByRole('button', { name: 'Delete Audio' }));
   const loadsBefore = listLoads(fetchMock);
@@ -58,7 +58,7 @@ test('an error notification sits in <main> above the heading, outside the table,
     return { status: 500, body: apiError('INTERNAL', 'Something went wrong.') };
   });
   const user = userEvent.setup();
-  renderApp('/inventory');
+  renderApp('/inventory?tab=categories');
 
   await user.click(await screen.findByRole('button', { name: 'Delete Audio' }));
   await user.click(screen.getByRole('button', { name: 'Delete category' }));
@@ -80,7 +80,7 @@ test('a notification raised just before navigating to another signed-in page is 
     return { status: 201, body: { category: { id: 'c9', name: 'Projectors', itemCount: 0 } } };
   });
   const user = userEvent.setup();
-  renderApp('/inventory');
+  renderApp('/inventory?tab=categories');
   await screen.findByRole('row', { name: /Audio/ });
 
   await user.type(screen.getByLabelText('New category'), 'Projectors');
@@ -107,7 +107,7 @@ test('a 401 on an Inventory action returns to login without crashing, and signin
     return { status: 401, body: apiError('UNAUTHENTICATED', 'Please sign in.') };
   });
   const user = userEvent.setup();
-  const router = renderApp('/inventory');
+  const router = renderApp('/inventory?tab=categories');
   await screen.findByRole('row', { name: /Audio/ });
 
   await user.type(screen.getByLabelText('New category'), 'Projectors');
@@ -120,6 +120,7 @@ test('a 401 on an Inventory action returns to login without crashing, and signin
 
   expect(await screen.findByRole('table', { name: 'Categories' })).toBeTruthy();
   expect(router.state.location.pathname).toBe('/inventory');
+  expect(router.state.location.search).toBe('?tab=categories');
 });
 
 test('TC-MD-24: changing only the case of a name is a real rename and shows the confirmation', async () => {
@@ -129,7 +130,7 @@ test('TC-MD-24: changing only the case of a name is a real rename and shows the 
     return { status: 200, body: { category: { ...AUDIO, name: 'AUDIO' } } };
   });
   const user = userEvent.setup();
-  renderApp('/inventory');
+  renderApp('/inventory?tab=categories');
 
   await user.click(await screen.findByRole('button', { name: 'Rename Audio' }));
   const field = within(screen.getByRole('dialog')).getByRole('textbox');
@@ -147,7 +148,7 @@ test('a rename that fails with a server error keeps the dialog open with the typ
     return { status: 500, body: apiError('INTERNAL', 'Something went wrong.') };
   });
   const user = userEvent.setup();
-  renderApp('/inventory');
+  renderApp('/inventory?tab=categories');
 
   await user.click(await screen.findByRole('button', { name: 'Rename Audio' }));
   const field = within(screen.getByRole('dialog')).getByRole('textbox') as HTMLInputElement;
@@ -165,7 +166,7 @@ test('TC-MD-25: a Retry that fails again keeps focus on Retry instead of jumping
     return { status: 500, body: apiError('INTERNAL', 'Something went wrong.') };
   });
   const user = userEvent.setup();
-  renderApp('/inventory');
+  renderApp('/inventory?tab=categories');
 
   const retry = await screen.findByRole('button', { name: 'Retry' });
   retry.focus();

@@ -132,7 +132,7 @@ const save = useMutation({
 
 ### Form dialog
 
-`FormDialog` edits a record in a modal dialog opened from its table row: renaming a category now, and editing items, rooms, and borrowers later. The children are the fields of a React Hook Form form. The browser focuses the first field when it opens, Enter saves, Escape and Cancel close it, and focus goes back to the row button that opened it. Both buttons are disabled while `isPending` is true. Reset the form with the record before opening it, and send API errors to the fields with `showApiFieldErrors`.
+`FormDialog` edits a record in a modal dialog opened from its table row: renaming a category, editing a borrower or an item, and rooms later. The children are the fields of a React Hook Form form. The browser focuses the first field when it opens, Enter saves, Escape and Cancel close it, and focus goes back to the row button that opened it. Both buttons are disabled while `isPending` is true. Reset the form with the record before opening it, and send API errors to the fields with `showApiFieldErrors`.
 
 ```tsx
 const editForm = useForm<CategoryInput>({ resolver: zodResolver(categorySchema) });

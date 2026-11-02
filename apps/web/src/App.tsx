@@ -16,7 +16,7 @@ function RequireSignIn({ children }: { children: ReactNode }) {
   const { user, signedOutOnPurpose } = useAuth();
   const location = useLocation();
   if (!user) {
-    const state = signedOutOnPurpose ? undefined : { from: location.pathname };
+    const state = signedOutOnPurpose ? undefined : { from: location.pathname + location.search };
     return <Navigate to="/login" replace state={state} />;
   }
   return children;

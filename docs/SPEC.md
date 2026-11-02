@@ -43,7 +43,7 @@ All domain tables use UUID primary keys and `created_at` / `updated_at` timestam
 
 **locations** (rooms and labs): name (unique, case-insensitive), active, created_by (user).
 
-**items**: name, category, description, tracking_type (`UNIT` or `QUANTITY`), asset_tag (unique, required for UNIT, null for QUANTITY), total_quantity (always 1 for UNIT), condition (`NEW`, `GOOD`, `FAIR`, `DAMAGED`), status (`ACTIVE`, `UNDER_REPAIR`, `LOST`, `RETIRED`).
+**items**: name, category, description, tracking_type (`UNIT` or `QUANTITY`, fixed once the item is created), asset_tag (unique, case-insensitive; stored as typed; required for UNIT, null for QUANTITY), total_quantity (always 1 for UNIT; 0 or more for QUANTITY), condition (`NEW`, `GOOD`, `FAIR`, `DAMAGED`), status (`ACTIVE`, `UNDER_REPAIR`, `LOST`, `RETIRED`).
 - Status describes the item's lifecycle, not whether it is currently out. "Borrowed" or "available" is always calculated from open transaction lines and never stored.
 
 **semesters**: name, start_date, end_date (dates in `Asia/Manila`), is_current (exactly one true at a time).
@@ -92,6 +92,7 @@ Enforced on the server in the shared Zod schemas and mirrored in the forms. They
 - JSON request body: 100 KB. CSV upload: 2 MB, one file, at most 5,000 rows.
 - Lists: page size at most 100. Search text: 2 to 100 characters.
 - Checkout: at most 50 lines per transaction. Quantity per line is a whole number from 1 to 10,000 and never above what is available.
+- Items: total quantity of a QUANTITY item is a whole number from 0 to 10,000.
 - Text fields: names 200 characters, descriptions 1,000, notes 500, override reasons 500 (required, at least 5 characters).
 - Reports: date range at most 366 days, results paginated or aggregated.
 - Audit log viewer: always filtered by a date range and paginated.

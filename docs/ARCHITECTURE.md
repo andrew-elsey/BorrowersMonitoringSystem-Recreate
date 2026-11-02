@@ -82,6 +82,7 @@ Adding a dependency outside this list needs the owner's approval.
 
   Writes (MD-5): `createBorrower` and `updateBorrower` (fields and `active`) are plain functions in the same file, because rule 1 lets only that file touch the table. They are not part of the interface: with an external school database that system owns the records, so they would be removed rather than reimplemented. Borrowers are never deleted (BR 15). Endpoints, admin only: `GET /api/borrowers?q=&type=&active=&page=&pageSize=` (calls `list`; optional filters `type` = `STUDENT`, `FACULTY`, or `EMPLOYEE` and `active` = `true` or `false`, anything else is `VALIDATION_ERROR`), `POST /api/borrowers` (`{ schoolId, name, type, department }`, 201 `{ borrower }`), `PATCH /api/borrowers/:id` (any of those fields and `active`, 200 `{ borrower }`). A school ID already in use is `DUPLICATE_VALUE` on the field `schoolId`; school IDs are unique regardless of case (`2026-A01` and `2026-a01` are the same borrower; a unique index on `lower(school_id)`, owner decision 2026-11-02) and stored as typed; a borrower may change only the case of its own school ID.
 - Everything else uses Prisma directly. Do not build extra repository layers.
+- Items (MD-2, `apps/api/src/services/items.ts`): `GET /api/items?q=&categoryId=&status=&trackingType=&page=&pageSize=` for all staff (`q` matches name or asset tag as plain text, 2 to 100 characters); for admins `POST /api/items` (201 `{ item }`), `PATCH /api/items/:id` (any field but `trackingType`, which is fixed and refused with `VALIDATION_ERROR`; retiring is `{ "status": "RETIRED" }`), and `DELETE /api/items/:id` (204; an item in any transaction line gets `HAS_HISTORY`, BR 15). The UNIT and QUANTITY rules are `trackingErrors` in `packages/shared`, used by the create schema and, against the stored item, by the update. A duplicate asset tag is `DUPLICATE_VALUE` on `assetTag` (unique index on `lower(asset_tag)`, owner decision 2026-11-03).
 - **Audit helper**: `audit(tx, { actorId, action, entity, entityId, before, after })` is called with the transaction client so the audit entry commits or rolls back with the change.
 
 ## 5. Authentication and authorization
@@ -142,10 +143,10 @@ Adding a dependency outside this list needs the owner's approval.
 ## 8. Data conventions
 
 - Enums are defined once in `packages/shared` and mirrored in the Prisma schema: roles, borrower types, item tracking type, item condition and status, return condition, flag status.
-- Constraints live in the database: unique asset tag, unique borrower school ID, unique room name (case-insensitive), non-negative quantities, `quantity_returned <= quantity_borrowed`, one current semester.
+- Constraints live in the database: unique asset tag (case-insensitive), unique borrower school ID, unique room name (case-insensitive), non-negative quantities, `quantity_returned <= quantity_borrowed`, one current semester.
 - Add indexes for: open lines by item, transactions by borrower and semester, lines by flag status, audit log by entity and date.
 - **Concurrency**: inside the checkout database transaction, lock the affected item rows (`SELECT ... FOR UPDATE` through `$queryRaw`) before re-checking availability (Rule 4).
-- Edits that audit a "before" value (`updateBorrower`, `renameCategory`) lock the row the same way before reading it, so two admins editing at once each audit the value their change really replaced (Rule 14).
+- Edits that audit a "before" value (`updateBorrower`, `renameCategory`, `updateItem`) lock the row the same way before reading it, so two admins editing at once each audit the value their change really replaced (Rule 14).
 - Deactivate or retire instead of deleting (Rule 15).
 
 ## 9. Scheduled job

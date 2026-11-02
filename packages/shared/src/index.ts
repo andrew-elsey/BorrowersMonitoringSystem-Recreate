@@ -4,3 +4,4 @@ export * from './auth.ts';
 export * from './permissions.ts';
 export * from './categories.ts';
 export * from './borrowers.ts';
+export * from './items.ts';

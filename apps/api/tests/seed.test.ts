@@ -88,6 +88,17 @@ test('stays safe to re-run after an admin changes the case of a sample school ID
   ).toBe(1);
 });
 
+test('stays safe to re-run after an admin changes the case of a sample asset tag (MD-2)', async () => {
+  await seed({ ...credentials, includeSampleData: true });
+  // What PATCH /api/items/:id { assetTag: 'lap-001' } does (allowed by TC-MD-29).
+  await prisma.item.updateMany({ where: { assetTag: 'LAP-001' }, data: { assetTag: 'lap-001' } });
+
+  expect(await seed({ ...credentials, includeSampleData: true })).toBe(0);
+  expect(
+    await prisma.item.count({ where: { assetTag: { equals: 'LAP-001', mode: 'insensitive' } } }),
+  ).toBe(1);
+});
+
 test('production seeds only the admin and settings', async () => {
   await seed({ ...credentials, includeSampleData: false });
   const counts = await countAll();
