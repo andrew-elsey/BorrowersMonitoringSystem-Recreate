@@ -40,15 +40,21 @@ async function duplicateName(name: string): Promise<ApiError> {
   return new ApiError(409, 'DUPLICATE_VALUE', message, { fields: { name: [message] } });
 }
 
-export async function listRooms(page: number, pageSize: number): Promise<RoomPage> {
+export async function listRooms(
+  page: number,
+  pageSize: number,
+  activeOnly: boolean,
+): Promise<RoomPage> {
+  const where = activeOnly ? { active: true } : {};
   const [rows, total] = await prisma.$transaction([
     prisma.location.findMany({
+      where,
       select: roomFields,
       orderBy: { name: 'asc' },
       skip: (page - 1) * pageSize,
       take: pageSize,
     }),
-    prisma.location.count(),
+    prisma.location.count({ where }),
   ]);
   return { data: rows.map(toRoom), page, pageSize, total };
 }

@@ -1,4 +1,4 @@
-import { pageQuerySchema, PERMISSIONS, roomSchema, roomUpdateSchema } from '@bms/shared';
+import { pageQuerySchema, PERMISSIONS, Role, roomSchema, roomUpdateSchema } from '@bms/shared';
 import { Router } from 'express';
 import { z } from 'zod';
 import { requireRole } from '../middleware/auth.ts';
@@ -13,9 +13,11 @@ const admin = requireRole(...PERMISSIONS.manageMasterData);
 export function createRoomsRouter() {
   const router = Router();
 
-  router.get('/rooms', admin, async (req, res) => {
+  // Admins see every room. Handlers need the list for the checkout room picker (SPEC.md 5) and
+  // see only active rooms, whatever the query says.
+  router.get('/rooms', requireRole(...PERMISSIONS.addLocationAtCheckout), async (req, res) => {
     const { page, pageSize } = pageQuerySchema.parse(req.query);
-    res.json(await listRooms(page, pageSize));
+    res.json(await listRooms(page, pageSize, req.session.role !== Role.ADMIN));
   });
 
   // The quick-add endpoint: admins and handlers may add a room (SPEC.md 3: add a room or lab at

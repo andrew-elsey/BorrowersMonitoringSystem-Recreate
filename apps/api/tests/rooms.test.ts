@@ -104,7 +104,7 @@ test('TC-MD-09: admin creates, renames, deactivates, and reactivates a room; eac
   expect(await auditFor(id)).toHaveLength(4);
 });
 
-test('TC-MD-10: a handler quick-adds a room with created_by set, but cannot list, edit, or delete (SPEC 3)', async () => {
+test('TC-MD-10: a handler quick-adds a room with created_by set, but cannot edit or delete (SPEC 3)', async () => {
   const handler = await signIn('hal');
   const created = await post(handler, { name: 'DL-104' }).expect(201);
   const { id } = created.body.room;
@@ -116,7 +116,6 @@ test('TC-MD-10: a handler quick-adds a room with created_by set, but cannot list
   expect(await auditFor(id)).toMatchObject([{ actorId: handlerId, action: 'LOCATION_CREATED' }]);
 
   for (const response of [
-    await handler.get('/api/rooms'),
     await patch(handler, id, { name: 'DL-105' }),
     await patch(handler, id, { active: false }),
     await del(handler, id),
@@ -128,6 +127,24 @@ test('TC-MD-10: a handler quick-adds a room with created_by set, but cannot list
     name: 'DL-104',
     active: true,
   });
+});
+
+test('TC-MD-30: a handler lists only active rooms, whatever the query says; admins see all (SPEC 3, 5)', async () => {
+  await room('CL-201');
+  const inactive = await room('CL-108');
+  await prisma.location.update({ where: { id: inactive.id }, data: { active: false } });
+  const handler = await signIn('hal');
+
+  for (const path of ['/api/rooms', '/api/rooms?active=false', '/api/rooms?page=1&pageSize=100']) {
+    const list = await handler.get(path).expect(200);
+    expect(list.body).toMatchObject({ total: 1, data: [{ name: 'CL-201', active: true }] });
+  }
+  const tooMany = await handler.get('/api/rooms?pageSize=101').expect(400);
+  expect(tooMany.body.error.code).toBe('VALIDATION_ERROR');
+
+  const all = await admin.get('/api/rooms').expect(200);
+  expect(all.body.data.map((row: { name: string }) => row.name)).toEqual(['CL-108', 'CL-201']);
+  expect(all.body.total).toBe(2);
 });
 
 test('a viewer cannot use any rooms endpoint; signed out gets 401', async () => {
