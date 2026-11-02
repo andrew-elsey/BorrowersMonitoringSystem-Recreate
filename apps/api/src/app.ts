@@ -6,6 +6,7 @@ import { getSessionMiddleware } from './lib/session.ts';
 import { requireFetchHeader } from './middleware/auth.ts';
 import { errorHandler } from './middleware/errors.ts';
 import { createAuthRouter } from './routes/auth.ts';
+import { createBorrowersRouter } from './routes/borrowers.ts';
 import { createCategoriesRouter } from './routes/categories.ts';
 import { healthRouter } from './routes/health.ts';
 
@@ -20,6 +21,7 @@ export function createApp() {
   app.use('/api', requireFetchHeader, getSessionMiddleware());
   app.use('/api', createAuthRouter());
   app.use('/api', createCategoriesRouter());
+  app.use('/api', createBorrowersRouter());
   // Unknown API paths get the standard error format too (CLAUDE.md rule 10), not Express's HTML page.
   app.use('/api', () => {
     throw new ApiError(404, 'NOT_FOUND', 'Not found.');
