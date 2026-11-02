@@ -12,6 +12,7 @@ import { Alert } from './Alert';
 
 // Success and error messages after an action, for example "Category saved." or the API's error
 // message. Messages stay until dismissed, so nobody misses one while busy at the counter.
+// AppShell mounts the provider inside <main>, so messages show at the top of every signed-in page.
 // Usage: const notify = useNotify(); notify.success('Category saved.'); notify.error(error);
 
 type Notify = { success: (text: string) => void; error: (error: unknown) => void };
@@ -46,21 +47,17 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
 
   return (
     <NotifyContext.Provider value={notify}>
-      {children}
-      {/* Fixed to the bottom of the screen, full width on a phone, narrow on a desktop. */}
-      {/* Always rendered, so screen readers announce messages added to it (aria-live). */}
-      <div
-        aria-live="polite"
-        className="fixed inset-x-4 bottom-4 z-10 flex flex-col gap-2 sm:left-auto sm:w-96"
-      >
+      {/* In the page flow above the page content, as in the approved mockup, so a message never */}
+      {/* covers a button. Always rendered, so screen readers announce messages added to it. */}
+      {/* empty:-mb-5 cancels the gap of AppShell's <main> while there is no message. */}
+      <div aria-live="polite" className="flex flex-col gap-2 empty:-mb-5">
         {notices.map((notice) => (
-          <div key={notice.id} className="shadow-lg">
-            <Alert kind={notice.kind} onDismiss={() => dismiss(notice.id)}>
-              {notice.text}
-            </Alert>
-          </div>
+          <Alert key={notice.id} kind={notice.kind} onDismiss={() => dismiss(notice.id)}>
+            {notice.text}
+          </Alert>
         ))}
       </div>
+      {children}
     </NotifyContext.Provider>
   );
 }

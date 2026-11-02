@@ -1,4 +1,4 @@
-import { useEffect, type ReactNode } from 'react';
+import { useEffect, useRef, type ReactNode } from 'react';
 
 // A paginated table for list screens. The page passes one page of rows from a list endpoint
 // ({ data, page, pageSize, total }, ARCHITECTURE.md 7) and loads another page on onPageChange.
@@ -21,8 +21,15 @@ type DataTableProps<T> = {
 export function DataTable<T>(props: DataTableProps<T>) {
   const { columns, rows, isLoading, page, pageSize, total } = props;
   const pageCount = Math.max(1, Math.ceil(total / pageSize));
-  const first = total === 0 ? 0 : (page - 1) * pageSize + 1;
+  const first = (page - 1) * pageSize + 1;
   const last = Math.min(page * pageSize, total);
+  const tableRef = useRef<HTMLTableElement>(null);
+
+  // The button just pressed may be disabled on the new page and lose focus, so focus the table.
+  function goToPage(newPage: number) {
+    props.onPageChange(newPage);
+    tableRef.current!.focus();
+  }
 
   // After deleting the only row on the last page, that page no longer exists: show the new last one.
   const { onPageChange } = props;
@@ -33,7 +40,12 @@ export function DataTable<T>(props: DataTableProps<T>) {
   return (
     <div className="flex flex-col gap-3">
       <div className="overflow-x-auto rounded-xl border border-divider bg-surface">
-        <table aria-busy={isLoading} className="w-full border-collapse text-left text-[15px]">
+        <table
+          ref={tableRef}
+          tabIndex={-1}
+          aria-busy={isLoading}
+          className="w-full border-collapse text-left text-[15px]"
+        >
           <caption className="sr-only">{props.caption}</caption>
           <thead>
             <tr className="border-b border-divider bg-page">
@@ -67,15 +79,18 @@ export function DataTable<T>(props: DataTableProps<T>) {
       </div>
 
       <nav aria-label="Pages" className="flex flex-wrap items-center justify-between gap-3">
-        <p className="text-sm text-muted">
-          Showing {first}–{last} of {total}
-        </p>
+        {/* Nothing to count while loading or empty: the table says so itself. */}
+        {!isLoading && total > 0 && (
+          <p className="text-sm text-muted">
+            Showing {first}–{last} of {total}
+          </p>
+        )}
         {pageCount > 1 && (
           <div className="flex items-center gap-2">
             <PageButton
               label="Previous"
               disabled={isLoading || page <= 1}
-              onClick={() => props.onPageChange(page - 1)}
+              onClick={() => goToPage(page - 1)}
             />
             <span className="text-sm">
               Page {page} of {pageCount}
@@ -83,7 +98,7 @@ export function DataTable<T>(props: DataTableProps<T>) {
             <PageButton
               label="Next"
               disabled={isLoading || page >= pageCount}
-              onClick={() => props.onPageChange(page + 1)}
+              onClick={() => goToPage(page + 1)}
             />
           </div>
         )}

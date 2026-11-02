@@ -58,7 +58,7 @@ test('shows a loading state and marks the table busy (TC-FND-24)', () => {
 test('shows the empty state when there are no rows (TC-FND-24)', () => {
   renderTable({ rows: [], total: 0 });
   expect(screen.getByText('No rooms yet.')).toBeTruthy();
-  expect(screen.getByText('Showing 0–0 of 0')).toBeTruthy();
+  expect(screen.queryByText(/Showing/)).toBeNull();
 });
 
 test('pages forward and back, with the buttons disabled at each end (TC-FND-24)', async () => {
@@ -92,4 +92,16 @@ test('the page buttons work from the keyboard (TC-FND-23)', async () => {
   expect(document.activeElement).toBe(screen.getByRole('button', { name: 'Previous' }));
   await user.keyboard('{Enter}');
   expect(onPageChange).toHaveBeenCalledWith(1);
+});
+
+test('hides the row count while loading, and focuses the table after a page change', async () => {
+  const user = userEvent.setup();
+  renderTable({ rows: undefined, isLoading: true, total: 0 });
+  expect(screen.queryByText(/Showing/)).toBeNull();
+  cleanup();
+
+  // On page 1 Previous is disabled, so focus must not stay on it (it would drop to the page start).
+  renderTable({ page: 2, pageSize: 25, total: 30 });
+  await user.click(screen.getByRole('button', { name: 'Previous' }));
+  expect(document.activeElement).toBe(screen.getByRole('table', { name: 'Rooms and labs' }));
 });

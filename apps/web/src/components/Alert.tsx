@@ -32,7 +32,8 @@ export function Alert({
       className={`flex items-start gap-2.5 rounded-lg border px-3.5 py-3 text-[15px] leading-normal ${className}`}
     >
       {icon}
-      <span className="flex-1">{children}</span>
+      {/* wrap-anywhere: a long name with no spaces in a message must not overflow the box. */}
+      <span className="flex-1 wrap-anywhere">{children}</span>
       {onDismiss && (
         <button
           type="button"

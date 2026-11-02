@@ -4,7 +4,6 @@ import { createMemoryRouter, RouterProvider } from 'react-router';
 import { vi } from 'vitest';
 import { routes } from './App';
 import { AuthProvider, createQueryClient, type SignedInUser } from './auth';
-import { NotificationProvider } from './components/Notifications';
 
 export const HANDLER: SignedInUser = {
   id: 'u1',
@@ -42,11 +41,24 @@ export function renderApp(path = '/') {
   render(
     <QueryClientProvider client={createQueryClient()}>
       <AuthProvider>
-        <NotificationProvider>
-          <RouterProvider router={router} />
-        </NotificationProvider>
+        <RouterProvider router={router} />
       </AuthProvider>
     </QueryClientProvider>,
   );
   return router;
+}
+
+// jsdom has no modal dialogs. This acts like a browser's showModal() and close(): it focuses the
+// first field or button inside, and on close puts focus back where it was when the dialog opened.
+export function emulateModalDialogs() {
+  const opener = new WeakMap<HTMLDialogElement, Element | null>();
+  HTMLDialogElement.prototype.showModal = function (this: HTMLDialogElement) {
+    opener.set(this, document.activeElement);
+    this.open = true;
+    this.querySelector<HTMLElement>('input, select, textarea, button')?.focus();
+  };
+  HTMLDialogElement.prototype.close = function (this: HTMLDialogElement) {
+    this.open = false;
+    (opener.get(this) as HTMLElement | null)?.focus();
+  };
 }

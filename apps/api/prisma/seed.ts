@@ -145,8 +145,12 @@ async function seedSampleData(
       skipDuplicates: true,
     }),
   );
-  const categories = await tx.category.findMany({ where: { name: { in: SAMPLE_CATEGORIES } } });
-  const categoryId = (name: string) => categories.find((category) => category.name === name)!.id;
+  // Names are unique regardless of case, so an admin may have changed a sample category's case.
+  const categories = await tx.category.findMany({
+    where: { name: { in: SAMPLE_CATEGORIES, mode: 'insensitive' } },
+  });
+  const categoryId = (name: string) =>
+    categories.find((category) => category.name.toLowerCase() === name.toLowerCase())!.id;
 
   // Room names are unique regardless of case, so existing rooms are skipped.
   count += await auditCreated(

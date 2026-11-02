@@ -2,10 +2,14 @@ import { PERMISSIONS } from '@bms/shared';
 import { NavLink, Outlet } from 'react-router';
 import { ROLE_LABELS, useAuth } from './auth';
 import { BoxIcon } from './components/icons';
+import { NotificationProvider } from './components/Notifications';
 
 // The menu, in SPEC.md 5 order. Each item lists the roles that may open it (SPEC.md 3), and an item
 // is added only when its screen is built: Checkout, Return, and the rest join in their own tickets.
-const NAV_ITEMS = [{ to: '/', label: 'Home', roles: PERMISSIONS.viewDashboardAndReports }];
+const NAV_ITEMS = [
+  { to: '/', label: 'Home', roles: PERMISSIONS.viewDashboardAndReports },
+  { to: '/inventory', label: 'Inventory and categories', roles: PERMISSIONS.manageMasterData },
+];
 
 // Top bar elements sit on green, so their focus ring is gold (ARCHITECTURE.md 14).
 const onBarFocus = 'focus-visible:outline-accent';
@@ -16,6 +20,13 @@ export function AppShell() {
 
   return (
     <div className="flex min-h-screen flex-col bg-page">
+      {/* Lets keyboard users jump past the top bar and menu. Hidden until it has focus. */}
+      <a
+        href="#main"
+        className="sr-only rounded-lg bg-surface px-4 py-2.5 text-[15px] font-semibold text-primary focus:not-sr-only focus:absolute focus:top-2 focus:left-2 focus:z-20"
+      >
+        Skip to main content
+      </a>
       <header className="flex flex-wrap items-center justify-between gap-3 border-b-4 border-accent bg-primary px-6 py-3 text-white">
         <div className="flex items-center gap-2.5">
           <BoxIcon size={24} />
@@ -70,8 +81,14 @@ export function AppShell() {
             ),
           )}
         </nav>
-        <main className="flex min-w-0 flex-[999_1_560px] flex-col gap-5 px-6 py-8">
-          <Outlet />
+        <main
+          id="main"
+          tabIndex={-1} // so the skip link moves keyboard focus here, not only the scroll position
+          className="flex min-w-0 flex-[999_1_560px] flex-col gap-5 px-6 py-8 focus:outline-none"
+        >
+          <NotificationProvider>
+            <Outlet />
+          </NotificationProvider>
         </main>
       </div>
     </div>
