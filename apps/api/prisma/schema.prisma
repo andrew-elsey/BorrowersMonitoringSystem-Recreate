@@ -93,10 +93,11 @@ model User {
   @@map("users")
 }
 
-// Read only through BorrowerService (CLAUDE.md rule 1).
+// Read only through BorrowerService (CLAUDE.md rule 1). School ID is unique case-insensitively
+// (raw SQL index on lower(school_id)).
 model Borrower {
   id         String       @id @default(uuid()) @db.Uuid
-  schoolId   String       @unique @map("school_id")
+  schoolId   String       @map("school_id")
   name       String
   type       BorrowerType
   department String

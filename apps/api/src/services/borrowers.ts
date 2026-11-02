@@ -135,7 +135,8 @@ export const borrowerService: BorrowerService = new LocalBorrowerService();
 // BorrowerService: an external school database would own the records, so these would be removed
 // then, not reimplemented.
 
-// School IDs are unique exactly as typed (SPEC.md 4). Reported on the field, so the form shows it.
+// School IDs are unique regardless of case (SPEC.md 4, index on lower(school_id)); stored as typed.
+// Reported on the field, so the form shows it.
 function duplicateSchoolId(schoolId: string): ApiError {
   const message = `A borrower with school ID "${schoolId}" already exists.`;
   return new ApiError(409, 'DUPLICATE_VALUE', message, { fields: { schoolId: [message] } });

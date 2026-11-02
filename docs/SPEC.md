@@ -37,7 +37,7 @@ All domain tables use UUID primary keys and `created_at` / `updated_at` timestam
 
 **users**: name, username (unique), password_hash, role (`ADMIN`, `HANDLER`, `VIEWER`), active.
 
-**borrowers**: school_id (unique), name, type (`STUDENT`, `FACULTY`, `EMPLOYEE`), department, active.
+**borrowers**: school_id (unique, case-insensitive; stored as typed), name, type (`STUDENT`, `FACULTY`, `EMPLOYEE`), department, active.
 
 **categories**: name (unique, case-insensitive).
 

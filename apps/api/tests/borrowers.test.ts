@@ -6,7 +6,7 @@ import { prisma } from '../src/lib/prisma.ts';
 import { borrowerService } from '../src/services/borrowers.ts';
 import { resetDatabase } from './setup/reset-database.ts';
 
-// MD-5: borrowers CRUD and search. Test cases TC-MD-15 to TC-MD-17 in TEST_CASES.md.
+// MD-5: borrowers CRUD and search. Test cases TC-MD-15 to TC-MD-17 and TC-MD-27 in TEST_CASES.md.
 
 const PASSWORD = 'correct-horse-battery';
 let passwordHash: string;
@@ -98,6 +98,32 @@ test('TC-MD-15: a duplicate school ID gets DUPLICATE_VALUE on the field, on crea
   expect(await prisma.borrower.count()).toBe(2);
   // Nothing failed was audited (the entries roll back with the change).
   expect(await prisma.auditLog.count()).toBe(2);
+});
+
+test('TC-MD-27: school IDs are unique regardless of case; a borrower can change its own case (SPEC 4)', async () => {
+  const carlo = await post(admin, { ...CARLO, schoolId: '2026-A01' }).expect(201);
+  const other = await post(admin, { ...CARLO, schoolId: 'EMP-0142' }).expect(201);
+
+  for (const response of [
+    await post(admin, { ...CARLO, schoolId: '2026-a01' }),
+    await patch(admin, other.body.borrower.id, { schoolId: '2026-A01'.toLowerCase() }),
+  ]) {
+    expect(response.status).toBe(409);
+    expect(response.body.error.code).toBe('DUPLICATE_VALUE');
+    expect(response.body.error.details.fields.schoolId).toHaveLength(1);
+  }
+
+  // Stored as typed.
+  const edited = await patch(admin, carlo.body.borrower.id, { schoolId: '2026-a01' }).expect(200);
+  expect(edited.body.borrower.schoolId).toBe('2026-a01');
+  expect(await auditFor(carlo.body.borrower.id)).toMatchObject([
+    { action: 'BORROWER_CREATED' },
+    {
+      action: 'BORROWER_UPDATED',
+      before: { schoolId: '2026-A01' },
+      after: { schoolId: '2026-a01' },
+    },
+  ]);
 });
 
 test('TC-MD-17: a deactivated borrower cannot be selected at checkout; reactivating restores it (BR 3)', async () => {

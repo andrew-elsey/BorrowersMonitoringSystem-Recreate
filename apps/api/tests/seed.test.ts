@@ -77,6 +77,17 @@ test('is safe to re-run: nothing is duplicated and nothing is overwritten', asyn
   expect((await prisma.setting.findUniqueOrThrow({ where: { id: 1 } })).closingTime).toBe('18:00');
 });
 
+test('stays safe to re-run after an admin changes the case of a sample school ID (MD-5)', async () => {
+  await seed({ ...credentials, includeSampleData: true });
+  // What PATCH /api/borrowers/:id { schoolId: 'f-0001' } does (allowed by TC-MD-27).
+  await prisma.borrower.updateMany({ where: { schoolId: 'F-0001' }, data: { schoolId: 'f-0001' } });
+
+  expect(await seed({ ...credentials, includeSampleData: true })).toBe(0);
+  expect(
+    await prisma.borrower.count({ where: { schoolId: { equals: 'F-0001', mode: 'insensitive' } } }),
+  ).toBe(1);
+});
+
 test('production seeds only the admin and settings', async () => {
   await seed({ ...credentials, includeSampleData: false });
   const counts = await countAll();
