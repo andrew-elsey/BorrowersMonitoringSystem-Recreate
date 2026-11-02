@@ -24,7 +24,9 @@ export function createRoomsRouter() {
   // checkout). The Rooms and labs screen uses it too.
   router.post('/rooms', requireRole(...PERMISSIONS.addLocationAtCheckout), async (req, res) => {
     const { name } = roomSchema.parse(req.body);
-    res.status(201).json({ room: await createRoom(req.session.userId!, name) });
+    res
+      .status(201)
+      .json({ room: await createRoom(req.session.userId!, name, req.session.role === Role.ADMIN) });
   });
 
   // Rename, deactivate, or reactivate (BR 15).

@@ -33,11 +33,19 @@ const notFound = () => new ApiError(404, 'NOT_FOUND', 'Room not found.');
 
 // Names are unique regardless of case (SPEC.md 4, index on lower(name)). The message names the
 // room that already exists, as typed when it was added, so "cl-201" reports "CL-201".
+// An inactive match gets a message saying what to do: only admins can reactivate (owner decision
+// 2026-11-03). The unique index still enforces the rule; this lookup only words the message.
 // Reported as a field error, so the form shows it under the name.
-async function duplicateName(name: string): Promise<ApiError> {
-  const [existing] = await prisma.$queryRaw<{ name: string }[]>`
-    SELECT name FROM locations WHERE lower(name) = lower(${name})`;
-  const message = `"${existing?.name ?? name}" already exists. Names are compared without regard to case.`;
+async function duplicateName(name: string, byAdmin: boolean): Promise<ApiError> {
+  const [existing] = await prisma.$queryRaw<{ name: string; active: boolean }[]>`
+    SELECT name, active FROM locations WHERE lower(name) = lower(${name})`;
+  const stored = `"${existing?.name ?? name}"`;
+  const message =
+    existing?.active === false
+      ? byAdmin
+        ? `${stored} exists but is inactive. Reactivate it instead.`
+        : `${stored} exists but is inactive. Ask an admin to reactivate it, or choose another room.`
+      : `${stored} already exists. Names are compared without regard to case.`;
   return new ApiError(409, 'DUPLICATE_VALUE', message, { fields: { name: [message] } });
 }
 
@@ -62,7 +70,7 @@ export async function listRooms(
 
 // Used by the admin screen and by handlers adding a room at checkout. created_by is the signed-in
 // user, never typed.
-export async function createRoom(actorId: string, name: string): Promise<Room> {
+export async function createRoom(actorId: string, name: string, byAdmin: boolean): Promise<Room> {
   try {
     return await prisma.$transaction(async (tx) => {
       const row = await tx.location.create({
@@ -80,7 +88,7 @@ export async function createRoom(actorId: string, name: string): Promise<Room> {
       return toRoom(row);
     });
   } catch (error) {
-    if (isPrismaError(error, 'P2002')) throw await duplicateName(name);
+    if (isPrismaError(error, 'P2002')) throw await duplicateName(name, byAdmin);
     throw error;
   }
 }
@@ -117,7 +125,7 @@ export async function updateRoom(actorId: string, id: string, changes: RoomUpdat
       return toRoom(row);
     });
   } catch (error) {
-    if (isPrismaError(error, 'P2002')) throw await duplicateName(changes.name ?? '');
+    if (isPrismaError(error, 'P2002')) throw await duplicateName(changes.name ?? '', true); // admin only
     throw error;
   }
 }

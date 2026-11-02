@@ -185,6 +185,30 @@ test('TC-MD-11: adding "CL-201" when "cl-201" exists gets DUPLICATE_VALUE, on cr
   expect(await prisma.auditLog.count()).toBe(0);
 });
 
+test('TC-MD-11: a name that matches an inactive room says so; admins are told to reactivate it (owner decision 2026-11-03)', async () => {
+  const inactive = await room('cl-201');
+  await prisma.location.update({ where: { id: inactive.id }, data: { active: false } });
+  const other = await room('CL-202');
+  const forHandler =
+    '"cl-201" exists but is inactive. Ask an admin to reactivate it, or choose another room.';
+  const forAdmin = '"cl-201" exists but is inactive. Reactivate it instead.';
+
+  for (const [response, message] of [
+    [await post(await signIn('hal'), { name: 'CL-201' }), forHandler],
+    [await post(admin, { name: 'CL-201' }), forAdmin],
+    [await patch(admin, other.id, { name: 'Cl-201' }), forAdmin],
+  ] as const) {
+    expect(response.status).toBe(409);
+    expect(response.body.error.code).toBe('DUPLICATE_VALUE');
+    expect(response.body.error.details.fields.name).toEqual([message]);
+  }
+  // Nothing is reactivated or written.
+  expect(await prisma.location.findUnique({ where: { id: inactive.id } })).toMatchObject({
+    active: false,
+  });
+  expect(await prisma.auditLog.count()).toBe(0);
+});
+
 test('a room can change the case of its own name', async () => {
   const existing = await room('cl-201');
   await patch(admin, existing.id, { name: 'CL-201' }).expect(200);
