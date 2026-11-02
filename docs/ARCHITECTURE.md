@@ -83,6 +83,7 @@ Adding a dependency outside this list needs the owner's approval.
   Writes (MD-5): `createBorrower` and `updateBorrower` (fields and `active`) are plain functions in the same file, because rule 1 lets only that file touch the table. They are not part of the interface: with an external school database that system owns the records, so they would be removed rather than reimplemented. Borrowers are never deleted (BR 15). Endpoints, admin only: `GET /api/borrowers?q=&type=&active=&page=&pageSize=` (calls `list`; optional filters `type` = `STUDENT`, `FACULTY`, or `EMPLOYEE` and `active` = `true` or `false`, anything else is `VALIDATION_ERROR`), `POST /api/borrowers` (`{ schoolId, name, type, department }`, 201 `{ borrower }`), `PATCH /api/borrowers/:id` (any of those fields and `active`, 200 `{ borrower }`). A school ID already in use is `DUPLICATE_VALUE` on the field `schoolId`; school IDs are unique regardless of case (`2026-A01` and `2026-a01` are the same borrower; a unique index on `lower(school_id)`, owner decision 2026-11-02) and stored as typed; a borrower may change only the case of its own school ID.
 - Everything else uses Prisma directly. Do not build extra repository layers.
 - Items (MD-2, `apps/api/src/services/items.ts`): `GET /api/items?q=&categoryId=&status=&trackingType=&page=&pageSize=` for all staff (`q` matches name or asset tag as plain text, 2 to 100 characters); for admins `POST /api/items` (201 `{ item }`), `PATCH /api/items/:id` (any field but `trackingType`, which is fixed and refused with `VALIDATION_ERROR`; retiring is `{ "status": "RETIRED" }`), and `DELETE /api/items/:id` (204; an item in any transaction line gets `HAS_HISTORY`, BR 15). The UNIT and QUANTITY rules are `trackingErrors` in `packages/shared`, used by the create schema and, against the stored item, by the update. A duplicate asset tag is `DUPLICATE_VALUE` on `assetTag` (unique index on `lower(asset_tag)`, owner decision 2026-11-03).
+- Rooms and labs (MD-3, `apps/api/src/services/rooms.ts`, the `locations` table): for admins `GET /api/rooms?page=&pageSize=` (each room with `createdBy { id, name }`, `createdAt`, and `transactionCount`), `PATCH /api/rooms/:id` (`name` and/or `active`; deactivating is `{ "active": false }`, 200 `{ room }`), and `DELETE /api/rooms/:id` (204; a room used by any transaction gets `HAS_HISTORY`, BR 15). `POST /api/rooms` (`{ name }`, 201 `{ room }`) is also the quick-add endpoint for handlers adding a room at checkout (SPEC 3), so admins and handlers may call it; `created_by` is always the signed-in user. A duplicate name is `DUPLICATE_VALUE` on `name`, regardless of case (unique index on `lower(name)` from the initial migration); the message names the existing room as stored. Audit actions are `LOCATION_CREATED`, `LOCATION_UPDATED`, and `LOCATION_DELETED` on entity `location`.
 - **Audit helper**: `audit(tx, { actorId, action, entity, entityId, before, after })` is called with the transaction client so the audit entry commits or rolls back with the change.
 
 ## 5. Authentication and authorization
@@ -146,7 +147,7 @@ Adding a dependency outside this list needs the owner's approval.
 - Constraints live in the database: unique asset tag (case-insensitive), unique borrower school ID, unique room name (case-insensitive), non-negative quantities, `quantity_returned <= quantity_borrowed`, one current semester.
 - Add indexes for: open lines by item, transactions by borrower and semester, lines by flag status, audit log by entity and date.
 - **Concurrency**: inside the checkout database transaction, lock the affected item rows (`SELECT ... FOR UPDATE` through `$queryRaw`) before re-checking availability (Rule 4).
-- Edits that audit a "before" value (`updateBorrower`, `renameCategory`, `updateItem`) lock the row the same way before reading it, so two admins editing at once each audit the value their change really replaced (Rule 14).
+- Edits that audit a "before" value (`updateBorrower`, `renameCategory`, `updateItem`, `updateRoom`) lock the row the same way before reading it, so two admins editing at once each audit the value their change really replaced (Rule 14).
 - Deactivate or retire instead of deleting (Rule 15).
 
 ## 9. Scheduled job
@@ -171,7 +172,7 @@ Environment variables (all documented in `.env.example`):
 | `SESSION_SECRET` | Signs session cookies | none |
 | `SESSION_TTL_HOURS` | Session lifetime | 8 |
 | `COOKIE_SECURE` | Secure cookie flag | false |
-| `APP_TIMEZONE`, `TZ` | Timezone | Asia/Manila |
+| `APP_TIMEZONE`, `TZ` | Timezone. The web image also receives `APP_TIMEZONE` as a build argument, so the app formats dates in it; rebuild the web image after changing it | Asia/Manila |
 | `ADMIN_USERNAME`, `ADMIN_PASSWORD` | First admin for the seed script | none |
 | `QA_PASSWORD` | Development only: password for the seed's role test accounts `qa-handler` and `qa-viewer` (skipped when empty) | none |
 | `WEB_PORT` | Published web port | 8080 |
