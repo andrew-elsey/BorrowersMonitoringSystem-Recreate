@@ -47,7 +47,7 @@ Paths are shortened: `api/` is `apps/api/tests/`, `web/` is `apps/web/src/pages/
 | TC-FND-27 | FND-6 | ARCH 6 | integration | With the database session time zone at Asia/Manila, write rows using `@default(now())`, `@updatedAt`, and `new Date()` | Stored instants are within a few seconds of `Date.now()` | `api/timestamps.test.ts` |
 | TC-FND-28 | FND-6 | ARCH 6 | integration | Create a session | Expiry stored as now plus `SESSION_TTL_HOURS` | `api/timestamps.test.ts` |
 | TC-FND-29 | FND-6 | ARCH 6 | integration | Start the API with a `DATABASE_URL` that has `options` | Refused, because it would replace `TimeZone=UTC` | `api/timestamps.test.ts` |
-| TC-FND-30 | FND-7 | SPEC 8, ARCH 7 | component | Submit a form, from the keyboard, that gets API field errors for two fields listed out of form order | Focus moves to the first errored field in form order; each field error is announced (`role="alert"`) | `web/components/Field.test.tsx` |
+| TC-FND-30 | FND-7 | SPEC 8, ARCH 7 | component | Submit a form, from the keyboard, that gets API field errors for two fields listed out of form order | Focus moves to the first errored field in form order; each field error is announced (`role="alert"`) | `web/components/Field.test.tsx` , `web/qa-md1-r5-fnd7-merge.test.tsx` (Inventory add and rename) |
 
 ## AUTH: Authentication and users
 
