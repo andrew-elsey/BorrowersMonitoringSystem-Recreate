@@ -95,6 +95,9 @@ describe.each(implementations)('%s', (_name, makeService) => {
     expect(await names('2026-0002')).toEqual(['Ben Reyes']);
     expect(await names('santos', 1)).toEqual(['Ana Santos']);
     expect(await names('zz')).toEqual([]);
+    // % and _ are plain text, not SQL wildcards.
+    expect(await names('%%')).toEqual([]);
+    expect(await names('__')).toEqual([]);
   });
 
   test('search enforces the SPEC 7 bounds', async () => {

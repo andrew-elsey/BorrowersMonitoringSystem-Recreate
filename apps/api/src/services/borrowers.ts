@@ -49,19 +49,24 @@ export function checkSearchBounds(query: string, limit: number): void {
 export class LocalBorrowerService implements BorrowerService {
   async findById(id: string): Promise<Borrower | null> {
     // PostgreSQL rejects a malformed uuid with an error; an id that cannot exist is simply not found.
-    if (!z.uuid().safeParse(id).success) return null;
+    // z.guid, not z.uuid: PostgreSQL accepts any well-formed uuid, not only RFC versions 1 to 8.
+    if (!z.guid().safeParse(id).success) return null;
     return prisma.borrower.findUnique({ where: { id }, select: borrowerFields });
   }
 
   // async, so a bounds error rejects the promise instead of throwing.
+  // Includes inactive borrowers (active: false) so admins can find them; checkout refuses them
+  // through isEligible (rule 3).
   async search(query: string, limit = SEARCH_DEFAULT_LIMIT): Promise<Borrower[]> {
     const text = query.trim();
     checkSearchBounds(text, limit);
+    // Prisma passes % and _ to LIKE as wildcards; escape them so the text matches literally.
+    const literal = text.replace(/[\\%_]/g, '\\$&');
     return prisma.borrower.findMany({
       where: {
         OR: [
-          { name: { contains: text, mode: 'insensitive' } },
-          { schoolId: { contains: text, mode: 'insensitive' } },
+          { name: { contains: literal, mode: 'insensitive' } },
+          { schoolId: { contains: literal, mode: 'insensitive' } },
         ],
       },
       select: borrowerFields,
