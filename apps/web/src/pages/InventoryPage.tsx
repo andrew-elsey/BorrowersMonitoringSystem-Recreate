@@ -3,7 +3,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
-import { apiFetch, errorText } from '../api';
+import { ApiRequestError, apiFetch, errorText } from '../api';
 import { Alert } from '../components/Alert';
 import { ConfirmDialog } from '../components/ConfirmDialog';
 import { DataTable } from '../components/DataTable';
@@ -19,6 +19,9 @@ type CategoryPage = { data: Category[]; page: number; pageSize: number; total: n
 type CategoryReply = { category: Category };
 const PAGE_SIZE = 25;
 const CATEGORIES_KEY = ['categories'];
+
+const isNotFound = (error: unknown) =>
+  error instanceof ApiRequestError && error.code === 'NOT_FOUND';
 
 const linkButtonClass = 'h-9 cursor-pointer rounded-lg px-2.5 text-[15px] font-semibold';
 
@@ -59,12 +62,22 @@ export function InventoryPage() {
     mutationFn: ({ category, input }: { category: Category; input: CategoryInput }) =>
       apiFetch<CategoryReply>('PUT', `/categories/${category.id}`, input),
     onSuccess: ({ category }, { category: before }) => {
-      notify.success(`Category "${before.name}" renamed to "${category.name}".`);
+      // Saving the same name changes nothing, so there is nothing to confirm.
+      if (category.name !== before.name) {
+        notify.success(`Category "${before.name}" renamed to "${category.name}".`);
+      }
       setToRename(null);
       return refresh();
     },
-    onError: (error) =>
-      showApiFieldErrors(renameForm.setError, error, ['name']) || notify.error(error),
+    onError: (error) => {
+      if (showApiFieldErrors(renameForm.setError, error, ['name'])) return;
+      notify.error(error);
+      // Someone else deleted it while the dialog was open: close it and drop the row.
+      if (isNotFound(error)) {
+        setToRename(null);
+        return refresh();
+      }
+    },
   });
 
   const remove = useMutation({
@@ -76,12 +89,20 @@ export function InventoryPage() {
       // Its row and Delete button are gone, so focus would drop to the page start.
       addForm.setFocus('name');
     },
-    // HAS_HISTORY: someone added an item to it since the list loaded.
+    // HAS_HISTORY (someone added an item to it) or NOT_FOUND (someone deleted it) since the list
+    // loaded: reload so the row shows the current state.
     onError: (error) => {
       notify.error(error);
       setToDelete(null);
+      return refresh();
     },
   });
+
+  async function retryLoading() {
+    const result = await categories.refetch();
+    // The Retry button is gone once the list loads, so focus would drop to the page start.
+    if (!result.isError) addForm.setFocus('name');
+  }
 
   function startRenaming(category: Category) {
     renameForm.reset({ name: category.name });
@@ -125,7 +146,7 @@ export function InventoryPage() {
             <button
               type="button"
               disabled={categories.isFetching}
-              onClick={() => categories.refetch()}
+              onClick={retryLoading}
               className="cursor-pointer font-semibold underline underline-offset-4 disabled:cursor-wait"
             >
               Retry

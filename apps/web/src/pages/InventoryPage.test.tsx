@@ -98,6 +98,10 @@ test('a failed list load shows the error and a Retry button, not the empty state
   await user.click(screen.getByRole('button', { name: 'Retry' }));
   expect(await screen.findByRole('table', { name: 'Categories' })).toBeTruthy();
   expect(categoryListLoads(fetchMock)).toBe(loadsBefore + 1);
+  // The Retry button is gone, so focus goes to the name field instead of the page start.
+  await vi.waitFor(() =>
+    expect(document.activeElement).toBe(screen.getByLabelText('New category')),
+  );
 });
 
 test('the screen is in the admin menu only; other roles get the not-allowed page (SPEC 3)', async () => {
@@ -270,6 +274,23 @@ test('delete asks first, then deletes and focuses the name field; a HAS_HISTORY 
   expect(
     await screen.findByText('This category is used by items, so it cannot be deleted.'),
   ).toBeTruthy();
+});
+
+test('a delete refused with NOT_FOUND (someone else deleted it) shows the message and reloads the list', async () => {
+  const fetchMock = fakeApi((method) =>
+    method === 'DELETE'
+      ? { status: 404, body: apiError('NOT_FOUND', 'Category not found.') }
+      : undefined,
+  );
+  const user = userEvent.setup();
+  renderApp('/inventory');
+
+  await user.click(await screen.findByRole('button', { name: 'Delete Audio' }));
+  const loadsBefore = categoryListLoads(fetchMock);
+  await user.click(screen.getByRole('button', { name: 'Delete category' }));
+  expect(await screen.findByText('Category not found.')).toBeTruthy();
+  expect(screen.queryByRole('dialog')).toBeNull();
+  await vi.waitFor(() => expect(categoryListLoads(fetchMock)).toBe(loadsBefore + 1));
 });
 
 test('the first Tab reaches a "Skip to main content" link that targets the main area', async () => {
