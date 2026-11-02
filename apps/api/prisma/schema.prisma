@@ -139,13 +139,14 @@ model Location {
 
 // Whether an item is borrowed is never stored: it is calculated from open lines (Rule 1).
 // UNIT items have an asset tag and total quantity 1; QUANTITY items have no asset tag (CHECK constraints).
+// Asset tag is unique case-insensitively (raw SQL index on lower(asset_tag)).
 model Item {
   id            String        @id @default(uuid()) @db.Uuid
   name          String
   categoryId    String        @map("category_id") @db.Uuid
   description   String?
   trackingType  TrackingType  @map("tracking_type")
-  assetTag      String?       @unique @map("asset_tag")
+  assetTag      String?       @map("asset_tag")
   totalQuantity Int           @map("total_quantity")
   condition     ItemCondition
   status        ItemStatus    @default(ACTIVE)

@@ -162,7 +162,7 @@ async function seedSampleData(
     }),
   );
 
-  // UNIT items are unique by asset tag.
+  // Asset tags are unique regardless of case, so existing UNIT items are skipped (ON CONFLICT DO NOTHING).
   count += await auditCreated(
     tx,
     'item',
