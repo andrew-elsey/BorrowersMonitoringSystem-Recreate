@@ -170,6 +170,9 @@ export async function updateBorrower(
 ): Promise<Borrower> {
   try {
     return await prisma.$transaction(async (tx) => {
+      // Lock the row first, so two admins editing at once take turns and each audit entry
+      // records the values its change really replaced (rule 14).
+      await tx.$queryRaw`SELECT 1 FROM borrowers WHERE id = ${id}::uuid FOR UPDATE`;
       const before = await tx.borrower.findUnique({ where: { id }, select: borrowerFields });
       if (!before) throw new ApiError(404, 'NOT_FOUND', 'Borrower not found.');
       const changedKeys = (Object.keys(changes) as (keyof BorrowerUpdate)[]).filter(

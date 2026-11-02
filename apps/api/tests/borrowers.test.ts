@@ -3,7 +3,7 @@ import { beforeAll, beforeEach, expect, test } from 'vitest';
 import { createApp } from '../src/app.ts';
 import { hashPassword } from '../src/lib/password.ts';
 import { prisma } from '../src/lib/prisma.ts';
-import { borrowerService } from '../src/services/borrowers.ts';
+import { borrowerService, updateBorrower } from '../src/services/borrowers.ts';
 import { resetDatabase } from './setup/reset-database.ts';
 
 // MD-5: borrowers CRUD and search. Test cases TC-MD-15 to TC-MD-17 and TC-MD-27 in TEST_CASES.md.
@@ -205,6 +205,27 @@ test('SPEC 7 bounds: page size 1 to 100; fields 1 to 200 characters; type from t
   }
   const { id } = (await post(admin, CARLO).expect(201)).body.borrower;
   await patch(admin, id, { active: 'no' }).expect(400);
+});
+
+test('two edits at once leave a consistent audit chain: each before is the value it replaced', async () => {
+  const { id } = (await post(admin, CARLO).expect(201)).body.borrower;
+  await Promise.all(
+    ['Fine Arts', 'Painting', 'Multimedia Arts'].map((department) =>
+      updateBorrower(adminId, id, { department }),
+    ),
+  );
+  const updates = (await auditFor(id)).slice(1) as unknown as {
+    before: { department: string };
+    after: { department: string };
+  }[];
+  expect(updates).toHaveLength(3);
+  // The row lock makes the edits take turns, so each one replaced a different value: the start
+  // value or another edit's result, never one that was already overwritten. Compared as sets,
+  // because entries written in the same millisecond have no reliable order.
+  const final = (await borrowerService.findById(id))!.department;
+  const befores = updates.map((entry) => entry.before.department).sort();
+  const afters = updates.map((entry) => entry.after.department).filter((d) => d !== final);
+  expect(befores).toEqual(['VC', ...afters].sort());
 });
 
 test('saving without changes writes nothing and no audit entry (BR 14)', async () => {
