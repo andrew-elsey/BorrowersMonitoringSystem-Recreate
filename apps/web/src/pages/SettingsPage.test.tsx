@@ -3,7 +3,14 @@ import { cleanup, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeAll, expect, test, vi } from 'vitest';
 import type { SignedInUser } from '../auth';
-import { emulateModalDialogs, HANDLER, mockApi, renderApp, signedInAs } from '../test-utils';
+import {
+  apiError,
+  emulateModalDialogs,
+  HANDLER,
+  mockApi,
+  renderApp,
+  signedInAs,
+} from '../test-utils';
 
 // MD-7: the Settings and semesters screen.
 
@@ -191,4 +198,32 @@ test('SPEC 3: handlers do not see Settings and semesters', async () => {
   renderApp('/settings');
   expect(await screen.findByRole('heading', { name: "You can't open this page" })).toBeTruthy();
   expect(screen.queryByRole('link', { name: 'Settings and semesters' })).toBeNull();
+});
+
+test('TC-MD-25 / SPEC 8: after a failed load, a working Retry moves focus to the first field', async () => {
+  let fail = true;
+  mockApi((method, path) => {
+    if (path === '/auth/me') return signedInAs(ADMIN);
+    if (fail) return { status: 500, body: apiError('INTERNAL_ERROR', 'Something went wrong.') };
+    if (path === '/settings') return { status: 200, body: { settings: SETTINGS } };
+    return {
+      status: 200,
+      body: { data: [FIRST], page: 1, pageSize: 25, total: 1, current: null },
+    };
+  });
+  const user = userEvent.setup();
+  renderApp('/settings');
+
+  const [settingsRetry, semestersRetry] = await screen.findAllByRole('button', { name: 'Retry' });
+  fail = false;
+  await user.click(semestersRetry);
+  expect(await screen.findByRole('table', { name: 'Semesters' })).toBeTruthy();
+  await vi.waitFor(() =>
+    expect(document.activeElement).toBe(screen.getByLabelText('New semester name')),
+  );
+
+  await user.click(settingsRetry);
+  await vi.waitFor(() =>
+    expect(document.activeElement).toBe(screen.getByLabelText('Closing time')),
+  );
 });

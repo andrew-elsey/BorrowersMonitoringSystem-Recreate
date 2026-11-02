@@ -54,22 +54,26 @@ const sectionClass = 'flex flex-col gap-4 rounded-xl border border-divider bg-su
 const linkButtonClass =
   'h-9 cursor-pointer rounded-lg px-2.5 text-[15px] font-semibold text-primary hover:bg-primary-tint';
 
+// A failed load: the error and a Retry button. The button is gone once the load works, so
+// onRetried moves focus somewhere useful instead of the page start (SPEC 8).
 function RetryAlert({
-  error,
-  onRetry,
-  busy,
+  query,
+  onRetried,
 }: {
-  error: unknown;
-  onRetry: () => void;
-  busy: boolean;
+  query: Pick<UseQueryResult, 'error' | 'isFetching' | 'refetch'>;
+  onRetried?: () => void;
 }) {
+  async function retry() {
+    const result = await query.refetch();
+    if (!result.isError) onRetried?.();
+  }
   return (
     <Alert kind="error">
-      {errorText(error)}{' '}
+      {errorText(query.error)}{' '}
       <button
         type="button"
-        disabled={busy}
-        onClick={onRetry}
+        disabled={query.isFetching}
+        onClick={retry}
         className="cursor-pointer font-semibold underline underline-offset-4 disabled:cursor-wait"
       >
         Retry
@@ -92,6 +96,9 @@ function SettingsSection() {
     queryKey: ['settings'],
     queryFn: async () => (await apiFetch<{ settings: Settings }>('GET', '/settings')).settings,
   });
+  // The form only exists once the settings load, so after a Retry its first field takes focus
+  // when it appears (autoFocus) rather than through setFocus.
+  const [retried, setRetried] = useState(false);
   // `values` fills the form once the settings load.
   const form = useForm<SettingsInput>({
     resolver: zodResolver(settingsSchema),
@@ -128,11 +135,7 @@ function SettingsSection() {
         Settings
       </h2>
       {settings.isError ? (
-        <RetryAlert
-          error={settings.error}
-          onRetry={() => settings.refetch()}
-          busy={settings.isFetching}
-        />
+        <RetryAlert query={settings} onRetried={() => setRetried(true)} />
       ) : !settings.data ? (
         <p className="text-muted">Loading…</p>
       ) : (
@@ -147,6 +150,7 @@ function SettingsSection() {
               label="Closing time"
               type="time"
               hint={settings.data.timezone}
+              autoFocus={retried}
               error={errors.closingTime?.message}
               {...form.register('closingTime')}
             />
@@ -298,11 +302,7 @@ function SemestersSection({
           borrower at 0 strikes; old flags stay in history.
         </p>
         {semesters.isError ? (
-          <RetryAlert
-            error={semesters.error}
-            onRetry={() => semesters.refetch()}
-            busy={semesters.isFetching}
-          />
+          <RetryAlert query={semesters} onRetried={() => addForm.setFocus('name')} />
         ) : (
           <DataTable
             caption="Semesters"
