@@ -94,7 +94,7 @@ Paths are shortened: `api/` is `apps/api/tests/`, `web/` is `apps/web/src/pages/
 
 | ID | Ticket | Rule | Level | Steps | Expected | Automated by |
 |---|---|---|---|---|---|---|
-| TC-MD-01 | MD-1 | BR 14 | integration | Admin creates and renames a category | Saved and audited | `api/categories.test.ts`, `api/qa-md1-gaps.test.ts`, `web/InventoryPage.test.tsx`, `web/qa-md1-r3-gaps.test.tsx` (same-name rename: no toast; rename NOT_FOUND closes and reloads) |
+| TC-MD-01 | MD-1 | BR 14 | integration | Admin creates and renames a category | Saved and audited | `api/categories.test.ts`, `api/qa-md1-gaps.test.ts`, `web/InventoryPage.test.tsx`, `web/qa-md1-r3-gaps.test.tsx` (same-name rename: no toast; rename NOT_FOUND closes and reloads); `api/categories.test.ts` (SPEC 7 bounds: a name with a control character such as NUL gets `VALIDATION_ERROR` on `name`, not a 500) |
 | TC-MD-02 | MD-1 | BR 15 | integration | Admin deletes an unused category, then one in use | Unused: deleted; in use: `HAS_HISTORY` | `api/categories.test.ts`, `api/qa-md1-gaps.test.ts`, `web/InventoryPage.test.tsx` (NOT_FOUND reloads the list), `web/qa-md1-r5-gaps.test.tsx` (HAS_HISTORY reloads the list) |
 | TC-MD-03 | MD-1 | SPEC 3 | integration | Handler creates a category | 403 | `api/categories.test.ts`, `api/qa-md1-gaps.test.ts` (signed out: 401 on every endpoint) |
 | TC-MD-04 | MD-2 | SPEC 4 | integration | Create a UNIT item without an asset tag, with a duplicate asset tag, with quantity other than 1 | Each rejected with `VALIDATION_ERROR` or `DUPLICATE_VALUE` | not yet |

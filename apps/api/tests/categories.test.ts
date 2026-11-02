@@ -151,10 +151,14 @@ test('SPEC 7 bounds: page size 100 is allowed and 101 is not; names are 1 to 200
   expect(tooMany.body.error.code).toBe('VALIDATION_ERROR');
 
   await post(admin, { name: 'x'.repeat(200) }).expect(201);
-  for (const name of ['', '   ', 'x'.repeat(201)]) {
+  // A NUL would make PostgreSQL fail with a 500, so control characters are refused.
+  for (const name of ['', '   ', 'x'.repeat(201), 'Audio\u0000', 'Au\ndio']) {
     const response = await post(admin, { name }).expect(400);
     expect(response.body.error.details.fields.name).toHaveLength(1);
   }
+  const { id } = (await post(admin, { name: 'Audio' }).expect(201)).body.category;
+  const rename = await put(admin, id, { name: 'Video\u0000' }).expect(400);
+  expect(rename.body.error.details.fields.name).toHaveLength(1);
 });
 
 test('a duplicate name gets DUPLICATE_VALUE on the name field, on create and on rename', async () => {
