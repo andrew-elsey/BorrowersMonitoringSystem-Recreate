@@ -158,3 +158,7 @@ function startRenaming(category: Category) {
 ### Notifications
 
 `useNotify()` shows a message at the top of the page content, above the page heading, until it is dismissed. Messages sit in the page flow, never floating over the page, so they never cover a button. Only the newest three are kept. `notify.success(text)` for a saved change; `notify.error(error)` shows the API error `message`, or "Try again in N seconds" on 429 and 503. `AppShell` mounts `NotificationProvider` inside `<main>`, so every signed-in page (and `renderApp` in tests) has it; a page outside the app shell, such as login, has none.
+
+### Status badge
+
+`StatusBadge` shows Active or Inactive as text on a colored pill, never color alone (ARCHITECTURE section 14), for records that are deactivated instead of deleted, such as borrowers and rooms.

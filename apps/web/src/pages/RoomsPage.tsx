@@ -10,7 +10,7 @@ import { DataTable } from '../components/DataTable';
 import { Field, showApiFieldErrors } from '../components/Field';
 import { FormDialog } from '../components/FormDialog';
 import { useNotify } from '../components/Notifications';
-import { StatusBadge } from './BorrowersPage';
+import { StatusBadge } from '../components/StatusBadge';
 
 // Rooms and labs (SPEC.md 5, admin only, MD-3). Add with the top form, rename in a dialog from the
 // row, deactivate or reactivate from the row. Only a room no transaction uses can be deleted
