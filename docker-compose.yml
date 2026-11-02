@@ -82,6 +82,8 @@ services:
     build:
       context: .
       dockerfile: apps/web/Dockerfile
+      args:
+        APP_TIMEZONE: ${APP_TIMEZONE:-Asia/Manila}
     restart: unless-stopped
     depends_on:
       api:
