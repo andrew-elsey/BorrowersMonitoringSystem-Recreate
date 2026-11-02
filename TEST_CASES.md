@@ -108,9 +108,9 @@ Paths are shortened: `api/` is `apps/api/tests/`, `web/` is `apps/web/src/pages/
 | TC-MD-12 | MD-3 | BR 15 | integration | Admin tries to remove a room used in a transaction | The room can only be deactivated; the record and its history stay | not yet |
 | TC-MD-13 | MD-4 | CLAUDE.md rule 1 | unit | Search the code for queries on the borrowers table outside `LocalBorrowerService` | None found | `api/borrower-reads.test.ts`, `api/qa-md4-gaps.test.ts` (patterns the guard catches) |
 | TC-MD-14 | MD-4 | ARCH 4 | integration | Replace `LocalBorrowerService` with a test double | Callers work unchanged | `api/borrower-service.test.ts`, `api/qa-md4-gaps.test.ts` (wildcards, whitespace, unicode, ordering, uuid forms) |
-| TC-MD-15 | MD-5 | SPEC 4 | integration | Admin creates and edits a borrower; duplicate school ID | Saved and audited; duplicate gets `DUPLICATE_VALUE` | not yet |
-| TC-MD-16 | MD-5 | SPEC 7 | integration | Search borrowers by name and by school ID with 1, 2, and 101 characters | 2 to 100 accepted; others rejected; results paginated | not yet |
-| TC-MD-17 | MD-5 | BR 3 | integration | Deactivate a borrower, then look them up for checkout | Not selectable for checkout | not yet |
+| TC-MD-15 | MD-5 | SPEC 4 | integration | Admin creates and edits a borrower; duplicate school ID | Saved and audited; duplicate gets `DUPLICATE_VALUE` | `api/borrowers.test.ts`, `web/pages/BorrowersPage.test.tsx` (form, edit dialog, duplicate under the field) |
+| TC-MD-16 | MD-5 | SPEC 7 | integration | Search borrowers by name and by school ID with 1, 2, and 101 characters | 2 to 100 accepted; others rejected; results paginated | `api/borrowers.test.ts`, `api/borrower-service.test.ts` (`list` in both implementations), `web/pages/BorrowersPage.test.tsx` (search box) |
+| TC-MD-17 | MD-5 | BR 3 | integration | Deactivate a borrower, then look them up for checkout | Not selectable for checkout | `api/borrowers.test.ts` (search returns `active: false`, `isEligible` gives `BORROWER_INACTIVE`; the checkout screen itself is BRW-3) |
 | TC-MD-18 | MD-6 | SPEC 6 | integration | Import a CSV with new, existing, and invalid rows | New created, existing updated by school ID, invalid rejected with reasons; counts reported; audited | not yet |
 | TC-MD-19 | MD-6 | SPEC 7, S21 | integration | Import a 2.1 MB CSV, two files, and a CSV with 5,001 rows | Rejected before parsing with `PAYLOAD_TOO_LARGE` | not yet |
 | TC-MD-20 | MD-6 | ARCH 12.3 | integration | Import a 5,000-row CSV while making other requests | Other requests are not blocked | not yet |
