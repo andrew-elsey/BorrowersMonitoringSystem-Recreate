@@ -106,8 +106,8 @@ Paths are shortened: `api/` is `apps/api/tests/`, `web/` is `apps/web/src/pages/
 | TC-MD-10 | MD-3 | SPEC 3 | integration | Handler uses quick-add for a room; handler edits a room | Quick-add works with `created_by` set; edit is 403 | not yet |
 | TC-MD-11 | MD-3 | SPEC 4 | integration | Add "CL-201" when "cl-201" exists | `DUPLICATE_VALUE` | not yet |
 | TC-MD-12 | MD-3 | BR 15 | integration | Admin tries to remove a room used in a transaction | The room can only be deactivated; the record and its history stay | not yet |
-| TC-MD-13 | MD-4 | CLAUDE.md rule 1 | unit | Search the code for queries on the borrowers table outside `LocalBorrowerService` | None found | `api/borrower-reads.test.ts` |
-| TC-MD-14 | MD-4 | ARCH 4 | integration | Replace `LocalBorrowerService` with a test double | Callers work unchanged | `api/borrower-service.test.ts` |
+| TC-MD-13 | MD-4 | CLAUDE.md rule 1 | unit | Search the code for queries on the borrowers table outside `LocalBorrowerService` | None found | `api/borrower-reads.test.ts`, `api/qa-md4-gaps.test.ts` (patterns the guard catches) |
+| TC-MD-14 | MD-4 | ARCH 4 | integration | Replace `LocalBorrowerService` with a test double | Callers work unchanged | `api/borrower-service.test.ts`, `api/qa-md4-gaps.test.ts` (wildcards, whitespace, unicode, ordering, uuid forms) |
 | TC-MD-15 | MD-5 | SPEC 4 | integration | Admin creates and edits a borrower; duplicate school ID | Saved and audited; duplicate gets `DUPLICATE_VALUE` | not yet |
 | TC-MD-16 | MD-5 | SPEC 7 | integration | Search borrowers by name and by school ID with 1, 2, and 101 characters | 2 to 100 accepted; others rejected; results paginated | not yet |
 | TC-MD-17 | MD-5 | BR 3 | integration | Deactivate a borrower, then look them up for checkout | Not selectable for checkout | not yet |
