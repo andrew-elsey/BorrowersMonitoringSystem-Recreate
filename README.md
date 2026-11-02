@@ -157,4 +157,4 @@ function startRenaming(category: Category) {
 
 ### Notifications
 
-`useNotify()` shows a message at the bottom of the screen until it is dismissed. Only the newest three are kept. `notify.success(text)` for a saved change; `notify.error(error)` shows the API error `message`, or "Try again in N seconds" on 429 and 503. `NotificationProvider` is already mounted in `main.tsx` and in the test helper `renderApp`.
+`useNotify()` shows a message at the top of the page content, above the page heading, until it is dismissed. Messages sit in the page flow, never floating over the page, so they never cover a button. Only the newest three are kept. `notify.success(text)` for a saved change; `notify.error(error)` shows the API error `message`, or "Try again in N seconds" on 429 and 503. `AppShell` mounts `NotificationProvider` inside `<main>`, so every signed-in page (and `renderApp` in tests) has it; a page outside the app shell, such as login, has none.

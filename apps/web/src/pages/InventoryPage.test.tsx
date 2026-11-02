@@ -142,6 +142,25 @@ test('adding a category sends the name, names it in the confirmation, clears the
   expect(categoryListLoads(fetchMock)).toBeGreaterThan(loadsBefore);
 });
 
+test('the confirmation sits in the page flow above the heading, not over the table buttons', async () => {
+  fakeApi((method) =>
+    method === 'POST'
+      ? { status: 201, body: { category: { id: 'c9', name: 'Projectors', itemCount: 0 } } }
+      : undefined,
+  );
+  const user = userEvent.setup();
+  renderApp('/inventory');
+  await screen.findByRole('row', { name: /Audio/ });
+  await user.type(screen.getByLabelText('New category'), 'Projectors');
+  await user.click(screen.getByRole('button', { name: 'Add category' }));
+
+  const message = await within(screen.getByRole('main')).findByRole('status');
+  const region = message.closest('[aria-live="polite"]') as HTMLElement;
+  expect(region.className).not.toMatch(/\b(fixed|absolute)\b/);
+  const heading = screen.getByRole('heading', { level: 1 });
+  expect(region.compareDocumentPosition(heading) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+});
+
 test('an empty name is refused in the browser; a duplicate name shows the API error under the field', async () => {
   const message = 'A category named "Audio" already exists.';
   const fetchMock = fakeApi((method) =>

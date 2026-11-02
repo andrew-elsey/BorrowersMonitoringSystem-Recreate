@@ -2,6 +2,7 @@ import { PERMISSIONS } from '@bms/shared';
 import { NavLink, Outlet } from 'react-router';
 import { ROLE_LABELS, useAuth } from './auth';
 import { BoxIcon } from './components/icons';
+import { NotificationProvider } from './components/Notifications';
 
 // The menu, in SPEC.md 5 order. Each item lists the roles that may open it (SPEC.md 3), and an item
 // is added only when its screen is built: Checkout, Return, and the rest join in their own tickets.
@@ -85,7 +86,9 @@ export function AppShell() {
           tabIndex={-1} // so the skip link moves keyboard focus here, not only the scroll position
           className="flex min-w-0 flex-[999_1_560px] flex-col gap-5 px-6 py-8 focus:outline-none"
         >
-          <Outlet />
+          <NotificationProvider>
+            <Outlet />
+          </NotificationProvider>
         </main>
       </div>
     </div>
