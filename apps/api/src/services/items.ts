@@ -182,7 +182,7 @@ export async function deleteItem(actorId: string, id: string): Promise<void> {
       throw new ApiError(
         409,
         'HAS_HISTORY',
-        'This item appears in past transactions, so it cannot be deleted. Set its status to Retired instead.',
+        'This item appears in past transactions. Set its status to Retired instead.',
       );
     }
     throw error;
