@@ -37,7 +37,7 @@ All domain tables use UUID primary keys and `created_at` / `updated_at` timestam
 
 **users**: name, username (unique), password_hash, role (`ADMIN`, `HANDLER`, `VIEWER`), active.
 
-**borrowers**: school_id (unique), name, type (`STUDENT`, `FACULTY`, `EMPLOYEE`), department, active.
+**borrowers**: school_id (unique, case-insensitive; stored as typed), name, type (`STUDENT`, `FACULTY`, `EMPLOYEE`), department, active.
 
 **categories**: name (unique, case-insensitive).
 
@@ -74,7 +74,7 @@ All domain tables use UUID primary keys and `created_at` / `updated_at` timestam
 | Return | admin, handler | Find open borrowings by borrower, item, or asset tag; return all or part; select condition |
 | Flag review | admin | List of flagged lines; override with a reason |
 | Inventory and categories | admin | Item and category management |
-| Borrowers | admin | Management, search, CSV import |
+| Borrowers | admin | Management, search, Type and Status filters, CSV import |
 | Rooms and labs | admin | Management |
 | Users | admin | Management |
 | Settings and semesters | admin | Closing time, thresholds, semester dates |

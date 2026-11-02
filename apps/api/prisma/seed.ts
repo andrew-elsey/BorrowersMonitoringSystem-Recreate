@@ -205,7 +205,7 @@ async function seedSampleData(
   );
 
   // CLAUDE.md rule 1: the seed only inserts borrowers and never reads them; reads go through BorrowerService.
-  // Unique by school ID, so existing borrowers are skipped.
+  // School IDs are unique regardless of case, so existing borrowers are skipped (ON CONFLICT DO NOTHING).
   count += await auditCreated(
     tx,
     'borrower',

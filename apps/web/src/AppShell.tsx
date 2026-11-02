@@ -9,6 +9,7 @@ import { NotificationProvider } from './components/Notifications';
 const NAV_ITEMS = [
   { to: '/', label: 'Home', roles: PERMISSIONS.viewDashboardAndReports },
   { to: '/inventory', label: 'Inventory and categories', roles: PERMISSIONS.manageMasterData },
+  { to: '/borrowers', label: 'Borrowers', roles: PERMISSIONS.manageMasterData },
 ];
 
 // Top bar elements sit on green, so their focus ring is gold (ARCHITECTURE.md 14).

@@ -1,4 +1,4 @@
-import type { Borrower } from '@bms/shared';
+import type { Borrower, BorrowerListQuery } from '@bms/shared';
 import { beforeEach, describe, expect, test } from 'vitest';
 import { prisma } from '../src/lib/prisma.ts';
 import {
@@ -33,11 +33,26 @@ class InMemoryBorrowerService implements BorrowerService {
   async search(query: string, limit = 25) {
     const text = query.trim();
     checkSearchBounds(text, limit);
+    return this.matching(text).slice(0, limit);
+  }
+
+  async list({ q, type, active, page, pageSize }: BorrowerListQuery) {
+    const text = q?.trim() ?? '';
+    if (q !== undefined) checkSearchBounds(text, pageSize);
+    const all = this.matching(text).filter(
+      (borrower) =>
+        (type === undefined || borrower.type === type) &&
+        (active === undefined || borrower.active === active),
+    );
+    const data = all.slice((page - 1) * pageSize, page * pageSize);
+    return { data, page, pageSize, total: all.length };
+  }
+
+  private matching(text: string) {
     const matches = (value: string) => value.toLowerCase().includes(text.toLowerCase());
     return this.borrowers
       .filter((borrower) => matches(borrower.name) || matches(borrower.schoolId))
-      .sort((a, b) => a.name.localeCompare(b.name))
-      .slice(0, limit);
+      .sort((a, b) => a.name.localeCompare(b.name));
   }
 
   async isEligible(id: string) {
@@ -116,6 +131,42 @@ describe.each(implementations)('%s', (_name, makeService) => {
       });
     }
     await expect(service.search('a'.repeat(100), 100)).resolves.toEqual([]);
+    // A NUL would be a 500 from PostgreSQL; every implementation refuses it as invalid input.
+    await expect(service.search('an\u0000')).rejects.toMatchObject({ code: 'VALIDATION_ERROR' });
+  });
+
+  test('list pages through everyone or the matches, filtered by type and status, with a total', async () => {
+    const service = makeService();
+    const page = async (params: BorrowerListQuery) => {
+      const result = await service.list(params);
+      return { ...result, data: result.data.map((borrower) => borrower.name) };
+    };
+    expect(await page({ page: 2, pageSize: 2 })).toEqual({
+      data: ['Cora Santos'],
+      page: 2,
+      pageSize: 2,
+      total: 3,
+    });
+    expect(await page({ q: 'SANTOS', page: 1, pageSize: 1 })).toEqual({
+      data: ['Ana Santos'],
+      page: 1,
+      pageSize: 1,
+      total: 2,
+    });
+    // The Type and Status filters, alone, together, and with q.
+    const names = async (params: Omit<BorrowerListQuery, 'page' | 'pageSize'>) =>
+      (await page({ ...params, page: 1, pageSize: 25 })).data;
+    expect(await names({ type: 'STUDENT' })).toEqual(['Ana Santos', 'Cora Santos']);
+    expect(await names({ active: false })).toEqual(['Cora Santos']);
+    expect(await names({ type: 'STUDENT', active: true })).toEqual(['Ana Santos']);
+    expect(await names({ q: 'reyes', type: 'STUDENT' })).toEqual([]);
+    expect(await page({ type: 'FACULTY', active: true, page: 1, pageSize: 25 })).toMatchObject({
+      total: 1,
+    });
+    await expect(service.list({ q: 'a', page: 1, pageSize: 25 })).rejects.toMatchObject({
+      code: 'VALIDATION_ERROR',
+      details: { fields: { q: [expect.any(String)] } },
+    });
   });
 
   test('isEligible: rule 3, inactive borrowers cannot borrow', async () => {

@@ -3,6 +3,7 @@ import type { ReactNode } from 'react';
 import { Navigate, useLocation, type RouteObject } from 'react-router';
 import { AppShell } from './AppShell';
 import { useAuth } from './auth';
+import { BorrowersPage } from './pages/BorrowersPage';
 import { ChangePasswordPage } from './pages/ChangePasswordPage';
 import { HomePage } from './pages/HomePage';
 import { InventoryPage } from './pages/InventoryPage';
@@ -55,6 +56,14 @@ export const routes: RouteObject[] = [
         element: (
           <RequireRole roles={PERMISSIONS.manageMasterData} pageName="Inventory and categories">
             <InventoryPage />
+          </RequireRole>
+        ),
+      },
+      {
+        path: 'borrowers',
+        element: (
+          <RequireRole roles={PERMISSIONS.manageMasterData} pageName="Borrowers">
+            <BorrowersPage />
           </RequireRole>
         ),
       },
