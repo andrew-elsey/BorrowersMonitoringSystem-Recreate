@@ -12,7 +12,7 @@ import {
   signedInAs,
 } from '../test-utils';
 
-// MD-5: the Borrowers screen.
+// MD-5: the Borrowers screen. TC-MD-15 to TC-MD-17 and TC-MD-28 in TEST_CASES.md.
 
 beforeAll(emulateModalDialogs);
 
@@ -240,4 +240,130 @@ test('the screen is in the admin menu only; other roles get the not-allowed page
       name: 'Borrowers',
     }),
   ).toBeNull();
+});
+
+// A list of 60, so there is a page 2 to leave.
+const sixty = (method: string) =>
+  method === 'GET'
+    ? { status: 200, body: { data: [CARLO, RHEA], page: 1, pageSize: 25, total: 60 } }
+    : undefined;
+const lastLoad = (fetchMock: ReturnType<typeof mockApi>) => requests(fetchMock, 'GET').at(-1)![0];
+const optionTexts = (select: HTMLElement) =>
+  within(select)
+    .getAllByRole('option')
+    .map((option) => option.textContent);
+
+test('TC-MD-28: Type and Status filters as in the mockup send type and active and go back to page 1', async () => {
+  const fetchMock = fakeApi(sixty);
+  const user = userEvent.setup();
+  renderApp('/borrowers');
+  await screen.findByRole('table', { name: 'Borrowers' });
+  const form = screen.getByRole('form', { name: 'Add borrower' });
+  const type = screen
+    .getAllByRole('combobox', { name: 'Type' })
+    .find((select) => !form.contains(select))!;
+  const status = screen.getByRole('combobox', { name: 'Status' });
+  expect(optionTexts(type)).toEqual(['All types', 'Student', 'Faculty', 'Employee']);
+  expect(optionTexts(status)).toEqual(['Active and inactive', 'Active', 'Inactive']);
+  // Defaults match everyone, so nothing is sent.
+  expect(lastLoad(fetchMock)).toBe('/api/borrowers?page=1&pageSize=25');
+
+  await user.click(await screen.findByRole('button', { name: 'Next' }));
+  await vi.waitFor(() => expect(lastLoad(fetchMock)).toBe('/api/borrowers?page=2&pageSize=25'));
+  await user.selectOptions(type, 'Faculty');
+  await vi.waitFor(() =>
+    expect(lastLoad(fetchMock)).toBe('/api/borrowers?page=1&pageSize=25&type=FACULTY'),
+  );
+
+  await user.click(screen.getByRole('button', { name: 'Next' }));
+  await user.selectOptions(status, 'Inactive');
+  await vi.waitFor(() =>
+    expect(lastLoad(fetchMock)).toBe('/api/borrowers?page=1&pageSize=25&type=FACULTY&active=false'),
+  );
+});
+
+test('with filters and no rows, the empty state names the filters, not "No borrowers yet."', async () => {
+  fakeApi((method, path) =>
+    method === 'GET' && path.includes('active=')
+      ? { status: 200, body: { data: [], page: 1, pageSize: 25, total: 0 } }
+      : undefined,
+  );
+  const user = userEvent.setup();
+  renderApp('/borrowers');
+  await screen.findByRole('table', { name: 'Borrowers' });
+  await user.selectOptions(screen.getByRole('combobox', { name: 'Status' }), 'Inactive');
+  expect(await screen.findByText('No borrowers match these filters.')).toBeTruthy();
+});
+
+test('Deactivate keeps focus while the request runs and after its label flips to Reactivate', async () => {
+  let active = true;
+  const fetchMock = fakeApi((method, _path, body) => {
+    if (method === 'PATCH') active = (body as { active: boolean }).active;
+    const carlo = { ...CARLO, active };
+    return method === 'PATCH'
+      ? { status: 200, body: { borrower: carlo } }
+      : { status: 200, body: { data: [carlo], page: 1, pageSize: 25, total: 1 } };
+  });
+  const user = userEvent.setup();
+  renderApp('/borrowers');
+  const button = await screen.findByRole('button', { name: 'Deactivate Carlo Dizon' });
+
+  // Hold the PATCH until the test lets it go.
+  let release!: () => void;
+  const answer = fetchMock.getMockImplementation()!;
+  fetchMock.mockImplementationOnce(async (url, init) => {
+    await new Promise<void>((resolve) => (release = resolve));
+    return answer(url, init);
+  });
+  await user.click(button);
+  await vi.waitFor(() => expect(button.getAttribute('aria-disabled')).toBe('true'));
+  expect(document.activeElement).toBe(button);
+  // A second click while it runs sends nothing.
+  await user.click(button);
+  release();
+
+  expect(await screen.findByRole('button', { name: 'Reactivate Carlo Dizon' })).toBe(button);
+  expect(document.activeElement).toBe(button);
+  expect(button.getAttribute('aria-disabled')).toBeNull();
+  expect(requests(fetchMock, 'PATCH')).toEqual([['/api/borrowers/b1', { active: false }]]);
+});
+
+test('when the Status filter hides the row just deactivated, focus moves to that filter', async () => {
+  let active = true;
+  fakeApi((method, path) => {
+    if (method === 'PATCH') {
+      active = false;
+      return { status: 200, body: { borrower: { ...CARLO, active } } };
+    }
+    const rows = path.includes('active=true') && !active ? [] : [{ ...CARLO, active }];
+    return { status: 200, body: { data: rows, page: 1, pageSize: 25, total: rows.length } };
+  });
+  const user = userEvent.setup();
+  renderApp('/borrowers');
+  await screen.findByRole('table', { name: 'Borrowers' });
+  const status = screen.getByRole('combobox', { name: 'Status' });
+  await user.selectOptions(status, 'Active');
+  await user.click(await screen.findByRole('button', { name: 'Deactivate Carlo Dizon' }));
+  expect(await screen.findByText('Carlo Dizon deactivated.')).toBeTruthy();
+  await vi.waitFor(() => expect(screen.queryByRole('button', { name: /Carlo Dizon/ })).toBeNull());
+  expect(document.activeElement).toBe(status);
+});
+
+test('the search goes back to page 1 only when the trimmed text changes', async () => {
+  const fetchMock = fakeApi(sixty);
+  const user = userEvent.setup();
+  renderApp('/borrowers');
+  await screen.findByRole('table', { name: 'Borrowers' });
+  await user.click(await screen.findByRole('button', { name: 'Next' }));
+  const search = screen.getByLabelText('Name or school ID');
+  // A space alone trims to the same (empty) search: still page 2 after the typing pause.
+  await user.type(search, ' ');
+  await new Promise((resolve) => setTimeout(resolve, 400));
+  expect(screen.getByText('Page 2 of 3')).toBeTruthy();
+  expect(lastLoad(fetchMock)).toBe('/api/borrowers?page=2&pageSize=25');
+
+  await user.type(search, 'Ca');
+  await vi.waitFor(() =>
+    expect(lastLoad(fetchMock)).toBe('/api/borrowers?page=1&pageSize=25&q=Ca'),
+  );
 });

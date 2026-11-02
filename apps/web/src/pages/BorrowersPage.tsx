@@ -9,7 +9,7 @@ import {
 } from '@bms/shared';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useForm, type UseFormReturn } from 'react-hook-form';
 import { ApiRequestError, apiFetch, errorText } from '../api';
 import { Alert } from '../components/Alert';
@@ -34,9 +34,17 @@ const TYPE_LABELS: Record<BorrowerType, string> = {
   FACULTY: 'Faculty',
   EMPLOYEE: 'Employee',
 };
-const TYPE_OPTIONS = [
-  { value: '', label: 'Choose a type' },
-  ...Object.values(BorrowerType).map((type) => ({ value: type, label: TYPE_LABELS[type] })),
+const TYPE_CHOICES = Object.values(BorrowerType).map((type) => ({
+  value: type,
+  label: TYPE_LABELS[type],
+}));
+const TYPE_OPTIONS = [{ value: '', label: 'Choose a type' }, ...TYPE_CHOICES];
+// The list filters, worded and ordered as in the approved mockup; the empty value matches everyone.
+const TYPE_FILTERS = [{ value: '', label: 'All types' }, ...TYPE_CHOICES];
+const STATUS_FILTERS = [
+  { value: '', label: 'Active and inactive' },
+  { value: 'true', label: 'Active' },
+  { value: 'false', label: 'Inactive' },
 ];
 // The type starts unchosen; the schema refuses the empty value with "Choose a type."
 const EMPTY: BorrowerInput = { schoolId: '', name: '', type: '' as BorrowerType, department: '' };
@@ -50,25 +58,34 @@ export function BorrowersPage() {
   const [page, setPage] = useState(1);
   const [searchText, setSearchText] = useState('');
   const [query, setQuery] = useState('');
+  const [typeFilter, setTypeFilter] = useState('');
+  const [statusFilter, setStatusFilter] = useState('');
+  const statusFilterRef = useRef<HTMLSelectElement>(null);
   const [toEdit, setToEdit] = useState<Borrower | null>(null);
 
   useEffect(() => {
     const timer = setTimeout(() => {
-      setQuery(searchText.trim());
-      setPage(1);
+      // Only a real change goes back to page 1, not the first render or a trailing space.
+      const next = searchText.trim();
+      if (next !== query) {
+        setQuery(next);
+        setPage(1);
+      }
     }, SEARCH_DELAY_MS);
     return () => clearTimeout(timer);
-  }, [searchText]);
+  }, [searchText, query]);
   // SPEC 7: one letter is too short to search, so the full list stays.
   const q = query.length >= SEARCH_MIN_LENGTH ? query : '';
 
   const borrowers = useQuery({
-    queryKey: [...BORROWERS_KEY, q, page],
+    queryKey: [...BORROWERS_KEY, q, typeFilter, statusFilter, page],
     queryFn: () => {
       const search = q ? `&q=${encodeURIComponent(q)}` : '';
+      const type = typeFilter ? `&type=${typeFilter}` : '';
+      const status = statusFilter ? `&active=${statusFilter}` : '';
       return apiFetch<BorrowerPage>(
         'GET',
-        `/borrowers?page=${page}&pageSize=${PAGE_SIZE}${search}`,
+        `/borrowers?page=${page}&pageSize=${PAGE_SIZE}${search}${type}${status}`,
       );
     },
     placeholderData: keepPreviousData,
@@ -117,6 +134,10 @@ export function BorrowersPage() {
       apiFetch<BorrowerReply>('PATCH', `/borrowers/${borrower.id}`, { active: !borrower.active }),
     onSuccess: ({ borrower }) => {
       notify.success(`${borrower.name} ${borrower.active ? 'reactivated' : 'deactivated'}.`);
+      // The focused button stays (only its label flips), unless the Status filter now hides the
+      // row; then focus goes to that filter instead of dropping to the page start.
+      if (statusFilter && String(borrower.active) !== statusFilter)
+        statusFilterRef.current?.focus();
       return refresh();
     },
     onError: (error) => {
@@ -160,16 +181,45 @@ export function BorrowersPage() {
         </div>
       </form>
 
-      <div className="max-w-[420px]">
-        <Field
-          id="search"
-          type="search"
-          label="Name or school ID"
-          maxLength={SEARCH_MAX_LENGTH}
-          hint={query.length === 1 ? `Type at least ${SEARCH_MIN_LENGTH} characters.` : undefined}
-          value={searchText}
-          onChange={(event) => setSearchText(event.target.value)}
-        />
+      {/* Search, Type, and Status in one row, as in the approved mockup. */}
+      <div className="flex flex-wrap items-start gap-3">
+        <div className="flex-[1_1_280px]">
+          <Field
+            id="search"
+            type="search"
+            label="Name or school ID"
+            maxLength={SEARCH_MAX_LENGTH}
+            hint={query.length === 1 ? `Type at least ${SEARCH_MIN_LENGTH} characters.` : undefined}
+            value={searchText}
+            onChange={(event) => setSearchText(event.target.value)}
+          />
+        </div>
+        {/* A filter change goes back to page 1, like a new search. */}
+        <div className="flex-[0_1_180px]">
+          <SelectField
+            id="type-filter"
+            label="Type"
+            options={TYPE_FILTERS}
+            value={typeFilter}
+            onChange={(event) => {
+              setTypeFilter(event.target.value);
+              setPage(1);
+            }}
+          />
+        </div>
+        <div className="flex-[0_1_180px]">
+          <SelectField
+            ref={statusFilterRef}
+            id="status-filter"
+            label="Status"
+            options={STATUS_FILTERS}
+            value={statusFilter}
+            onChange={(event) => {
+              setStatusFilter(event.target.value);
+              setPage(1);
+            }}
+          />
+        </div>
       </div>
 
       {borrowers.isError ? (
@@ -208,7 +258,9 @@ export function BorrowersPage() {
           emptyText={
             q
               ? `No borrower matches "${q}". Check the spelling or search by school ID.`
-              : 'No borrowers yet.'
+              : typeFilter || statusFilter
+                ? 'No borrowers match these filters.'
+                : 'No borrowers yet.'
           }
           page={page}
           pageSize={PAGE_SIZE}
@@ -244,9 +296,10 @@ export function BorrowersPage() {
         <button
           type="button"
           aria-label={`${borrower.active ? 'Deactivate' : 'Reactivate'} ${borrower.name}`}
-          disabled={setActive.isPending}
-          onClick={() => setActive.mutate(borrower)}
-          className={`${linkButtonClass} disabled:cursor-wait`}
+          // aria-disabled, not disabled, so focus stays on the button while the request runs.
+          aria-disabled={setActive.isPending || undefined}
+          onClick={() => !setActive.isPending && setActive.mutate(borrower)}
+          className={`${linkButtonClass} aria-disabled:cursor-wait`}
         >
           {borrower.active ? 'Deactivate' : 'Reactivate'}
         </button>
