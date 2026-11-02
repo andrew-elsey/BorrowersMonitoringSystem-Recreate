@@ -10,6 +10,11 @@ const NAV_ITEMS = [
   { to: '/', label: 'Home', roles: PERMISSIONS.viewDashboardAndReports },
   { to: '/inventory', label: 'Inventory and categories', roles: PERMISSIONS.manageMasterData },
   { to: '/borrowers', label: 'Borrowers', roles: PERMISSIONS.manageMasterData },
+  {
+    to: '/settings',
+    label: 'Settings and semesters',
+    roles: PERMISSIONS.manageSettingsAndSemesters,
+  },
 ];
 
 // Top bar elements sit on green, so their focus ring is gold (ARCHITECTURE.md 14).

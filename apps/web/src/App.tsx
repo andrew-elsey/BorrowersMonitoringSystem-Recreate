@@ -9,6 +9,7 @@ import { HomePage } from './pages/HomePage';
 import { InventoryPage } from './pages/InventoryPage';
 import { LoginPage } from './pages/LoginPage';
 import { NotAllowedPage } from './pages/NotAllowedPage';
+import { SettingsPage } from './pages/SettingsPage';
 
 // Route guard: signed-out users go to the login page. After an expired session, login sends them
 // back to this page; after Sign out it sends them home.
@@ -64,6 +65,17 @@ export const routes: RouteObject[] = [
         element: (
           <RequireRole roles={PERMISSIONS.manageMasterData} pageName="Borrowers">
             <BorrowersPage />
+          </RequireRole>
+        ),
+      },
+      {
+        path: 'settings',
+        element: (
+          <RequireRole
+            roles={PERMISSIONS.manageSettingsAndSemesters}
+            pageName="Settings and semesters"
+          >
+            <SettingsPage />
           </RequireRole>
         ),
       },
