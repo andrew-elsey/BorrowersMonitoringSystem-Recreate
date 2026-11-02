@@ -4,7 +4,8 @@ import { ApiError, isPrismaError } from '../lib/errors.ts';
 import { prisma } from '../lib/prisma.ts';
 
 // Rooms and labs (MD-3), stored in the locations table. Admins manage them; admins and handlers
-// can add one (SPEC.md 3). The routes check the role.
+// can add one, and handlers can list active rooms for the checkout picker (SPEC.md 3). The routes
+// check the role and pass `activeOnly` to listRooms.
 
 const roomFields = {
   id: true,
