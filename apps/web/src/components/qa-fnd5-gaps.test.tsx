@@ -158,6 +158,8 @@ test('change password: an API field error with no field on the form still shows 
   await user.type(screen.getByLabelText('Confirm new password'), 'a longer phrase');
   await user.click(screen.getByRole('button', { name: 'Change password' }));
 
-  expect((await screen.findByRole('alert')).textContent).toContain('Some fields are invalid.');
-  expect(screen.getByText('Too common.')).toBeTruthy();
+  // Two alerts now: the page message, and the field error, which FND-7 announces too.
+  const alerts = await screen.findAllByRole('alert');
+  expect(alerts.map((alert) => alert.textContent).join(' ')).toContain('Some fields are invalid.');
+  expect(screen.getByText('Too common.').getAttribute('role')).toBe('alert');
 });

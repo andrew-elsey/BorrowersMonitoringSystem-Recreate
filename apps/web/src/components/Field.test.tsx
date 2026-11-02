@@ -118,6 +118,30 @@ test('field errors from the API details show next to their fields (TC-FND-22)', 
   expect(screen.getByLabelText('Username').getAttribute('aria-invalid')).toBe('true');
 });
 
+test('API field errors move focus to the first errored field in form order and are announced (TC-FND-30)', async () => {
+  const user = userEvent.setup();
+  // The API lists "note" before "type"; the form shows Type first, so focus goes to Type.
+  const apiError = new ApiRequestError(
+    400,
+    'VALIDATION_ERROR',
+    'Check the highlighted fields.',
+    { fields: { note: ['Note is not allowed.'], type: ['That type is closed.'] } },
+    null,
+  );
+  render(<TestForm apiError={apiError} />);
+
+  await user.type(screen.getByLabelText('Username'), 'ana');
+  await user.type(screen.getByLabelText('Password'), 'secret');
+  await user.selectOptions(screen.getByLabelText('Type'), 'STUDENT');
+  // Submit with Enter from the username field, so focus has to move.
+  await user.type(screen.getByLabelText('Username'), '{Enter}');
+
+  expect(await screen.findByText('That type is closed.')).toBeTruthy();
+  expect(document.activeElement).toBe(screen.getByLabelText('Type'));
+  const alerts = screen.getAllByRole('alert').map((alert) => alert.textContent);
+  expect(alerts).toEqual(['That type is closed.', 'Note is not allowed.']);
+});
+
 test('showApiFieldErrors returns false for an error without field details', () => {
   const setError = () => {};
   const conflict = new ApiRequestError(409, 'HAS_HISTORY', 'Retire it instead.', {}, null);
@@ -140,7 +164,11 @@ test('an API field error with no field on the form returns false, so the message
 
   expect(showApiFieldErrors(setError, error, ['borrowerId'])).toBe(false);
   expect(setError).toHaveBeenCalledTimes(1);
-  expect(setError).toHaveBeenCalledWith('borrowerId', { message: 'Choose a borrower.' });
+  expect(setError).toHaveBeenCalledWith(
+    'borrowerId',
+    { message: 'Choose a borrower.' },
+    { shouldFocus: true },
+  );
   expect(showApiFieldErrors(vi.fn(), error, ['borrowerId', 'lines'])).toBe(true);
 });
 

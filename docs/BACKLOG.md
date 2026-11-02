@@ -13,13 +13,13 @@ Document references: `BR` = `BUSINESS_RULES.md`, `ARCH` = `ARCHITECTURE.md`, `SP
 | Sprint | Goal | Tickets | Points |
 |---|---|---|---|
 | 1 | Foundation and sign-in: running Docker environment, schema, seed data, role-based login with protected hashing, sign-in screens and app shell, UTC timestamp fix, login limiter memory fix | FND-1, FND-2, FND-3, FND-4, AUTH-1, AUTH-2, AUTH-4, FND-6, AUTH-5 | 26 |
-| 2 | Shared components and master data: shared form and table components, admins manage items, rooms, borrowers, semesters, settings | FND-5, MD-1, MD-2, MD-3, MD-4, MD-5, MD-7, DOC-1 | 22 |
+| 2 | Shared components and master data: shared form and table components, admins manage items, rooms, borrowers, semesters, settings, API field error focus fix | FND-5, MD-1, MD-2, MD-3, MD-4, MD-5, MD-7, DOC-1, FND-7 | 23 |
 | 3 | Checkout: handlers can check items out; return API works; rate limits and request limits in place | BRW-1, BRW-2, BRW-3, BRW-4, SEC-1 | 21 |
 | 4 | Returns and flagging: full return flow, end-of-day flagging, strikes, blocking, override | BRW-5, FLG-1, FLG-2, FLG-3, FLG-4 | 19 |
 | 5 | Dashboard, reports, admin tools | BRW-6, RPT-1, RPT-2, RPT-3, RPT-4, AUTH-3, MD-6 | 20 |
 | 6 | Hardening, abuse testing, and release | HRD-1, HRD-2, HRD-3, HRD-4, HRD-5, SEC-2 | 20 |
 
-Total: 128 points. Sprints 1 (26), 2 (22), and 3 (21) are over the working capacity of about 20; that is accepted for now and will be revisited once Sprint 1 shows the real velocity.
+Total: 129 points. Sprints 1 (26), 2 (23), and 3 (21) are over the working capacity of about 20; that is accepted for now and will be revisited once Sprint 1 shows the real velocity.
 
 ## Epic FND: Foundation
 
@@ -44,6 +44,10 @@ Acceptance: form fields show inline validation errors, including field errors fr
 **FND-6 · Bug: stored timestamps are 8 hours early** (2 pts, Sprint 1). Depends on: FND-3.
 Found in AUTH-4 QA on 2026-10-31. Every timestamp the API writes is stored 8 hours earlier than the real UTC time, because the db session time zone is Asia/Manila and `@prisma/adapter-pg` sends and reads timestamps as if the session were UTC. Breaks CLAUDE.md rule 4 and ARCH 6.
 Acceptance: every timestamp the API writes (`@default(now())`, `@updatedAt`, explicit `new Date()` values, and session expiry) is stored as the correct UTC instant, whatever the Postgres session time zone or the container `TZ`; the fix is in one shared place (the Prisma client or adapter setup, or the connection settings), not in each query; the API still returns ISO 8601 UTC strings; an integration test against the real test database fails on the old code and passes after the fix, writing a row and checking the stored instant is within a few seconds of `Date.now()` with the database session time zone at Asia/Manila so it cannot pass by accident; existing wrong rows in the dev database are handled (a documented reset, or a new append-only migration, never an edited one; the owner decides); ARCH 6 records how UTC storage is guaranteed; full suite, lint, and typecheck pass, and the app works under `docker compose up`. Refs: ARCH 6, CLAUDE.md rules 4 and 5.
+
+**FND-7 · Bug: API field errors don't move focus or get announced** (1 pt, Sprint 2). Depends on: FND-5.
+Found in FND-5 manual QA on 2026-11-01. After an API field error (for example a wrong current password), focus stays where it was instead of moving to the field, and the inline error is not announced to screen readers. Browser-side errors already move focus. Every form screen uses `showApiFieldErrors`, so it is fixed once there.
+Acceptance: after API field errors, focus moves to the first errored field in form order; each inline field error is announced to screen readers; a component test covers both (TC-FND-30); README usage updated; full suite, lint, and typecheck pass. Refs: SPEC 8, ARCH 7.
 
 ## Epic AUTH: Authentication and users
 
