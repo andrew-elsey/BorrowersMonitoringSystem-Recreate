@@ -17,13 +17,14 @@ import {
 } from '@tanstack/react-query';
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
-import { apiFetch, errorText } from '../api';
+import { apiFetch } from '../api';
 import { Alert } from '../components/Alert';
 import { DataTable } from '../components/DataTable';
 import { Field, showApiFieldErrors } from '../components/Field';
 import { FormDialog } from '../components/FormDialog';
 import { CheckIcon } from '../components/icons';
 import { useNotify } from '../components/Notifications';
+import { RetryAlert } from '../components/RetryAlert';
 
 // Settings and semesters (SPEC.md 5, admin only, MD-7). The server enforces every rule
 // (CLAUDE.md rule 2): thresholds in order (BR 11), end date not before start, one current semester.
@@ -53,34 +54,6 @@ export function SettingsPage() {
 const sectionClass = 'flex flex-col gap-4 rounded-xl border border-divider bg-surface p-5';
 const linkButtonClass =
   'h-9 cursor-pointer rounded-lg px-2.5 text-[15px] font-semibold text-primary hover:bg-primary-tint';
-
-// A failed load: the error and a Retry button. The button is gone once the load works, so
-// onRetried moves focus somewhere useful instead of the page start (SPEC 8).
-function RetryAlert({
-  query,
-  onRetried,
-}: {
-  query: Pick<UseQueryResult, 'error' | 'isFetching' | 'refetch'>;
-  onRetried?: () => void;
-}) {
-  async function retry() {
-    const result = await query.refetch();
-    if (!result.isError) onRetried?.();
-  }
-  return (
-    <Alert kind="error">
-      {errorText(query.error)}{' '}
-      <button
-        type="button"
-        disabled={query.isFetching}
-        onClick={retry}
-        className="cursor-pointer font-semibold underline underline-offset-4 disabled:cursor-wait"
-      >
-        Retry
-      </button>
-    </Alert>
-  );
-}
 
 const SETTINGS_FIELDS = [
   'closingTime',

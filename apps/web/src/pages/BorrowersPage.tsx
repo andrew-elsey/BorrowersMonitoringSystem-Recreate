@@ -11,12 +11,12 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useRef, useState } from 'react';
 import { useForm, type UseFormReturn } from 'react-hook-form';
-import { ApiRequestError, apiFetch, errorText } from '../api';
-import { Alert } from '../components/Alert';
+import { ApiRequestError, apiFetch } from '../api';
 import { DataTable } from '../components/DataTable';
 import { Field, SelectField, showApiFieldErrors } from '../components/Field';
 import { FormDialog } from '../components/FormDialog';
 import { useNotify } from '../components/Notifications';
+import { RetryAlert } from '../components/RetryAlert';
 
 // Borrowers (SPEC.md 5, admin only). Add with the top form, edit in a dialog from the row,
 // deactivate or reactivate from the row; borrowers are never deleted (BR 15). The server enforces
@@ -146,12 +146,6 @@ export function BorrowersPage() {
     },
   });
 
-  async function retryLoading() {
-    const result = await borrowers.refetch();
-    // The Retry button is gone once the list loads, so focus would drop to the page start.
-    if (!result.isError) addForm.setFocus('schoolId');
-  }
-
   function startEditing(borrower: Borrower) {
     const { schoolId, name, type, department } = borrower;
     editForm.reset({ schoolId, name, type, department });
@@ -224,17 +218,7 @@ export function BorrowersPage() {
 
       {borrowers.isError ? (
         // Without this, a failed load would look like an empty list.
-        <Alert kind="error">
-          {errorText(borrowers.error)}{' '}
-          <button
-            type="button"
-            disabled={borrowers.isFetching}
-            onClick={retryLoading}
-            className="cursor-pointer font-semibold underline underline-offset-4 disabled:cursor-wait"
-          >
-            Retry
-          </button>
-        </Alert>
+        <RetryAlert query={borrowers} onRetried={() => addForm.setFocus('schoolId')} />
       ) : (
         <DataTable
           caption="Borrowers"

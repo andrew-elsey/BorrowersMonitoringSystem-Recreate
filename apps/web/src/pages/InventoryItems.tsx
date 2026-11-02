@@ -15,7 +15,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useRef, useState } from 'react';
 import { useForm, type UseFormReturn } from 'react-hook-form';
-import { ApiRequestError, apiFetch, errorText } from '../api';
+import { ApiRequestError, apiFetch } from '../api';
 import { Alert } from '../components/Alert';
 import { ConfirmDialog } from '../components/ConfirmDialog';
 import { DataTable } from '../components/DataTable';
@@ -23,6 +23,7 @@ import { secondaryButtonClass } from '../components/Dialog';
 import { Field, SelectField, showApiFieldErrors, TextAreaField } from '../components/Field';
 import { FormDialog } from '../components/FormDialog';
 import { useNotify } from '../components/Notifications';
+import { RetryAlert } from '../components/RetryAlert';
 
 // The Items tab of Inventory and categories (MD-2, admin only). "+ Add item" opens the add form,
 // Edit opens a dialog from the row, and Delete works only for an item with no history; one with
@@ -382,17 +383,7 @@ export function InventoryItems() {
 
           {items.isError ? (
             // Without this, a failed load would look like an empty list.
-            <Alert kind="error">
-              {errorText(items.error)}{' '}
-              <button
-                type="button"
-                disabled={items.isFetching}
-                onClick={() => items.refetch()}
-                className="cursor-pointer font-semibold underline underline-offset-4 disabled:cursor-wait"
-              >
-                Retry
-              </button>
-            </Alert>
+            <RetryAlert query={items} />
           ) : (
             <DataTable
               caption="Items"
