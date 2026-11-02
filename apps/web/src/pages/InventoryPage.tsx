@@ -3,6 +3,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
+import { Link, useSearchParams } from 'react-router';
 import { ApiRequestError, apiFetch, errorText } from '../api';
 import { Alert } from '../components/Alert';
 import { ConfirmDialog } from '../components/ConfirmDialog';
@@ -10,8 +11,42 @@ import { DataTable } from '../components/DataTable';
 import { Field, showApiFieldErrors } from '../components/Field';
 import { FormDialog } from '../components/FormDialog';
 import { useNotify } from '../components/Notifications';
+import { InventoryItems } from './InventoryItems';
 
-// Inventory and categories (SPEC.md 5, admin only). MD-1 builds the categories part; MD-2 adds items.
+// Inventory and categories (SPEC.md 5, admin only), with an Items tab (MD-2) and a Categories tab
+// (MD-1). The tab is in the address (?tab=categories), so a reload or the Back button keeps it.
+export function InventoryPage() {
+  const [params] = useSearchParams();
+  const onCategories = params.get('tab') === 'categories';
+  return (
+    <>
+      <h1 className="text-[28px] leading-tight font-bold">Inventory and categories</h1>
+      <nav aria-label="Inventory sections" className="flex gap-1 border-b border-divider">
+        <TabLink to="/inventory" current={!onCategories}>
+          Items
+        </TabLink>
+        <TabLink to="/inventory?tab=categories" current={onCategories}>
+          Categories
+        </TabLink>
+      </nav>
+      {onCategories ? <CategoriesTab /> : <InventoryItems />}
+    </>
+  );
+}
+
+function TabLink({ to, current, children }: { to: string; current: boolean; children: string }) {
+  return (
+    <Link
+      to={to}
+      aria-current={current ? 'page' : undefined}
+      className={`flex h-11 items-center border-b-3 px-4.5 font-semibold ${current ? 'border-primary text-primary' : 'border-transparent text-muted hover:text-ink'}`}
+    >
+      {children}
+    </Link>
+  );
+}
+
+// The Categories tab (MD-1).
 // The server enforces every rule (CLAUDE.md rule 2): names are unique, and a category in use cannot
 // be deleted (BR 15). The unavailable Delete button only saves a pointless request.
 
@@ -25,7 +60,7 @@ const isNotFound = (error: unknown) =>
 
 const linkButtonClass = 'h-9 cursor-pointer rounded-lg px-2.5 text-[15px] font-semibold';
 
-export function InventoryPage() {
+function CategoriesTab() {
   const notify = useNotify();
   const queryClient = useQueryClient();
   const [page, setPage] = useState(1);
@@ -111,8 +146,6 @@ export function InventoryPage() {
 
   return (
     <>
-      <h1 className="text-[28px] leading-tight font-bold">Inventory and categories</h1>
-
       <form
         noValidate
         onSubmit={addForm.handleSubmit((input) => add.mutate(input))}

@@ -34,7 +34,7 @@ function duplicateApi() {
 test('a duplicate name in the add form is announced with role="alert" and focus moves to the field', async () => {
   duplicateApi();
   const user = userEvent.setup();
-  renderApp('/inventory');
+  renderApp('/inventory?tab=categories');
   await screen.findByRole('row', { name: /Audio/ });
 
   await user.type(screen.getByLabelText('New category'), 'audio');
@@ -48,7 +48,7 @@ test('a duplicate name in the add form is announced with role="alert" and focus 
 test('a duplicate name in the rename dialog is announced with role="alert" and focus moves to the field', async () => {
   duplicateApi();
   const user = userEvent.setup();
-  renderApp('/inventory');
+  renderApp('/inventory?tab=categories');
 
   await user.click(await screen.findByRole('button', { name: 'Rename Cameras' }));
   const dialog = screen.getByRole('dialog');

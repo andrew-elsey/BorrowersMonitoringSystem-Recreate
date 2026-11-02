@@ -40,7 +40,7 @@ test('TC-MD-25: an unreachable API (fetch rejects) shows the error and Retry, no
     return page([AUDIO]);
   });
   const user = userEvent.setup();
-  renderApp('/inventory');
+  renderApp('/inventory?tab=categories');
 
   expect(await screen.findByText(/Could not reach the server/)).toBeTruthy();
   expect(screen.queryByText('No categories yet.')).toBeNull();
@@ -58,7 +58,7 @@ test('TC-MD-25: an unreachable API (fetch rejects) shows the error and Retry, no
 test('TC-MD-26 keyboard only: Enter opens Rename, Escape closes without saving and focus returns; in-use Delete is reachable and inert', async () => {
   const fetchMock = api((method) => (method === 'GET' ? page([AUDIO, LAPTOPS]) : { status: 500 }));
   const user = userEvent.setup();
-  renderApp('/inventory');
+  renderApp('/inventory?tab=categories');
 
   const rename = await screen.findByRole('button', { name: 'Rename Audio' });
   rename.focus();
@@ -91,7 +91,7 @@ test('a same-name rename padded with spaces sends the trimmed name, closes the d
     method === 'GET' ? page([AUDIO]) : { status: 200, body: { category: AUDIO } },
   );
   const user = userEvent.setup();
-  renderApp('/inventory');
+  renderApp('/inventory?tab=categories');
 
   await user.click(await screen.findByRole('button', { name: 'Rename Audio' }));
   const field = screen.getByLabelText('New name');
@@ -116,7 +116,7 @@ test('rename NOT_FOUND (deleted by someone else while the dialog is open) shows 
     return { status: 404, body: apiError('NOT_FOUND', 'Category not found.') };
   });
   const user = userEvent.setup();
-  renderApp('/inventory');
+  renderApp('/inventory?tab=categories');
 
   await user.click(await screen.findByRole('button', { name: 'Rename Audio' }));
   const field = screen.getByLabelText('New name');
@@ -139,7 +139,7 @@ test('paging on the Inventory page loads the next page and moves focus to the ta
     return p === 2 ? page(many.slice(25), 2, 30) : page(many.slice(0, 25), 1, 30);
   });
   const user = userEvent.setup();
-  renderApp('/inventory');
+  renderApp('/inventory?tab=categories');
 
   await screen.findByRole('row', { name: /Cat 00/ });
   await user.click(screen.getByRole('button', { name: 'Next' }));

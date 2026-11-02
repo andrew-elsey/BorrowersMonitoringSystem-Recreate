@@ -57,7 +57,7 @@ const categoryListLoads = (fetchMock: ReturnType<typeof mockApi>) =>
 test('lists categories with their item counts; a category in use cannot be deleted (BR 15)', async () => {
   const fetchMock = fakeApi();
   const user = userEvent.setup();
-  renderApp('/inventory');
+  renderApp('/inventory?tab=categories');
 
   const table = await screen.findByRole('table', { name: 'Categories' });
   const laptops = await within(table).findByRole('row', { name: /Laptops 14/ });
@@ -87,7 +87,7 @@ test('a failed list load shows the error and a Retry button, not the empty state
       : undefined,
   );
   const user = userEvent.setup();
-  renderApp('/inventory');
+  renderApp('/inventory?tab=categories');
 
   expect(await screen.findByText('Something went wrong. Try again.')).toBeTruthy();
   expect(screen.queryByText('No categories yet.')).toBeNull();
@@ -112,7 +112,7 @@ test('the screen is in the admin menu only; other roles get the not-allowed page
   cleanup();
 
   mockApi(() => signedInAs(HANDLER));
-  renderApp('/inventory');
+  renderApp('/inventory?tab=categories');
   expect(await screen.findByRole('heading', { name: "You can't open this page" })).toBeTruthy();
   expect(screen.queryByRole('table', { name: 'Categories' })).toBeNull();
   expect(
@@ -129,7 +129,7 @@ test('adding a category sends the name, names it in the confirmation, clears the
       : undefined,
   );
   const user = userEvent.setup();
-  renderApp('/inventory');
+  renderApp('/inventory?tab=categories');
   await screen.findByRole('row', { name: /Audio/ });
   const loadsBefore = categoryListLoads(fetchMock);
 
@@ -149,7 +149,7 @@ test('the confirmation sits in the page flow above the heading, not over the tab
       : undefined,
   );
   const user = userEvent.setup();
-  renderApp('/inventory');
+  renderApp('/inventory?tab=categories');
   await screen.findByRole('row', { name: /Audio/ });
   await user.type(screen.getByLabelText('New category'), 'Projectors');
   await user.click(screen.getByRole('button', { name: 'Add category' }));
@@ -169,7 +169,7 @@ test('an empty name is refused in the browser; a duplicate name shows the API er
       : undefined,
   );
   const user = userEvent.setup();
-  renderApp('/inventory');
+  renderApp('/inventory?tab=categories');
   await screen.findByRole('row', { name: /Audio/ });
 
   await user.click(screen.getByRole('button', { name: 'Add category' }));
@@ -188,7 +188,7 @@ test('Rename opens a dialog with the name filled in and focused; Enter saves and
     method === 'PUT' ? { status: 200, body: { category: { ...AUDIO, name: 'Sound' } } } : undefined,
   );
   const user = userEvent.setup();
-  renderApp('/inventory');
+  renderApp('/inventory?tab=categories');
 
   const renameButton = await screen.findByRole('button', { name: 'Rename Audio' });
   await user.click(renameButton);
@@ -216,7 +216,7 @@ test('a rename still succeeds when the browser closes the dialog while it is sav
     return { status: 200, body: { category: { ...AUDIO, name: 'Sound' } } };
   });
   const user = userEvent.setup();
-  renderApp('/inventory');
+  renderApp('/inventory?tab=categories');
 
   await user.click(await screen.findByRole('button', { name: 'Rename Audio' }));
   const field = screen.getByLabelText('New name');
@@ -234,7 +234,7 @@ test('a duplicate name on rename shows the API error under the dialog field and 
       : undefined,
   );
   const user = userEvent.setup();
-  renderApp('/inventory');
+  renderApp('/inventory?tab=categories');
 
   await user.click(await screen.findByRole('button', { name: 'Rename Audio' }));
   const dialog = screen.getByRole('dialog', { name: 'Rename Audio' });
@@ -251,7 +251,7 @@ test('a duplicate name on rename shows the API error under the dialog field and 
 test('Cancel closes the rename dialog without sending anything and returns focus to Rename', async () => {
   const fetchMock = fakeApi();
   const user = userEvent.setup();
-  renderApp('/inventory');
+  renderApp('/inventory?tab=categories');
 
   const renameButton = await screen.findByRole('button', { name: 'Rename Audio' });
   await user.click(renameButton);
@@ -273,7 +273,7 @@ test('delete asks first, then deletes and focuses the name field; a HAS_HISTORY 
     };
   });
   const user = userEvent.setup();
-  renderApp('/inventory');
+  renderApp('/inventory?tab=categories');
 
   await user.click(await screen.findByRole('button', { name: 'Delete Audio' }));
   const dialog = screen.getByRole('dialog', { name: 'Delete category?' });
@@ -302,7 +302,7 @@ test('a delete refused with NOT_FOUND (someone else deleted it) shows the messag
       : undefined,
   );
   const user = userEvent.setup();
-  renderApp('/inventory');
+  renderApp('/inventory?tab=categories');
 
   await user.click(await screen.findByRole('button', { name: 'Delete Audio' }));
   const loadsBefore = categoryListLoads(fetchMock);
@@ -315,7 +315,7 @@ test('a delete refused with NOT_FOUND (someone else deleted it) shows the messag
 test('the first Tab reaches a "Skip to main content" link that targets the main area', async () => {
   fakeApi();
   const user = userEvent.setup();
-  renderApp('/inventory');
+  renderApp('/inventory?tab=categories');
   await screen.findByRole('table', { name: 'Categories' });
 
   await user.tab();
