@@ -349,7 +349,7 @@ test('when the Status filter hides the row just deactivated, focus moves to that
   expect(document.activeElement).toBe(status);
 });
 
-test('the search goes back to page 1 only when the trimmed text changes', async () => {
+test('the search goes back to page 1 only when the search sent changes (not a space or one letter)', async () => {
   const fetchMock = fakeApi(sixty);
   const user = userEvent.setup();
   renderApp('/borrowers');
@@ -362,7 +362,13 @@ test('the search goes back to page 1 only when the trimmed text changes', async 
   expect(screen.getByText('Page 2 of 3')).toBeTruthy();
   expect(lastLoad(fetchMock)).toBe('/api/borrowers?page=2&pageSize=25');
 
-  await user.type(search, 'Ca');
+  // One letter is too short to search, so the list and the page stay as they are.
+  await user.type(search, 'C');
+  await new Promise((resolve) => setTimeout(resolve, 400));
+  expect(screen.getByText('Page 2 of 3')).toBeTruthy();
+  expect(lastLoad(fetchMock)).toBe('/api/borrowers?page=2&pageSize=25');
+
+  await user.type(search, 'a');
   await vi.waitFor(() =>
     expect(lastLoad(fetchMock)).toBe('/api/borrowers?page=1&pageSize=25&q=Ca'),
   );

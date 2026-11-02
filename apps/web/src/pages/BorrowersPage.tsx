@@ -27,6 +27,8 @@ const PAGE_SIZE = 25;
 const BORROWERS_KEY = ['borrowers'];
 // Wait for a pause in typing, so a name is one search request, not one per letter.
 const SEARCH_DELAY_MS = 300;
+// SPEC 7: one letter is too short to search, so the full list stays.
+const searchFor = (text: string) => (text.length >= SEARCH_MIN_LENGTH ? text : '');
 const FIELDS = ['schoolId', 'name', 'type', 'department'] as const;
 
 const TYPE_LABELS: Record<BorrowerType, string> = {
@@ -65,17 +67,15 @@ export function BorrowersPage() {
 
   useEffect(() => {
     const timer = setTimeout(() => {
-      // Only a real change goes back to page 1, not the first render or a trailing space.
       const next = searchText.trim();
-      if (next !== query) {
-        setQuery(next);
-        setPage(1);
-      }
+      setQuery(next);
+      // Only a change to the search actually sent goes back to page 1: not the first render,
+      // a trailing space, or a single letter (which still shows the full list).
+      if (searchFor(next) !== searchFor(query)) setPage(1);
     }, SEARCH_DELAY_MS);
     return () => clearTimeout(timer);
   }, [searchText, query]);
-  // SPEC 7: one letter is too short to search, so the full list stays.
-  const q = query.length >= SEARCH_MIN_LENGTH ? query : '';
+  const q = searchFor(query);
 
   const borrowers = useQuery({
     queryKey: [...BORROWERS_KEY, q, typeFilter, statusFilter, page],
