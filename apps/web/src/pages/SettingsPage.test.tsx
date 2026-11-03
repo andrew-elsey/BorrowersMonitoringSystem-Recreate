@@ -70,7 +70,7 @@ const changeRequests = (fetchMock: ReturnType<typeof mockApi>) =>
     .filter(([, init]) => init?.method !== 'GET')
     .map(([url, init]) => [init!.method, url, init!.body && JSON.parse(init!.body as string)]);
 
-test('shows the settings and semesters, warns with no current semester, and sets one current', async () => {
+test('TC-MD-33: shows the settings and semesters, warns with no current semester, and sets one current after confirming', async () => {
   const semesters = [SECOND, FIRST];
   const fetchMock = fakeApi(semesters, (method, path) => {
     if (method === 'POST' && path === '/semesters/s1/current') {
@@ -92,9 +92,24 @@ test('shows the settings and semesters, warns with no current semester, and sets
   expect(within(row).getByText('10 Aug 2026')).toBeTruthy();
   expect(within(row).getByText('18 Dec 2026')).toBeTruthy();
 
-  await user.click(
-    screen.getByRole('button', { name: 'Set 1st Semester AY 2026-2027 as current' }),
-  );
+  // Cancel has focus when it opens (ConfirmDialog pattern); cancelling sends nothing.
+  const setFirst = screen.getByRole('button', { name: 'Set 1st Semester AY 2026-2027 as current' });
+  await user.click(setFirst);
+  let dialog = screen.getByRole('dialog', { name: 'Change the current semester?' });
+  expect(
+    within(dialog).getByText(
+      'Strikes will count only in 1st Semester AY 2026-2027, so every borrower starts at 0 strikes. Old flags stay in history.',
+    ),
+  ).toBeTruthy();
+  expect(document.activeElement).toBe(within(dialog).getByRole('button', { name: 'Cancel' }));
+  await user.click(within(dialog).getByRole('button', { name: 'Cancel' }));
+  expect(screen.queryByRole('dialog')).toBeNull();
+  expect(changeRequests(fetchMock)).toEqual([]);
+
+  // Confirm: the switch is sent once.
+  await user.click(setFirst);
+  dialog = screen.getByRole('dialog', { name: 'Change the current semester?' });
+  await user.click(within(dialog).getByRole('button', { name: 'Set as current' }));
   expect(
     await screen.findByText('"1st Semester AY 2026-2027" is now the current semester.'),
   ).toBeTruthy();
@@ -103,6 +118,10 @@ test('shows the settings and semesters, warns with no current semester, and sets
   ).toBeTruthy();
   expect(screen.queryByText('No current semester.')).toBeNull();
   expect(screen.queryByRole('button', { name: /Set 1st Semester.* as current/ })).toBeNull();
+  // Its button is gone, so focus goes to the new semester name.
+  await vi.waitFor(() =>
+    expect(document.activeElement).toBe(screen.getByLabelText('New semester name')),
+  );
   expect(changeRequests(fetchMock)).toEqual([['POST', '/api/semesters/s1/current', undefined]]);
 });
 
@@ -189,6 +208,34 @@ test('adds a semester from the form and edits one in a dialog opened from its ro
       { name: '1st Semester', startDate: FIRST.startDate, endDate: FIRST.endDate },
     ],
   ]);
+});
+
+test('TC-MD-31, TC-MD-32: an overlap and a duplicate name from the API show under their fields', async () => {
+  const overlap = `These dates overlap "${FIRST.name}" (2026-08-10 to 2026-12-18).`;
+  const duplicate = `A semester named "${FIRST.name}" already exists.`;
+  fakeApi([FIRST], (method, path, body) => {
+    const fields = method === 'POST' ? { startDate: [overlap] } : { name: [duplicate] };
+    if (path.startsWith('/semesters')) {
+      const code = method === 'POST' ? 'SEMESTER_OVERLAP' : 'DUPLICATE_VALUE';
+      return { status: 409, body: apiError(code, fields.startDate?.[0] ?? duplicate, { fields }) };
+    }
+    throw new Error(`unexpected ${method} ${path} ${JSON.stringify(body)}`);
+  });
+  const user = userEvent.setup();
+  renderApp('/settings');
+
+  await user.type(await screen.findByLabelText('New semester name'), 'Summer');
+  await user.type(screen.getAllByLabelText('Start date')[0], '2026-12-18');
+  await user.type(screen.getAllByLabelText('End date')[0], '2027-01-05');
+  await user.click(screen.getByRole('button', { name: 'Add semester' }));
+  expect(await screen.findByText(overlap)).toBeTruthy();
+  expect(document.activeElement).toBe(screen.getAllByLabelText('Start date')[0]);
+
+  await user.click(screen.getByRole('button', { name: `Edit ${FIRST.name}` }));
+  const dialog = screen.getByRole('dialog', { name: `Edit ${FIRST.name}` });
+  await user.click(within(dialog).getByRole('button', { name: 'Save semester' }));
+  expect(await within(dialog).findByText(duplicate)).toBeTruthy();
+  expect(document.activeElement).toBe(within(dialog).getByLabelText('Name'));
 });
 
 test('SPEC 3: handlers do not see Settings and semesters', async () => {

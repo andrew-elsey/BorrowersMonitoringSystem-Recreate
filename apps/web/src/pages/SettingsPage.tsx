@@ -19,6 +19,7 @@ import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { apiFetch } from '../api';
 import { Alert } from '../components/Alert';
+import { ConfirmDialog } from '../components/ConfirmDialog';
 import { DataTable } from '../components/DataTable';
 import { Field, showApiFieldErrors } from '../components/Field';
 import { FormDialog } from '../components/FormDialog';
@@ -209,6 +210,7 @@ function SemestersSection({
   const notify = useNotify();
   const queryClient = useQueryClient();
   const [toEdit, setToEdit] = useState<Semester | null>(null);
+  const [toMakeCurrent, setToMakeCurrent] = useState<Semester | null>(null);
   const refresh = () => queryClient.invalidateQueries({ queryKey: SEMESTERS_KEY });
 
   const addForm = useForm<SemesterInput>({
@@ -247,12 +249,16 @@ function SemestersSection({
   const makeCurrent = useMutation({
     mutationFn: (semester: Semester) =>
       apiFetch<{ semester: Semester }>('POST', `/semesters/${semester.id}/current`),
-    onSuccess: ({ semester }) => {
+    onSuccess: async ({ semester }) => {
       notify.success(`"${semester.name}" is now the current semester.`);
-      return refresh();
+      setToMakeCurrent(null);
+      await refresh();
+      // Its Set as current button is gone, so focus would drop to the page start.
+      addForm.setFocus('name');
     },
     onError: (error) => {
       notify.error(error);
+      setToMakeCurrent(null);
       return refresh();
     },
   });
@@ -335,6 +341,19 @@ function SemestersSection({
       >
         <SemesterFields idPrefix="edit" form={editForm} />
       </FormDialog>
+
+      {/* Owner decision 2026-11-03: switching changes whose strikes count (BR 12), so ask first. */}
+      <ConfirmDialog
+        open={toMakeCurrent !== null}
+        title="Change the current semester?"
+        confirmLabel="Set as current"
+        onConfirm={() => makeCurrent.mutate(toMakeCurrent!)}
+        onCancel={() => setToMakeCurrent(null)}
+        isPending={makeCurrent.isPending}
+      >
+        Strikes will count only in {toMakeCurrent?.name}, so every borrower starts at 0 strikes. Old
+        flags stay in history.
+      </ConfirmDialog>
     </>
   );
 
@@ -353,9 +372,8 @@ function SemestersSection({
           <button
             type="button"
             aria-label={`Set ${semester.name} as current`}
-            disabled={makeCurrent.isPending}
-            onClick={() => makeCurrent.mutate(semester)}
-            className={`${linkButtonClass} disabled:cursor-wait`}
+            onClick={() => setToMakeCurrent(semester)}
+            className={linkButtonClass}
           >
             Set as current
           </button>
