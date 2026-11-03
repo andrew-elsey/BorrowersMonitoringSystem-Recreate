@@ -46,7 +46,7 @@ All domain tables use UUID primary keys and `created_at` / `updated_at` timestam
 **items**: name, category, description, tracking_type (`UNIT` or `QUANTITY`, fixed once the item is created), asset_tag (unique, case-insensitive; stored as typed; required for UNIT, null for QUANTITY), total_quantity (always 1 for UNIT; 0 or more for QUANTITY), condition (`NEW`, `GOOD`, `FAIR`, `DAMAGED`), status (`ACTIVE`, `UNDER_REPAIR`, `LOST`, `RETIRED`).
 - Status describes the item's lifecycle, not whether it is currently out. "Borrowed" or "available" is always calculated from open transaction lines and never stored.
 
-**semesters**: name, start_date, end_date (dates in `Asia/Manila`; the end is not before the start), is_current (exactly one true at a time). Never deleted.
+**semesters**: name (unique, case-insensitive), start_date, end_date (dates in `Asia/Manila`; the end is not before the start), is_current (exactly one true at a time). Semesters never overlap: start and end are both included, so one ending on the day another starts overlaps it (owner decision 2026-11-03). Never deleted.
 
 **settings** (single row): closing_time (local time `HH:mm`, default `17:00`), warning_threshold (default 3), notice_threshold (default 4), block_threshold (default 5).
 
