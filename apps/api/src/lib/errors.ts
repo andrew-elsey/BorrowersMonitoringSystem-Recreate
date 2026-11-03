@@ -23,3 +23,10 @@ export class ApiError extends Error {
 export function isPrismaError(error: unknown, code: string): boolean {
   return (error as { code?: unknown } | null)?.code === code;
 }
+
+// True when PostgreSQL rejected a query with this SQLSTATE that Prisma has no code of its own for,
+// for example '23P01' (an exclusion constraint, such as overlapping semesters).
+export function isPostgresError(error: unknown, sqlState: string): boolean {
+  type WithCause = { meta?: { driverAdapterError?: { cause?: { originalCode?: unknown } } } };
+  return (error as WithCause | null)?.meta?.driverAdapterError?.cause?.originalCode === sqlState;
+}

@@ -46,7 +46,7 @@ All domain tables use UUID primary keys and `created_at` / `updated_at` timestam
 **items**: name, category, description, tracking_type (`UNIT` or `QUANTITY`, fixed once the item is created), asset_tag (unique, case-insensitive; stored as typed; required for UNIT, null for QUANTITY), total_quantity (always 1 for UNIT; 0 or more for QUANTITY), condition (`NEW`, `GOOD`, `FAIR`, `DAMAGED`), status (`ACTIVE`, `UNDER_REPAIR`, `LOST`, `RETIRED`).
 - Status describes the item's lifecycle, not whether it is currently out. "Borrowed" or "available" is always calculated from open transaction lines and never stored.
 
-**semesters**: name, start_date, end_date (dates in `Asia/Manila`), is_current (exactly one true at a time).
+**semesters**: name (unique, case-insensitive), start_date, end_date (dates in `Asia/Manila`; the end is not before the start), is_current (exactly one true at a time). Semesters never overlap: start and end are both included, so one ending on the day another starts overlaps it (owner decision 2026-11-03). Never deleted.
 
 **settings** (single row): closing_time (local time `HH:mm`, default `17:00`), warning_threshold (default 3), notice_threshold (default 4), block_threshold (default 5).
 
@@ -93,6 +93,7 @@ Enforced on the server in the shared Zod schemas and mirrored in the forms. They
 - Lists: page size at most 100. Search text: 2 to 100 characters.
 - Checkout: at most 50 lines per transaction. Quantity per line is a whole number from 1 to 10,000 and never above what is available.
 - Items: total quantity of a QUANTITY item is a whole number from 0 to 10,000.
+- Settings: closing time is `HH:mm` (00:00 to 23:59); each strike threshold is a whole number from 1 to 100, and warning < notice < block.
 - Text fields: names 200 characters, descriptions 1,000, notes 500, override reasons 500 (required, at least 5 characters).
 - Reports: date range at most 366 days, results paginated or aggregated.
 - Audit log viewer: always filtered by a date range and paginated.

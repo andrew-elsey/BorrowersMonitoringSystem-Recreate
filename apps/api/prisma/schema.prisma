@@ -160,6 +160,7 @@ model Item {
 }
 
 // Dates are calendar dates in Asia/Manila. Exactly one row has is_current = true (partial unique index).
+// Name unique ignoring case (raw SQL index on lower(name)); no overlapping dates (raw SQL exclusion constraint semesters_no_overlap).
 model Semester {
   id        String   @id @default(uuid()) @db.Uuid
   name      String

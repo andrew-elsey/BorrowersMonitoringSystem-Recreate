@@ -96,7 +96,7 @@ const save = useMutation({
 
 ### Data table
 
-`DataTable` shows one page from a list endpoint (`{ data, page, pageSize, total }`, ARCHITECTURE section 7) with loading and empty states and Previous and Next buttons. The row count is hidden while loading or empty, and a page change moves focus to the table. When the query fails, show an `Alert` with the error and a Retry button instead of the table, so a failed load does not look like an empty list. Keep the page number in state and pass it to the query; page size is at most 100 (SPEC section 7).
+`DataTable` shows one page from a list endpoint (`{ data, page, pageSize, total }`, ARCHITECTURE section 7) with loading and empty states and Previous and Next buttons. The row count is hidden while loading or empty, and a page change moves focus to the table. When the query fails, show a `RetryAlert` instead of the table, so a failed load does not look like an empty list. Keep the page number in state and pass it to the query; page size is at most 100 (SPEC section 7).
 
 ```tsx
 <DataTable
@@ -111,6 +111,18 @@ const save = useMutation({
   total={rooms.data?.total ?? 0}
   onPageChange={setPage}
 />
+```
+
+### Retry alert
+
+`RetryAlert` shows a failed query's error with a Retry button. Pass the query; `onRetried` runs after a Retry that worked, because the button is then gone and focus would drop to the page start, so move focus to the first field of the page's form (SPEC section 8).
+
+```tsx
+{rooms.isError ? (
+  <RetryAlert query={rooms} onRetried={() => addForm.setFocus('name')} />
+) : (
+  <DataTable ... />
+)}
 ```
 
 ### Confirm dialog

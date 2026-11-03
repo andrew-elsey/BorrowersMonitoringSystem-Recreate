@@ -4,13 +4,13 @@ import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tansta
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { Link, useSearchParams } from 'react-router';
-import { ApiRequestError, apiFetch, errorText } from '../api';
-import { Alert } from '../components/Alert';
+import { ApiRequestError, apiFetch } from '../api';
 import { ConfirmDialog } from '../components/ConfirmDialog';
 import { DataTable } from '../components/DataTable';
 import { Field, showApiFieldErrors } from '../components/Field';
 import { FormDialog } from '../components/FormDialog';
 import { useNotify } from '../components/Notifications';
+import { RetryAlert } from '../components/RetryAlert';
 import { InventoryItems } from './InventoryItems';
 
 // Inventory and categories (SPEC.md 5, admin only), with an Items tab (MD-2) and a Categories tab
@@ -133,12 +133,6 @@ function CategoriesTab() {
     },
   });
 
-  async function retryLoading() {
-    const result = await categories.refetch();
-    // The Retry button is gone once the list loads, so focus would drop to the page start.
-    if (!result.isError) addForm.setFocus('name');
-  }
-
   function startRenaming(category: Category) {
     renameForm.reset({ name: category.name });
     setToRename(category);
@@ -174,17 +168,7 @@ function CategoriesTab() {
       <div className="max-w-[760px]">
         {categories.isError ? (
           // Without this, a failed load would look like "No categories yet."
-          <Alert kind="error">
-            {errorText(categories.error)}{' '}
-            <button
-              type="button"
-              disabled={categories.isFetching}
-              onClick={retryLoading}
-              className="cursor-pointer font-semibold underline underline-offset-4 disabled:cursor-wait"
-            >
-              Retry
-            </button>
-          </Alert>
+          <RetryAlert query={categories} onRetried={() => addForm.setFocus('name')} />
         ) : (
           <DataTable
             caption="Categories"

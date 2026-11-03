@@ -92,10 +92,13 @@ describe('semesters', () => {
 
   test('only one semester can be current', async () => {
     await prisma.semester.create({ data: { name: 'First 2026', isCurrent: true, ...dates } });
-    await prisma.semester.create({ data: { name: 'Old', isCurrent: false, ...dates } });
+    // Other dates, so only the one-current index can refuse the change (semesters never overlap, MD-7).
+    const later = { startDate: new Date('2027-01-10'), endDate: new Date('2027-05-30') };
+    await prisma.semester.create({ data: { name: 'Old', isCurrent: false, ...later } });
 
-    const second = prisma.semester.create({
-      data: { name: 'Second 2026', isCurrent: true, ...dates },
+    const second = prisma.semester.updateMany({
+      where: { name: 'Old' },
+      data: { isCurrent: true },
     });
     await expect(second).rejects.toThrow();
     expect(await prisma.semester.count({ where: { isCurrent: true } })).toBe(1);

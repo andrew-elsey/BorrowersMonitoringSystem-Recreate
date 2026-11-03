@@ -3,13 +3,13 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
-import { ApiRequestError, apiFetch, errorText } from '../api';
-import { Alert } from '../components/Alert';
+import { ApiRequestError, apiFetch } from '../api';
 import { ConfirmDialog } from '../components/ConfirmDialog';
 import { DataTable } from '../components/DataTable';
 import { Field, showApiFieldErrors } from '../components/Field';
 import { FormDialog } from '../components/FormDialog';
 import { useNotify } from '../components/Notifications';
+import { RetryAlert } from '../components/RetryAlert';
 import { StatusBadge } from '../components/StatusBadge';
 
 // Rooms and labs (SPEC.md 5, admin only, MD-3). Add with the top form, rename in a dialog from the
@@ -122,12 +122,6 @@ export function RoomsPage() {
     },
   });
 
-  async function retryLoading() {
-    const result = await rooms.refetch();
-    // The Retry button is gone once the list loads, so focus would drop to the page start.
-    if (!result.isError) addForm.setFocus('name');
-  }
-
   function startRenaming(room: Room) {
     renameForm.reset({ name: room.name });
     setToRename(room);
@@ -169,18 +163,7 @@ export function RoomsPage() {
 
       <div className="max-w-[900px]">
         {rooms.isError ? (
-          // Without this, a failed load would look like an empty list.
-          <Alert kind="error">
-            {errorText(rooms.error)}{' '}
-            <button
-              type="button"
-              disabled={rooms.isFetching}
-              onClick={retryLoading}
-              className="cursor-pointer font-semibold underline underline-offset-4 disabled:cursor-wait"
-            >
-              Retry
-            </button>
-          </Alert>
+          <RetryAlert query={rooms} onRetried={() => addForm.setFocus('name')} />
         ) : (
           <DataTable
             caption="Rooms and labs"
