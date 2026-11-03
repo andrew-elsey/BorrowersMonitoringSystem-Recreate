@@ -87,6 +87,11 @@ test('TC-MD-33: shows the settings and semesters, warns with no current semester
   expect(screen.getByText('Asia/Manila')).toBeTruthy();
   expect((screen.getByLabelText('Block at') as HTMLInputElement).value).toBe('5');
   expect(await screen.findByText('No current semester.')).toBeTruthy();
+  expect(
+    screen.getByText(
+      'Strikes count only in the current semester. Flags from other semesters stay in history.',
+    ),
+  ).toBeTruthy();
   const row = screen.getByRole('row', { name: /1st Semester/ });
   // Calendar dates are shown as they are, never shifted by a timezone.
   expect(within(row).getByText('10 Aug 2026')).toBeTruthy();
@@ -118,9 +123,13 @@ test('TC-MD-33: shows the settings and semesters, warns with no current semester
   ).toBeTruthy();
   expect(screen.queryByText('No current semester.')).toBeNull();
   expect(screen.queryByRole('button', { name: /Set 1st Semester.* as current/ })).toBeNull();
-  // Its button is gone, so focus goes to the new semester name.
+  // Its button is gone, so focus goes to its name in the list.
   await vi.waitFor(() =>
-    expect(document.activeElement).toBe(screen.getByLabelText('New semester name')),
+    expect(document.activeElement).toBe(
+      within(screen.getByRole('row', { name: /1st Semester/ })).getByText(
+        '1st Semester AY 2026-2027',
+      ),
+    ),
   );
   expect(changeRequests(fetchMock)).toEqual([['POST', '/api/semesters/s1/current', undefined]]);
 });

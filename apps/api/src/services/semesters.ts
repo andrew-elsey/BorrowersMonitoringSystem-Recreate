@@ -166,8 +166,8 @@ export async function updateSemester(
   }
 }
 
-// Exactly one current semester (SPEC.md 4). Setting a new one starts every borrower at 0 strikes
-// (BR 12); old transactions keep their semester.
+// Exactly one current semester (SPEC.md 4). Strikes count only in the current semester (BR 10, 12);
+// old transactions keep their semester, so their flags stay in history.
 export async function setCurrentSemester(actorId: string, id: string): Promise<Semester> {
   return prisma.$transaction(async (tx) => {
     // One change of the current semester at a time. Without this, two admins setting different

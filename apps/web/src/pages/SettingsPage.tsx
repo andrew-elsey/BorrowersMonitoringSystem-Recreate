@@ -245,7 +245,7 @@ function SemestersSection({
     },
   });
 
-  // BR 12: a new current semester starts every borrower at 0 strikes.
+  // BR 10, 12: only flags from the current semester count as strikes.
   const makeCurrent = useMutation({
     mutationFn: (semester: Semester) =>
       apiFetch<{ semester: Semester }>('POST', `/semesters/${semester.id}/current`),
@@ -253,8 +253,8 @@ function SemestersSection({
       notify.success(`"${semester.name}" is now the current semester.`);
       setToMakeCurrent(null);
       await refresh();
-      // Its Set as current button is gone, so focus would drop to the page start.
-      addForm.setFocus('name');
+      // Its Set as current button is gone, so focus goes to its name for screen readers.
+      document.getElementById(`semester-name-${semester.id}`)?.focus();
     },
     onError: (error) => {
       notify.error(error);
@@ -279,8 +279,7 @@ function SemestersSection({
           Semesters
         </h2>
         <p className="text-sm text-muted">
-          Strikes count only in the current semester. Making a new semester current starts every
-          borrower at 0 strikes; old flags stay in history.
+          Strikes count only in the current semester. Flags from other semesters stay in history.
         </p>
         {semesters.isError ? (
           <RetryAlert query={semesters} onRetried={() => addForm.setFocus('name')} />
@@ -291,7 +290,11 @@ function SemestersSection({
               {
                 header: 'Name',
                 cell: (s) => (
-                  <span className={`wrap-anywhere ${s.isCurrent ? 'font-bold' : ''}`}>
+                  <span
+                    id={`semester-name-${s.id}`}
+                    tabIndex={-1}
+                    className={`wrap-anywhere ${s.isCurrent ? 'font-bold' : ''}`}
+                  >
                     {s.name}
                   </span>
                 ),
