@@ -98,7 +98,7 @@ test('TC-MD-33: shows the settings and semesters, warns with no current semester
   let dialog = screen.getByRole('dialog', { name: 'Change the current semester?' });
   expect(
     within(dialog).getByText(
-      'Strikes will count only in 1st Semester AY 2026-2027, so every borrower starts at 0 strikes. Old flags stay in history.',
+      'Only flags from transactions in 1st Semester AY 2026-2027 will count as strikes. Flags from other semesters stay in history.',
     ),
   ).toBeTruthy();
   expect(document.activeElement).toBe(within(dialog).getByRole('button', { name: 'Cancel' }));

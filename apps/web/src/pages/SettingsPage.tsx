@@ -351,8 +351,8 @@ function SemestersSection({
         onCancel={() => setToMakeCurrent(null)}
         isPending={makeCurrent.isPending}
       >
-        Strikes will count only in {toMakeCurrent?.name}, so every borrower starts at 0 strikes. Old
-        flags stay in history.
+        Only flags from transactions in {toMakeCurrent?.name} will count as strikes. Flags from
+        other semesters stay in history.
       </ConfirmDialog>
     </>
   );
