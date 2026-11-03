@@ -132,7 +132,7 @@ const save = useMutation({
 
 ### Form dialog
 
-`FormDialog` edits a record in a modal dialog opened from its table row: renaming a category, editing a borrower or an item, and rooms later. The children are the fields of a React Hook Form form. The browser focuses the first field when it opens, Enter saves, Escape and Cancel close it, and focus goes back to the row button that opened it. Both buttons are disabled while `isPending` is true. Reset the form with the record before opening it, and send API errors to the fields with `showApiFieldErrors`.
+`FormDialog` edits a record in a modal dialog opened from its table row: renaming a category, editing a borrower or an item, and renaming a room. The children are the fields of a React Hook Form form. The browser focuses the first field when it opens, Enter saves, Escape and Cancel close it, and focus goes back to the row button that opened it. Both buttons are disabled while `isPending` is true. Reset the form with the record before opening it, and send API errors to the fields with `showApiFieldErrors`.
 
 ```tsx
 const editForm = useForm<CategoryInput>({ resolver: zodResolver(categorySchema) });
@@ -158,3 +158,7 @@ function startRenaming(category: Category) {
 ### Notifications
 
 `useNotify()` shows a message at the top of the page content, above the page heading, until it is dismissed. Messages sit in the page flow, never floating over the page, so they never cover a button. Only the newest three are kept. `notify.success(text)` for a saved change; `notify.error(error)` shows the API error `message`, or "Try again in N seconds" on 429 and 503. `AppShell` mounts `NotificationProvider` inside `<main>`, so every signed-in page (and `renderApp` in tests) has it; a page outside the app shell, such as login, has none.
+
+### Status badge
+
+`StatusBadge` shows Active or Inactive as text on a colored pill, never color alone (ARCHITECTURE section 14), for records that are deactivated instead of deleted, such as borrowers and rooms.

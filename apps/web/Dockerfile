@@ -8,6 +8,8 @@ COPY apps/web/package.json apps/web/
 RUN npm ci
 COPY packages/shared packages/shared
 COPY apps/web apps/web
+# The web app formats dates in this zone (vite.config.ts envPrefix).
+ARG APP_TIMEZONE=Asia/Manila
 RUN npm run build -w @bms/web
 
 # nginx-unprivileged runs as a non-root user and listens on 8080 (ARCHITECTURE.md 12.6).

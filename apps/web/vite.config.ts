@@ -4,6 +4,8 @@ import tailwindcss from '@tailwindcss/vite';
 
 export default defineConfig({
   plugins: [react(), tailwindcss()],
+  // APP_TIMEZONE (ARCHITECTURE.md 6) reaches the app as import.meta.env.APP_TIMEZONE at build time.
+  envPrefix: ['VITE_', 'APP_TIMEZONE'],
   // Bundle @bms/shared from its TypeScript source (see packages/shared/package.json).
   resolve: { conditions: ['source', 'module', 'browser', 'development|production'] },
   // `npm run dev`: forward /api to the API running on this machine, as nginx does in Docker.
