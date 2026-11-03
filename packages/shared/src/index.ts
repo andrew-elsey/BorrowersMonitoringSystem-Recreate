@@ -5,4 +5,5 @@ export * from './permissions.ts';
 export * from './categories.ts';
 export * from './borrowers.ts';
 export * from './items.ts';
+export * from './rooms.ts';
 export * from './settings.ts';

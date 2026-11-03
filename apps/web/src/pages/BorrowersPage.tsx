@@ -17,6 +17,7 @@ import { Field, SelectField, showApiFieldErrors } from '../components/Field';
 import { FormDialog } from '../components/FormDialog';
 import { useNotify } from '../components/Notifications';
 import { RetryAlert } from '../components/RetryAlert';
+import { StatusBadge } from '../components/StatusBadge';
 
 // Borrowers (SPEC.md 5, admin only). Add with the top form, edit in a dialog from the row,
 // deactivate or reactivate from the row; borrowers are never deleted (BR 15). The server enforces
@@ -329,16 +330,5 @@ function BorrowerFields({
         {...form.register('department')}
       />
     </>
-  );
-}
-
-// Text and color together, never color alone (ARCHITECTURE.md 14).
-function StatusBadge({ active }: { active: boolean }) {
-  return (
-    <span
-      className={`inline-flex rounded-full px-2.5 py-0.5 text-[13px] font-semibold ${active ? 'bg-primary-tint text-primary' : 'bg-page text-muted'}`}
-    >
-      {active ? 'Active' : 'Inactive'}
-    </span>
   );
 }

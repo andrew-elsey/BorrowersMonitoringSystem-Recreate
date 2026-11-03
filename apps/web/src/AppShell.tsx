@@ -10,6 +10,7 @@ const NAV_ITEMS = [
   { to: '/', label: 'Home', roles: PERMISSIONS.viewDashboardAndReports },
   { to: '/inventory', label: 'Inventory and categories', roles: PERMISSIONS.manageMasterData },
   { to: '/borrowers', label: 'Borrowers', roles: PERMISSIONS.manageMasterData },
+  { to: '/rooms', label: 'Rooms and labs', roles: PERMISSIONS.manageMasterData },
   {
     to: '/settings',
     label: 'Settings and semesters',
