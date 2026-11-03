@@ -73,6 +73,29 @@ test('lists rooms with who added them, when, and status; a room in use cannot be
   expect(changeRequests(fetchMock)).toEqual([]);
 });
 
+test('a failed list load shows the error and a Retry button, not the empty state', async () => {
+  let fail = true;
+  fakeApi((method) =>
+    method === 'GET' && fail
+      ? { status: 500, body: apiError('INTERNAL', 'Something went wrong. Try again.') }
+      : undefined,
+  );
+  const user = userEvent.setup();
+  renderApp('/rooms');
+
+  expect(await screen.findByText('Something went wrong. Try again.')).toBeTruthy();
+  expect(screen.queryByText('No rooms or labs yet. Add the first one above.')).toBeNull();
+  expect(screen.queryByText(/Showing/)).toBeNull();
+
+  fail = false;
+  await user.click(screen.getByRole('button', { name: 'Retry' }));
+  expect(await screen.findByRole('table', { name: 'Rooms and labs' })).toBeTruthy();
+  // The Retry button is gone, so focus goes to the name field instead of the page start.
+  await vi.waitFor(() =>
+    expect(document.activeElement).toBe(screen.getByLabelText('New room or lab name')),
+  );
+});
+
 test('TC-MD-11: a duplicate name shows the API message under the field', async () => {
   const message = '"CL-201" already exists. Names are compared without regard to case.';
   const fetchMock = fakeApi((method) =>

@@ -148,7 +148,7 @@ Adding a dependency outside this list needs the owner's approval.
 - Constraints live in the database: unique asset tag (case-insensitive), unique borrower school ID, unique room name (case-insensitive), non-negative quantities, `quantity_returned <= quantity_borrowed`, one current semester, unique semester name (case-insensitive), no overlapping semesters.
 - Add indexes for: open lines by item, transactions by borrower and semester, lines by flag status, audit log by entity and date.
 - **Concurrency**: inside the checkout database transaction, lock the affected item rows (`SELECT ... FOR UPDATE` through `$queryRaw`) before re-checking availability (Rule 4).
-- Edits that audit a "before" value (`updateBorrower`, `renameCategory`, `updateItem`, `updateRoom`) lock the row the same way before reading it, so two admins editing at once each audit the value their change really replaced (Rule 14).
+- Edits that audit a "before" value (`updateBorrower`, `renameCategory`, `updateItem`, `updateRoom`, `updateSemester`, `updateSettings`) lock the row the same way before reading it, so two admins editing at once each audit the value their change really replaced (Rule 14).
 - Deactivate or retire instead of deleting (Rule 15).
 
 ## 9. Scheduled job
