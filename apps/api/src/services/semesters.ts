@@ -1,7 +1,7 @@
 import type { Semester, SemesterInput, SemesterPage } from '@bms/shared';
 import type { Prisma } from '../generated/prisma/client.ts';
 import { audit } from '../lib/audit.ts';
-import { ApiError } from '../lib/errors.ts';
+import { ApiError, isPostgresError, isPrismaError } from '../lib/errors.ts';
 import { prisma } from '../lib/prisma.ts';
 
 // Semesters (MD-7). Admin only; the route checks the role. Semesters are never deleted (BR 15):
@@ -24,6 +24,32 @@ function toSemester(row: SemesterRow): Semester {
 }
 
 const notFound = () => new ApiError(404, 'NOT_FOUND', 'Semester not found.');
+
+// Owner decisions 2026-11-03: names are unique regardless of case (index on lower(name)) and
+// semesters never overlap, start and end included (exclusion constraint). The database enforces
+// both, so two requests at once cannot both get through; the errors come back as field errors.
+async function toConflictError(error: unknown, input: SemesterInput, id?: string) {
+  if (isPrismaError(error, 'P2002')) {
+    const message = `A semester named "${input.name}" already exists.`;
+    return new ApiError(409, 'DUPLICATE_VALUE', message, { fields: { name: [message] } });
+  }
+  if (isPostgresError(error, '23P01')) {
+    // The semester it overlaps has committed, so it can be named.
+    const other = await prisma.semester.findFirst({
+      where: {
+        id: id && { not: id },
+        startDate: { lte: toDate(input.endDate) },
+        endDate: { gte: toDate(input.startDate) },
+      },
+      orderBy: { startDate: 'asc' },
+    });
+    const message = other
+      ? `These dates overlap "${other.name}" (${toDateString(other.startDate)} to ${toDateString(other.endDate)}).`
+      : 'These dates overlap another semester.';
+    return new ApiError(409, 'SEMESTER_OVERLAP', message, { fields: { startDate: [message] } });
+  }
+  return error;
+}
 
 // Audit snapshot: what an admin can change.
 const snapshot = ({ name, startDate, endDate }: Semester) => ({ name, startDate, endDate });
@@ -75,26 +101,30 @@ export async function requireCurrentSemester(
 
 // A new semester is not current; the admin sets it with setCurrentSemester.
 export async function createSemester(actorId: string, input: SemesterInput): Promise<Semester> {
-  return prisma.$transaction(async (tx) => {
-    const semester = toSemester(
-      await tx.semester.create({
-        data: {
-          name: input.name,
-          startDate: toDate(input.startDate),
-          endDate: toDate(input.endDate),
-        },
-      }),
-    );
-    // Rule 14
-    await audit(tx, {
-      actorId,
-      action: 'SEMESTER_CREATED',
-      entity: 'semester',
-      entityId: semester.id,
-      after: snapshot(semester),
+  try {
+    return await prisma.$transaction(async (tx) => {
+      const semester = toSemester(
+        await tx.semester.create({
+          data: {
+            name: input.name,
+            startDate: toDate(input.startDate),
+            endDate: toDate(input.endDate),
+          },
+        }),
+      );
+      // Rule 14
+      await audit(tx, {
+        actorId,
+        action: 'SEMESTER_CREATED',
+        entity: 'semester',
+        entityId: semester.id,
+        after: snapshot(semester),
+      });
+      return semester;
     });
-    return semester;
-  });
+  } catch (error) {
+    throw await toConflictError(error, input);
+  }
 }
 
 export async function updateSemester(
@@ -102,34 +132,38 @@ export async function updateSemester(
   id: string,
   input: SemesterInput,
 ): Promise<Semester> {
-  return prisma.$transaction(async (tx) => {
-    // Lock the row so two edits at once take turns and each audit entry has the true "before".
-    await tx.$queryRaw`SELECT 1 FROM semesters WHERE id = ${id}::uuid FOR UPDATE`;
-    const row = await tx.semester.findUnique({ where: { id } });
-    if (!row) throw notFound();
-    const before = toSemester(row);
-    const after = { ...before, ...input };
-    // Nothing changed: nothing is written or audited.
-    if (JSON.stringify(snapshot(before)) === JSON.stringify(snapshot(after))) return before;
-    await tx.semester.update({
-      where: { id },
-      data: {
-        name: input.name,
-        startDate: toDate(input.startDate),
-        endDate: toDate(input.endDate),
-      },
+  try {
+    return await prisma.$transaction(async (tx) => {
+      // Lock the row so two edits at once take turns and each audit entry has the true "before".
+      await tx.$queryRaw`SELECT 1 FROM semesters WHERE id = ${id}::uuid FOR UPDATE`;
+      const row = await tx.semester.findUnique({ where: { id } });
+      if (!row) throw notFound();
+      const before = toSemester(row);
+      const after = { ...before, ...input };
+      // Nothing changed: nothing is written or audited.
+      if (JSON.stringify(snapshot(before)) === JSON.stringify(snapshot(after))) return before;
+      await tx.semester.update({
+        where: { id },
+        data: {
+          name: input.name,
+          startDate: toDate(input.startDate),
+          endDate: toDate(input.endDate),
+        },
+      });
+      // Rule 14
+      await audit(tx, {
+        actorId,
+        action: 'SEMESTER_UPDATED',
+        entity: 'semester',
+        entityId: id,
+        before: snapshot(before),
+        after: snapshot(after),
+      });
+      return after;
     });
-    // Rule 14
-    await audit(tx, {
-      actorId,
-      action: 'SEMESTER_UPDATED',
-      entity: 'semester',
-      entityId: id,
-      before: snapshot(before),
-      after: snapshot(after),
-    });
-    return after;
-  });
+  } catch (error) {
+    throw await toConflictError(error, input, id);
+  }
 }
 
 // Exactly one current semester (SPEC.md 4). Setting a new one starts every borrower at 0 strikes

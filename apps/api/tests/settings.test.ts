@@ -7,7 +7,7 @@ import { getCurrentSemester, requireCurrentSemester } from '../src/services/seme
 import { getSettings } from '../src/services/settings.ts';
 import { resetDatabase } from './setup/reset-database.ts';
 
-// MD-7: semesters and settings. Test cases TC-MD-21 to TC-MD-23 in TEST_CASES.md.
+// MD-7: semesters and settings. Test cases TC-MD-21 to TC-MD-23, TC-MD-31, and TC-MD-32 in TEST_CASES.md.
 
 const PASSWORD = 'correct-horse-battery';
 let passwordHash: string;
@@ -105,7 +105,7 @@ test('TC-MD-21: admin creates semesters and sets one current, then another; exac
 
 test('TC-MD-21: two admins setting different semesters current at once still leave exactly one current', async () => {
   const ids = await Promise.all(
-    [FIRST, SECOND, { ...SECOND, name: 'Summer' }].map(
+    [FIRST, SECOND, { name: 'Summer', startDate: '2027-06-01', endDate: '2027-07-15' }].map(
       async (body) => (await createSemester(body).expect(201)).body.semester.id as string,
     ),
   );
@@ -170,6 +170,87 @@ test('BR 2: checkout reads the current semester and is rejected with NO_CURRENT_
   const { id } = (await createSemester(FIRST).expect(201)).body.semester;
   await setCurrent(admin, id).expect(200);
   expect(await requireCurrentSemester()).toEqual({ id, ...FIRST, isCurrent: true });
+});
+
+test('TC-MD-31: a semester whose dates overlap another is refused on create and edit, start and end included', async () => {
+  const first = (await createSemester(FIRST).expect(201)).body.semester;
+  const overlap = `These dates overlap "${FIRST.name}" (2026-08-10 to 2026-12-18).`;
+
+  // Starts on the day FIRST ends: inclusive dates, so it overlaps.
+  const touching = await createSemester({
+    name: 'Touching',
+    startDate: '2026-12-18',
+    endDate: '2027-01-05',
+  }).expect(409);
+  expect(touching.body.error).toEqual({
+    code: 'SEMESTER_OVERLAP',
+    message: overlap,
+    details: { fields: { startDate: [overlap] } },
+  });
+  // Contains FIRST entirely.
+  await createSemester({ name: 'Around', startDate: '2026-08-01', endDate: '2026-12-31' }).expect(
+    409,
+  );
+  // Starts the day after FIRST ends: no overlap.
+  const second = (await createSemester({ ...SECOND, startDate: '2026-12-19' }).expect(201)).body
+    .semester;
+
+  // Editing SECOND to reach back into FIRST is refused; editing a semester within its own dates is not.
+  const edit = await send(admin, 'put', `/semesters/${second.id}`, {
+    ...SECOND,
+    startDate: '2026-12-01',
+  }).expect(409);
+  expect(edit.body.error.details.fields).toEqual({ startDate: [overlap] });
+  await send(admin, 'put', `/semesters/${first.id}`, { ...FIRST, endDate: '2026-12-17' }).expect(
+    200,
+  );
+
+  expect(await prisma.semester.count()).toBe(2);
+  expect((await auditFor('semester')).map((entry) => entry.action)).toEqual([
+    'SEMESTER_CREATED',
+    'SEMESTER_CREATED',
+    'SEMESTER_UPDATED',
+  ]);
+});
+
+test('TC-MD-31: two overlapping semesters created at once: exactly one is saved', async () => {
+  const replies = await Promise.all([
+    createSemester(FIRST),
+    createSemester({ ...FIRST, name: 'Same dates' }),
+  ]);
+  expect(replies.map((reply) => reply.status).sort()).toEqual([201, 409]);
+  expect(replies.find((reply) => reply.status === 409)!.body.error.code).toBe('SEMESTER_OVERLAP');
+  expect(await prisma.semester.count()).toBe(1);
+  expect(await auditFor('semester')).toHaveLength(1);
+});
+
+test('TC-MD-32: semester names are unique regardless of case on create and edit; a semester may change its own case', async () => {
+  const first = (await createSemester(FIRST).expect(201)).body.semester;
+  const second = (await createSemester(SECOND).expect(201)).body.semester;
+  const message = `A semester named "${FIRST.name.toUpperCase()}" already exists.`;
+
+  const created = await createSemester({
+    name: FIRST.name.toUpperCase(),
+    startDate: '2027-06-01',
+    endDate: '2027-07-15',
+  }).expect(409);
+  expect(created.body.error).toEqual({
+    code: 'DUPLICATE_VALUE',
+    message,
+    details: { fields: { name: [message] } },
+  });
+  const edited = await send(admin, 'put', `/semesters/${second.id}`, {
+    ...SECOND,
+    name: FIRST.name.toUpperCase(),
+  }).expect(409);
+  expect(edited.body.error.details.fields).toEqual({ name: [message] });
+
+  const ownCase = await send(admin, 'put', `/semesters/${first.id}`, {
+    ...FIRST,
+    name: FIRST.name.toLowerCase(),
+  }).expect(200);
+  expect(ownCase.body.semester.name).toBe(FIRST.name.toLowerCase());
+  expect(await auditFor('semester')).toHaveLength(3);
 });
 
 test('TC-MD-22: thresholds out of order (4, 3, 5 and 3, 3, 5) are rejected and nothing changes', async () => {
