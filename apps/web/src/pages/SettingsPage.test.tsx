@@ -134,6 +134,34 @@ test('TC-MD-33: shows the settings and semesters, warns with no current semester
   expect(changeRequests(fetchMock)).toEqual([['POST', '/api/semesters/s1/current', undefined]]);
 });
 
+test('TC-MD-33: when the list fails to reload after Set as current, focus goes to the new semester name', async () => {
+  let semestersFail = false;
+  mockApi((method, path) => {
+    if (path === '/auth/me') return signedInAs(ADMIN);
+    if (path === '/settings') return { status: 200, body: { settings: SETTINGS } };
+    if (method === 'POST' && path === '/semesters/s1/current') {
+      semestersFail = true;
+      return { status: 200, body: { semester: { ...FIRST, isCurrent: true } } };
+    }
+    if (semestersFail)
+      return { status: 500, body: apiError('INTERNAL_ERROR', 'Something went wrong.') };
+    return { status: 200, body: { data: [FIRST], page: 1, pageSize: 25, total: 1, current: null } };
+  });
+  const user = userEvent.setup();
+  renderApp('/settings');
+
+  await user.click(
+    await screen.findByRole('button', { name: 'Set 1st Semester AY 2026-2027 as current' }),
+  );
+  const dialog = screen.getByRole('dialog', { name: 'Change the current semester?' });
+  await user.click(within(dialog).getByRole('button', { name: 'Set as current' }));
+
+  expect(await screen.findByRole('button', { name: 'Retry' })).toBeTruthy();
+  await vi.waitFor(() =>
+    expect(document.activeElement).toBe(screen.getByLabelText('New semester name')),
+  );
+});
+
 test('BR 11: thresholds out of order are shown under the field and not sent; valid ones are saved', async () => {
   const fetchMock = fakeApi([{ ...FIRST, isCurrent: true }], (method, path, body) => {
     if (method === 'PUT' && path === '/settings') {

@@ -15,7 +15,7 @@ import {
   useQueryClient,
   type UseQueryResult,
 } from '@tanstack/react-query';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { apiFetch } from '../api';
 import { Alert } from '../components/Alert';
@@ -252,9 +252,9 @@ function SemestersSection({
     onSuccess: async ({ semester }) => {
       notify.success(`"${semester.name}" is now the current semester.`);
       setToMakeCurrent(null);
+      const reloadStartedAt = Date.now();
       await refresh();
-      // Its Set as current button is gone, so focus goes to its name for screen readers.
-      document.getElementById(`semester-name-${semester.id}`)?.focus();
+      setFocusAfterSwitch({ id: semester.id, reloadStartedAt });
     },
     onError: (error) => {
       notify.error(error);
@@ -262,6 +262,22 @@ function SemestersSection({
       return refresh();
     },
   });
+
+  // Its Set as current button is gone, so focus goes to its name for screen readers. If its row
+  // is not shown (failed reload, or moved to another page), the add form gets it. The list comes
+  // from the parent, so wait until it shows the reload; before that the old rows are on screen.
+  const [focusAfterSwitch, setFocusAfterSwitch] = useState<{
+    id: string;
+    reloadStartedAt: number;
+  } | null>(null);
+  const listUpdatedAt = Math.max(semesters.dataUpdatedAt, semesters.errorUpdatedAt);
+  useEffect(() => {
+    if (focusAfterSwitch === null || listUpdatedAt < focusAfterSwitch.reloadStartedAt) return;
+    const name = document.getElementById(`semester-name-${focusAfterSwitch.id}`);
+    if (name) name.focus();
+    else addForm.setFocus('name');
+    setFocusAfterSwitch(null);
+  }, [focusAfterSwitch, listUpdatedAt, addForm]);
 
   function startEditing(semester: Semester) {
     editForm.reset({
