@@ -6,7 +6,7 @@ Guide for Claude Code. Read this file first, then the documents listed below.
 
 A web app for a college department's handout room. Staff record which items are borrowed, by whom, for which room or lab, and which staff member handled each checkout and return. Borrowers never log in: they ask for items in person and staff do the data entry.
 
-Items are either individually tracked equipment (laptops, projectors, each with an asset tag or serial number) or quantity-based supplies that are returned (for example extension cords). Everything is expected back the same day. Items still out after closing time are flagged, and flagged transactions become strikes against the borrower: warning at 3, stricter notice at 4, blocked at 5, reset each semester.
+Items are either individually tracked equipment (laptops, projectors, each with an asset tag or serial number) or quantity-based supplies that are returned (for example extension cords). Everything is expected back the same day. Items still out after closing time are flagged, and flagged transactions become strikes against the borrower: warning at 3, stricter notice at 4, blocked at 5, counted per semester (a new semester starts everyone at zero).
 
 This is a recreation of a system the owner built in college. It runs in Docker on the owner's machine first, then on a department PC on the local network.
 

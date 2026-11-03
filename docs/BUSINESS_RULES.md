@@ -44,7 +44,7 @@ All times below are `Asia/Manila` unless stated. Default closing time is 17:00.
     - 3 strikes: checkout shows a **warning**.
     - 4 strikes: checkout shows a **stricter notice**.
     - 5 or more strikes: checkout is **blocked** (enforced in the API). Returns are never blocked.
-12. **Semester reset.** Strikes are counted per semester through the transaction's semester, so a new current semester starts every borrower at zero. No cleanup job exists or is needed.
+12. **Semester reset.** Strikes are counted per semester through the transaction's semester. A semester with no flagged transactions yet starts every borrower at zero; switching back to an earlier semester brings its strikes back. No cleanup job exists or is needed.
 
 ### Overrides
 
@@ -82,7 +82,7 @@ Notation: "Day 1" is a normal working day with closing time 17:00 and a current 
 
 **S8. Thresholds.** Fil reaches 3 strikes: the next checkout screen shows the warning, and checkout works. At 4 strikes it shows the stricter notice, and checkout works. At 5 strikes checkout is rejected with `BORROWER_BLOCKED`, but Fil can still return items. An admin overrides one of Fil's flagged transactions, so Fil has 4 strikes and can borrow again.
 
-**S9. Semester reset.** Gio has 4 strikes in semester 1. An admin sets semester 2 as current. Gio now has 0 strikes. Gio's semester 1 transactions still show their flags in history.
+**S9. Semester reset.** Gio has 4 strikes in semester 1. An admin sets semester 2 as current. Gio now has 0 strikes. Gio's semester 1 transactions still show their flags in history. If the admin later sets semester 1 as current again, Gio is back at 4 strikes.
 
 **S10. Checkout after closing time.** Hana borrows a laptop at 17:30 (closing is 17:00). Tonight's job does not flag it. If it is still out at tomorrow's 17:00, it is flagged then.
 
