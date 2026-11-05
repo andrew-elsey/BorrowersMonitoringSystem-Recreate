@@ -135,16 +135,16 @@ Paths are shortened: `api/` is `apps/api/tests/`, `web/` is `apps/web/src/pages/
 | TC-BRW-01 | BRW-1 | BR 1 | unit | Ask availability of a UNIT item with and without an open line | Unavailable with an open line; available without | `api/availability.test.ts` (unit and integration: out, returned, never borrowed) |
 | TC-BRW-02 | BRW-1 | BR 1 | unit | QUANTITY item total 10, open lines 4 and 3 (1 returned on the second) | Available 4 | `api/availability.test.ts` (unit and integration through a transaction client; a fully returned line adds nothing) |
 | TC-BRW-03 | BRW-1 | BR 1 | unit | Ask availability of items with status `UNDER_REPAIR`, `LOST`, `RETIRED` | Not available | `api/availability.test.ts` (unit for UNIT and QUANTITY items; integration for UNIT items) |
-| TC-BRW-04 | BRW-2 | BR 2 | integration | Handler checks out two items to a borrower for a room | One transaction and two lines; handler from the session; issue time and current semester set; audited | not yet |
-| TC-BRW-05 | BRW-2 | BR 1, S14 | integration | Issue a unit item that is already out | `ITEM_UNAVAILABLE` | not yet |
-| TC-BRW-06 | BRW-2 | BR 1, S14 | integration | Issue 4 of a quantity item with 3 available | `INSUFFICIENT_QUANTITY` | not yet |
-| TC-BRW-07 | BRW-2 | BR 1, S14 | integration | Issue items with status `UNDER_REPAIR`, `LOST`, `RETIRED` | `ITEM_UNAVAILABLE` | not yet |
-| TC-BRW-08 | BRW-2 | BR 3, S14 | integration | Issue to an inactive borrower | `BORROWER_INACTIVE` | not yet |
-| TC-BRW-09 | BRW-2 | BR 2, S14 | integration | Check out with no current semester | `NO_CURRENT_SEMESTER` | not yet |
-| TC-BRW-10 | BRW-2 | BR 4, S14 | integration | Check out two lines where the second fails | No transaction and no lines are created | not yet |
-| TC-BRW-11 | BRW-2 | BR 4, S16 | integration | Two handlers issue the same unit item at the same moment | Exactly one succeeds; the other gets `ITEM_UNAVAILABLE` | not yet |
-| TC-BRW-12 | BRW-2 | SPEC 7, S21 | integration | Check out 51 lines; a line with quantity 0 or 10,001 | `VALIDATION_ERROR` | not yet |
-| TC-BRW-13 | BRW-2 | SPEC 3 | integration | View-only user calls checkout | 403 (S18) | not yet |
+| TC-BRW-04 | BRW-2 | BR 2 | integration | Handler checks out two items to a borrower for a room | One transaction and two lines; handler from the session; issue time and current semester set; audited | `api/checkout.test.ts` (also: an `issuedById` in the body is ignored) |
+| TC-BRW-05 | BRW-2 | BR 1, S14 | integration | Issue a unit item that is already out | `ITEM_UNAVAILABLE` | `api/checkout.test.ts` |
+| TC-BRW-06 | BRW-2 | BR 1, S14 | integration | Issue 4 of a quantity item with 3 available | `INSUFFICIENT_QUANTITY` | `api/checkout.test.ts` (3 of the same item then succeeds) |
+| TC-BRW-07 | BRW-2 | BR 1, S14 | integration | Issue items with status `UNDER_REPAIR`, `LOST`, `RETIRED` | `ITEM_UNAVAILABLE` | `api/checkout.test.ts` (UNIT and QUANTITY items) |
+| TC-BRW-08 | BRW-2 | BR 3, S14 | integration | Issue to an inactive borrower | `BORROWER_INACTIVE` | `api/checkout.test.ts` |
+| TC-BRW-09 | BRW-2 | BR 2, S14 | integration | Check out with no current semester | `NO_CURRENT_SEMESTER` | `api/checkout.test.ts` |
+| TC-BRW-10 | BRW-2 | BR 4, S14 | integration | Check out two lines where the second fails | No transaction and no lines are created | `api/checkout.test.ts` (no audit entry either) |
+| TC-BRW-11 | BRW-2 | BR 4, S16 | integration | Two handlers issue the same unit item at the same moment | Exactly one succeeds; the other gets `ITEM_UNAVAILABLE` | `api/checkout.test.ts` (fails if the row lock is removed; opposite line orders do not deadlock) |
+| TC-BRW-12 | BRW-2 | SPEC 7, S21 | integration | Check out 51 lines; a line with quantity 0 or 10,001 | `VALIDATION_ERROR` | `api/checkout.test.ts` (also: no lines, a repeated item, a 501-character note, a unit item with quantity 2; an unknown item, borrower, or room is `NOT_FOUND`) |
+| TC-BRW-13 | BRW-2 | SPEC 3 | integration | View-only user calls checkout | 403 (S18) | `api/checkout.test.ts` (signed out 401) |
 | TC-BRW-14 | BRW-3 | SPEC 5 | component | Look up a borrower | Name, type, and department shown | not yet |
 | TC-BRW-15 | BRW-3 | SPEC 5 | component | Pick a room; add a new room from the picker | Room selected; new room is created and selected | not yet |
 | TC-BRW-16 | BRW-3 | SPEC 5 | component | Search an item; enter quantity for a QUANTITY item; add a note and expected return date | Lines show with quantity, note, and date | not yet |
