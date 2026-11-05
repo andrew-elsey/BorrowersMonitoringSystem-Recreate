@@ -26,11 +26,14 @@ export async function getAvailability(
     where: { id: { in: itemIds } },
     select: { id: true, status: true, totalQuantity: true },
   });
-  // Outstanding = borrowed minus returned (glossary). Closed lines add 0, so summing every line
-  // is the same as summing open lines.
+  // Outstanding = borrowed minus returned on open lines only (glossary). This filter matches the
+  // partial index transaction_items_open_by_item_idx, so the read stays bounded as history grows.
   const sums = await db.transactionItem.groupBy({
     by: ['itemId'],
-    where: { itemId: { in: itemIds } },
+    where: {
+      itemId: { in: itemIds },
+      quantityReturned: { lt: db.transactionItem.fields.quantityBorrowed },
+    },
     _sum: { quantityBorrowed: true, quantityReturned: true },
   });
   const outstanding = new Map(
