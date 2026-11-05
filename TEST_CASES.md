@@ -167,6 +167,10 @@ Paths are shortened: `api/` is `apps/api/tests/`, `web/` is `apps/web/src/pages/
 | TC-BRW-33 | BRW-6 | RPT-1 | component | Open the dashboard with a noted line | Note and expected return date shown | not yet |
 | TC-BRW-34 | BRW-2 | BR 2, SPEC 4 | integration | A handler, then an admin, checks out in a deactivated room | `LOCATION_INACTIVE` for both; nothing created | `api/checkout.test.ts` |
 | TC-BRW-35 | BRW-2 | BR 7, SPEC 7 | integration | Check out with an expected return date before today, today, and later in Asia/Manila, just before and just after Manila midnight | Before today: `VALIDATION_ERROR` on `lines.0.expectedReturnDate`; today and later: saved | `api/checkout.test.ts` (clock faked at 23:59:59 and 00:00 Manila time) |
+| TC-BRW-36 | BRW-3 | SPEC 3, 7 | integration | Admin and handler call `GET /api/borrowers/lookup` with a matching `q`, a page, a missing, 1-character, and 101-character `q`, and `pageSize=101`; a viewer and a signed-out visitor call it | Admin and handler: 200 with only `id`, `schoolId`, `name`, `type`, `department`, `active` (inactive included), paginated; bad `q` or page size: `VALIDATION_ERROR`; viewer: 403; signed out: 401 | `api/borrowers.test.ts`; the screen uses it: `web/CheckoutPage.test.tsx` |
+| TC-BRW-37 | BRW-3 | BR 1 | integration | List items: a unit item out, one free, one under repair, and a quantity item of 20 with 3 outstanding; then search them on the Checkout screen | `available` is 0, 1, 0, 17, no borrower details; the screen shows "Out", "Available", "Under repair", "N available", and Add is disabled when 0 | `api/items.test.ts`, `api/qa-md2-gaps.test.ts` (row fields), `web/CheckoutPage.test.tsx` |
+| TC-BRW-38 | BRW-3 | Rule 3 | integration | Set closing time 18:30; every role reads `GET /api/closing-time`; a handler reads and writes `/api/settings`; open Checkout | All roles get `{ closingTime: "18:30" }`; handler gets 403 on settings; signed out 401; the screen shows "Today by 18:30", "Lines still out at 18:30", "Due back by 18:30 today" | `api/settings.test.ts`, `web/CheckoutPage.test.tsx` |
+| TC-BRW-39 | BRW-3 | ARCH 14.1, SPEC 8 | component | Show a message, scroll a long page, then tab to a field | The message area is sticky at the top of the window below the top bar, and a focused field scrolls in below the messages | `web/components/Notifications.test.tsx` (class and `scroll-padding-top`; the visual check is manual) |
 
 ## FLG: Flagging and strikes
 
@@ -258,7 +262,7 @@ Paths are shortened: `api/` is `apps/api/tests/`, `web/` is `apps/web/src/pages/
 
 | Rule or scenario | Cases |
 |---|---|
-| BR 1 Availability | TC-BRW-01, 02, 03, 05, 06, 07 |
+| BR 1 Availability | TC-BRW-01, 02, 03, 05, 06, 07, 37 |
 | BR 2 Who and when | TC-BRW-04, 09, 34 |
 | BR 3 Eligible borrowers | TC-MD-17, TC-BRW-08, TC-FLG-19 |
 | BR 4 Atomic and safe | TC-BRW-10, 11 |
