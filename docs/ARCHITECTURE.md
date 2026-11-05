@@ -51,7 +51,7 @@ Adding a dependency outside this list needs the owner's approval.
         components/      small shared pieces (FND-5 adds the form and table components)
         api.ts           fetch wrapper: CSRF header, standard errors, Retry-After
         auth.tsx         signed-in user (GET /api/auth/me), 401 handling, role labels
-        App.tsx          routes and route guards (RequireSignIn, RequireRole)
+        App.tsx          routes and route guards (RequireSignIn, RequireRole); screen pages are lazy-loaded (HRD-6)
         AppShell.tsx     top bar and the role-filtered menu
   packages/
     shared/              Zod schemas, enums, and types used by both api and web
@@ -289,6 +289,7 @@ Record the results and any tuned limits in this section.
 | UI colors | College of Fine Arts and Design logo colors (section 14) | The handout room belongs to the college; contrast checked against WCAG AA |
 | College logo | Not used | No license to use it |
 | UI font | System font stack (Segoe UI Variable on Windows 11) | No download, works offline on the LAN, no new dependency |
+| Web bundle | Screen pages lazy-loaded with `React.lazy` and one `Suspense` in `AppShell` | Sign-in and the app shell load first; the entry chunk (React, router, TanStack Query, shared Zod schemas, sign-in, shell) stays under Vite's 500 kB warning with no new dependency |
 
 ## 14. UI theme
 
