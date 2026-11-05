@@ -98,6 +98,7 @@ Notation: "Day 1" is a normal working day with closing time 17:00 and a current 
 - Issuing an item with status `UNDER_REPAIR`, `LOST`, or `RETIRED` fails with `ITEM_UNAVAILABLE`.
 - Issuing to an inactive borrower fails with `BORROWER_INACTIVE`.
 - With no current semester, checkout fails with `NO_CURRENT_SEMESTER`.
+- Checkout in an inactive room fails with `LOCATION_INACTIVE`, for admins too.
 - A failed checkout creates no transaction and no lines.
 
 **S15. Return validations.** Returning 3 when 2 are outstanding fails with `RETURN_EXCEEDS_OUTSTANDING`. Returning on a line with nothing outstanding fails the same way.

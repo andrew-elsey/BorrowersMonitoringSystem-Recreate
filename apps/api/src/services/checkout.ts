@@ -26,9 +26,11 @@ const toDate = (date: string) => new Date(`${date}T00:00:00Z`);
 // BR 7: an expected return date is today or later in the app timezone (owner decision 2026-11-05).
 // YYYY-MM-DD strings sort in date order.
 function checkExpectedReturnDates(lines: CheckoutInput['lines']): void {
+  // config.ts has already refused an invalid zone, so this is never null in practice.
   const today = DateTime.now().setZone(config.timezone).toISODate();
+  if (!today) throw new Error(`Cannot work out today in ${config.timezone}.`);
   lines.forEach((line, index) => {
-    if (line.expectedReturnDate && line.expectedReturnDate < today!) {
+    if (line.expectedReturnDate && line.expectedReturnDate < today) {
       const message = 'Choose today or a later date.';
       throw new ApiError(400, 'VALIDATION_ERROR', message, {
         fields: { [`lines.${index}.expectedReturnDate`]: [message] },

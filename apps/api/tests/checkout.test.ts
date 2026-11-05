@@ -7,7 +7,8 @@ import { hashPassword } from '../src/lib/password.ts';
 import { prisma } from '../src/lib/prisma.ts';
 import { resetDatabase } from './setup/reset-database.ts';
 
-// BRW-2: checkout API (BR 1 to 4, 14; S14, S16). Test cases TC-BRW-04 to TC-BRW-13 in TEST_CASES.md.
+// BRW-2: checkout API (BR 1 to 4, 14; S14, S16). Test cases TC-BRW-04 to TC-BRW-13, TC-BRW-34, and
+// TC-BRW-35 in TEST_CASES.md.
 
 const PASSWORD = 'correct-horse-battery';
 let passwordHash: string;
@@ -329,6 +330,9 @@ test('TC-BRW-12: 51 lines, quantity 0, or quantity 10,001 is VALIDATION_ERROR (S
   const many = Array.from({ length: 51 }, () => ({ itemId: randomUUID(), quantity: 1 }));
   const tooMany = await checkout(handler, many).expect(400);
   expect(tooMany.body.error.details.fields.lines).toEqual(['At most 50 items per checkout.']);
+  // Exactly 50 pass the schema; the unknown ids are then NOT_FOUND.
+  const fifty = await checkout(handler, many.slice(0, 50)).expect(404);
+  expect(fifty.body.error.code).toBe('NOT_FOUND');
   for (const lines of [
     [{ itemId: cords.id, quantity: 0 }],
     [{ itemId: cords.id, quantity: 10_001 }],

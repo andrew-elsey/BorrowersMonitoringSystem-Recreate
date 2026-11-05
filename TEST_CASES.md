@@ -287,7 +287,7 @@ Paths are shortened: `api/` is `apps/api/tests/`, `web/` is `apps/web/src/pages/
 | S11 Service down at closing | TC-FLG-10 |
 | S12 Idempotent job | TC-FLG-11 |
 | S13 Overridden stays overridden | TC-FLG-12 |
-| S14 Checkout validations | TC-BRW-05 to 10 |
+| S14 Checkout validations | TC-BRW-05 to 10, 34 |
 | S15 Return validations | TC-BRW-24 |
 | S16 Concurrent checkout | TC-BRW-11 |
 | S17 Damaged return | TC-BRW-25 |

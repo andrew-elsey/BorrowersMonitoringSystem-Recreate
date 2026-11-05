@@ -108,7 +108,7 @@ Adding a dependency outside this list needs the owner's approval.
 
 ## 6. Time and timezone
 
-- Application timezone: `Asia/Manila` (UTC+8, no daylight saving), set through `APP_TIMEZONE` (default `Asia/Manila`). Containers also set `TZ=Asia/Manila`.
+- Application timezone: `Asia/Manila` (UTC+8, no daylight saving), set through `APP_TIMEZONE` (default `Asia/Manila`); the api refuses to start if it is not a valid IANA zone (`readTimezone` in `lib/config.ts`). Containers also set `TZ=Asia/Manila`.
 - The database stores all timestamps as `timestamptz` (UTC). The API returns ISO 8601 strings in UTC (`2026-10-29T09:00:00.000Z`).
 - **How UTC storage is guaranteed (FND-6):** every database connection the api opens sets its session time zone to UTC (`options: '-c TimeZone=UTC'` on the adapter in `apps/api/src/lib/prisma.ts`). This is required, not cosmetic: `@prisma/adapter-pg` sends `Date` values as UTC digits without an offset and reads `timestamptz` values as if they were UTC. Under any other session time zone, such as the db container's `Asia/Manila`, every write is stored shifted and every read is shifted back, so the API looks right while the stored instants and anything computed in SQL (`now()`, reports) are wrong. The containers keep `TZ=Asia/Manila`; only the api's connections use UTC. `apps/api/tests/timestamps.test.ts` checks stored instants with `extract(epoch ...)`, which the adapter cannot shift. `DATABASE_URL` must not contain an `options` parameter, because pg would let it replace this setting without any error; `prisma.ts` refuses to start if it does. Never open a database connection without this setting, and never compare against SQL `now()` from a connection that lacks it.
 - The frontend formats everything in `Asia/Manila`.
