@@ -132,9 +132,9 @@ Paths are shortened: `api/` is `apps/api/tests/`, `web/` is `apps/web/src/pages/
 
 | ID | Ticket | Rule | Level | Steps | Expected | Automated by |
 |---|---|---|---|---|---|---|
-| TC-BRW-01 | BRW-1 | BR 1 | unit | Ask availability of a UNIT item with and without an open line | Unavailable with an open line; available without | not yet |
-| TC-BRW-02 | BRW-1 | BR 1 | unit | QUANTITY item total 10, open lines 4 and 3 (1 returned on the second) | Available 4 | not yet |
-| TC-BRW-03 | BRW-1 | BR 1 | unit | Ask availability of items with status `UNDER_REPAIR`, `LOST`, `RETIRED` | Not available | not yet |
+| TC-BRW-01 | BRW-1 | BR 1 | unit | Ask availability of a UNIT item with and without an open line | Unavailable with an open line; available without | `api/availability.test.ts` (unit and integration: out, returned, never borrowed) |
+| TC-BRW-02 | BRW-1 | BR 1 | unit | QUANTITY item total 10, open lines 4 and 3 (1 returned on the second) | Available 4 | `api/availability.test.ts` (unit and integration through a transaction client; a fully returned line adds nothing) |
+| TC-BRW-03 | BRW-1 | BR 1 | unit | Ask availability of items with status `UNDER_REPAIR`, `LOST`, `RETIRED` | Not available | `api/availability.test.ts` (unit for UNIT and QUANTITY items; integration for UNIT items) |
 | TC-BRW-04 | BRW-2 | BR 2 | integration | Handler checks out two items to a borrower for a room | One transaction and two lines; handler from the session; issue time and current semester set; audited | not yet |
 | TC-BRW-05 | BRW-2 | BR 1, S14 | integration | Issue a unit item that is already out | `ITEM_UNAVAILABLE` | not yet |
 | TC-BRW-06 | BRW-2 | BR 1, S14 | integration | Issue 4 of a quantity item with 3 available | `INSUFFICIENT_QUANTITY` | not yet |
