@@ -349,6 +349,7 @@ Decisions the owner made with the second mockup:
 - "Run flagging now" is on Flag review, asks for confirmation, and shows the API's refusal when pressed again within a minute.
 - New users get a starting password typed by the admin, who tells the user in person. The user changes it on the Change password screen. No forced change at first sign-in.
 - The audit sweep in HRD-1 is a script and a test, not a screen.
+- The checkout confirmation summary is the Summary panel next to the form, plus a success message after saving, not a separate confirm step (owner decision 2026-11-05).
 - The usage summary (RPT-4) uses bar charts. ARCHITECTURE section 2 names no chart library, so adding one needs the owner's approval. The mockup's light and dark chart switch is ignored: the app has light colors only.
 - The banner and message wording in the mockup is approved as written.
 

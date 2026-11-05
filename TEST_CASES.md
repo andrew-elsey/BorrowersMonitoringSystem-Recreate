@@ -145,11 +145,11 @@ Paths are shortened: `api/` is `apps/api/tests/`, `web/` is `apps/web/src/pages/
 | TC-BRW-11 | BRW-2 | BR 4, S16 | integration | Two handlers issue the same unit item at the same moment | Exactly one succeeds; the other gets `ITEM_UNAVAILABLE` | `api/checkout.test.ts` (fails if the row lock is removed; opposite line orders do not deadlock) |
 | TC-BRW-12 | BRW-2 | SPEC 7, S21 | integration | Check out 51 lines; a line with quantity 0 or 10,001 | `VALIDATION_ERROR` | `api/checkout.test.ts` (also: no lines, a repeated item, a 501-character note, a unit item with quantity 2; an unknown item, borrower, or room is `NOT_FOUND`) |
 | TC-BRW-13 | BRW-2 | SPEC 3 | integration | View-only user calls checkout | 403 (S18) | `api/checkout.test.ts` (signed out 401) |
-| TC-BRW-14 | BRW-3 | SPEC 5 | component | Look up a borrower | Name, type, and department shown | not yet |
-| TC-BRW-15 | BRW-3 | SPEC 5 | component | Pick a room; add a new room from the picker | Room selected; new room is created and selected | not yet |
-| TC-BRW-16 | BRW-3 | SPEC 5 | component | Search an item; enter quantity for a QUANTITY item; add a note and expected return date | Lines show with quantity, note, and date | not yet |
-| TC-BRW-17 | BRW-3 | SPEC 5 | component | Review and submit, clicking submit twice quickly | Confirmation summary shown; only one request is sent | not yet |
-| TC-BRW-18 | BRW-3 | ARCH 7 | component | Submit a checkout the API refuses | The API error `message` is shown | not yet |
+| TC-BRW-14 | BRW-3 | SPEC 5 | component | Look up a borrower | Name, type, and department shown | `web/CheckoutPage.test.tsx` (also: an inactive borrower shows "Inactive borrower." and Confirm is disabled, BR 3) |
+| TC-BRW-15 | BRW-3 | SPEC 5 | component | Pick a room; add a new room from the picker | Room selected; new room is created and selected | `web/CheckoutPage.test.tsx` (also: a duplicate name shows under the new room field) |
+| TC-BRW-16 | BRW-3 | SPEC 5 | component | Search an item; enter quantity for a QUANTITY item; add a note and expected return date | Lines show with quantity, note, and date | `web/CheckoutPage.test.tsx` (also: non-active items and items already on a line cannot be added; a unit line has no quantity field) |
+| TC-BRW-17 | BRW-3 | SPEC 5 | component | Review and submit, clicking submit twice quickly | Confirmation summary shown; only one request is sent | `web/CheckoutPage.test.tsx` (two clicks in the same moment send one request; nothing is sent while the borrower, room, or items are missing) |
+| TC-BRW-18 | BRW-3 | ARCH 7 | component | Submit a checkout the API refuses | The API error `message` is shown | `web/CheckoutPage.test.tsx` (`INSUFFICIENT_QUANTITY` and `ITEM_UNAVAILABLE` marked on the line by `details.itemId`, `lines.N.expectedReturnDate` on that line, `fields.lines` and `LOCATION_INACTIVE` at the top) |
 | TC-BRW-19 | BRW-3 | SPEC 8 | manual | Complete a checkout with the keyboard only | Possible without a mouse | manual |
 | TC-BRW-20 | BRW-4 | BR 5 | integration | Return a line in full | Return event with quantity, time, condition, and receiving handler from the session; audited | not yet |
 | TC-BRW-21 | BRW-4 | BR 5 | integration | Handler B returns an item issued by handler A | Receiving handler is B; issuing handler stays A | not yet |
