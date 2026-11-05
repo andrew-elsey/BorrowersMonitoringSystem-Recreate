@@ -7,3 +7,4 @@ export * from './borrowers.ts';
 export * from './items.ts';
 export * from './rooms.ts';
 export * from './settings.ts';
+export * from './transactions.ts';
