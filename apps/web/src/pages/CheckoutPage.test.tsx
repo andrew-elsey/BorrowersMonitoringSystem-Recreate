@@ -10,7 +10,14 @@ import { apiError, HANDLER, mockApi, renderApp, signedInAs } from '../test-utils
 afterEach(() => {
   cleanup();
   vi.unstubAllGlobals();
+  vi.useRealTimers();
 });
+
+// Only Date is faked, so user events and timers still run normally.
+const setManilaClock = (iso: string) => {
+  vi.useFakeTimers({ toFake: ['Date'] });
+  vi.setSystemTime(new Date(iso));
+};
 
 const PAOLO: Borrower = {
   id: 'b0000000-0000-4000-8000-000000000001',
@@ -227,6 +234,7 @@ test('TC-BRW-37: item results show what is available; an item with none cannot b
 });
 
 test('TC-BRW-38: the closing time comes from settings (rule 3)', async () => {
+  setManilaClock('2026-11-05T06:20:00.000Z'); // 14:20 in Manila, before closing
   fakeApi((method, path) =>
     method === 'GET' && path === '/closing-time'
       ? { status: 200, body: { closingTime: '18:30' } }
@@ -241,6 +249,24 @@ test('TC-BRW-38: the closing time comes from settings (rule 3)', async () => {
   expect(screen.getByText(/Lines still out at 18:30 are flagged anyway\./)).toBeTruthy();
   await user.click(screen.getByRole('button', { name: 'Confirm checkout' }));
   expect((await screen.findByRole('status')).textContent).toContain('Due back by 18:30 today.');
+});
+
+test('TC-BRW-40: after closing time the screen says the items are due back tomorrow (BR 8, S10)', async () => {
+  setManilaClock('2026-11-05T09:30:00.000Z'); // 17:30 in Manila, closing is 17:00
+  const late = { ...SAVED.body.transaction, issuedAt: '2026-11-05T09:30:00.000Z' };
+  fakeApi((method, path) =>
+    method === 'POST' && path === '/transactions'
+      ? { status: 201, body: { transaction: late } }
+      : undefined,
+  );
+  const user = userEvent.setup();
+  renderApp('/checkout');
+  expect(
+    await within(await screen.findByRole('complementary')).findByText('Tomorrow by 17:00'),
+  ).toBeTruthy();
+  await fillCheckout(user);
+  await user.click(screen.getByRole('button', { name: 'Confirm checkout' }));
+  expect((await screen.findByRole('status')).textContent).toContain('Due back by 17:00 tomorrow.');
 });
 
 test('TC-BRW-16: search items, enter a quantity for a quantity item, and add a note and expected return date', async () => {

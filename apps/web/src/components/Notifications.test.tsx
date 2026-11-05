@@ -116,6 +116,10 @@ test('TC-BRW-39: the message area is pinned, and focused fields scroll in below 
   expect(document.documentElement.style.scrollPaddingTop).toBe('64px');
   await user.click(screen.getByRole('button', { name: 'Dismiss' }));
   expect(document.documentElement.style.scrollPaddingTop).toBe('0px');
+  // Signing out unmounts the provider: no padding is left on the sign-in page.
+  await user.click(screen.getByRole('button', { name: 'Save' }));
+  cleanup();
+  expect(document.documentElement.style.scrollPaddingTop).toBe('');
 });
 
 test('useNotify outside the provider fails clearly', () => {

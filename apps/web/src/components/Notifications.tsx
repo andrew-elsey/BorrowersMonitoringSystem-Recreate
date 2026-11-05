@@ -31,6 +31,10 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
   useLayoutEffect(() => {
     const height = notices.length ? area.current!.offsetHeight : 0;
     document.documentElement.style.scrollPaddingTop = `${height}px`;
+    // Cleared on unmount too, so sign-out never leaves the padding on the sign-in page.
+    return () => {
+      document.documentElement.style.scrollPaddingTop = '';
+    };
   }, [notices]);
 
   const add = useCallback((kind: Notice['kind'], text: string) => {

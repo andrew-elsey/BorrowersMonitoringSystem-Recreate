@@ -45,6 +45,10 @@ const issueTime = new Intl.DateTimeFormat('en-GB', {
   minute: '2-digit',
   timeZone: TIMEZONE,
 });
+// BR 8, S10: a line issued at or after closing is first checked at tomorrow's closing.
+// Both times are zero-padded 24-hour HH:mm, so comparing the strings compares the times.
+const dueDay = (at: Date, closingTime: string) =>
+  issueTime.format(at) >= closingTime ? 'tomorrow' : 'today';
 
 const TYPE_LABELS: Record<BorrowerType, string> = {
   STUDENT: 'Student',
@@ -267,7 +271,7 @@ export function CheckoutPage() {
         <Alert kind="success">
           <strong>Checkout saved.</strong> {plural(saved.lines.length, 'item')} issued to{' '}
           {borrower.name} for {chosenRoom?.name} at {issueTime.format(new Date(saved.issuedAt))}.
-          Due back by {closingTime} today.{' '}
+          Due back by {closingTime} {dueDay(new Date(saved.issuedAt), closingTime)}.{' '}
           <button
             type="button"
             id="start-over"
@@ -633,7 +637,9 @@ export function CheckoutPage() {
             <dt className="text-muted">Issued by</dt>
             <dd>{user.name} (you)</dd>
             <dt className="text-muted">Due back</dt>
-            <dd>Today by {closingTime}</dd>
+            <dd>
+              {dueDay(new Date(), closingTime) === 'today' ? 'Today' : 'Tomorrow'} by {closingTime}
+            </dd>
           </dl>
           <button
             type="button"
