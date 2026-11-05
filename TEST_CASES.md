@@ -165,6 +165,8 @@ Paths are shortened: `api/` is `apps/api/tests/`, `web/` is `apps/web/src/pages/
 | TC-BRW-31 | BRW-6 | SPEC 7 | integration | Save a 501-character note; edit a note on a closed line | Rejected | not yet |
 | TC-BRW-32 | BRW-6 | BR 7, S4 | integration | James borrows 5 extension cables, handler notes "returning tomorrow" with tomorrow's date; job runs at 17:00 | Line is flagged anyway; strikes counted as usual | not yet |
 | TC-BRW-33 | BRW-6 | RPT-1 | component | Open the dashboard with a noted line | Note and expected return date shown | not yet |
+| TC-BRW-34 | BRW-2 | BR 2, SPEC 4 | integration | A handler, then an admin, checks out in a deactivated room | `LOCATION_INACTIVE` for both; nothing created | `api/checkout.test.ts` |
+| TC-BRW-35 | BRW-2 | BR 7, SPEC 7 | integration | Check out with an expected return date before today, today, and later in Asia/Manila, just before and just after Manila midnight | Before today: `VALIDATION_ERROR` on `lines.0.expectedReturnDate`; today and later: saved | `api/checkout.test.ts` (clock faked at 23:59:59 and 00:00 Manila time) |
 
 ## FLG: Flagging and strikes
 
@@ -257,12 +259,12 @@ Paths are shortened: `api/` is `apps/api/tests/`, `web/` is `apps/web/src/pages/
 | Rule or scenario | Cases |
 |---|---|
 | BR 1 Availability | TC-BRW-01, 02, 03, 05, 06, 07 |
-| BR 2 Who and when | TC-BRW-04, 09 |
+| BR 2 Who and when | TC-BRW-04, 09, 34 |
 | BR 3 Eligible borrowers | TC-MD-17, TC-BRW-08, TC-FLG-19 |
 | BR 4 Atomic and safe | TC-BRW-10, 11 |
 | BR 5 Return events | TC-BRW-20, 21, 22, 28 |
 | BR 6 Returning never touches flags | TC-BRW-23, 29, TC-FLG-08 |
-| BR 7 Notes are informational | TC-BRW-30, 32 |
+| BR 7 Notes are informational | TC-BRW-30, 32, 35 |
 | BR 8 End-of-day flagging | TC-FLG-06 to 12 |
 | BR 9 Catch-up | TC-FLG-10 |
 | BR 10 Strike count | TC-FLG-01 to 04 |

@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import type { ItemStatus } from '@bms/shared';
 import request from 'supertest';
-import { beforeAll, beforeEach, expect, test } from 'vitest';
+import { beforeAll, beforeEach, expect, test, vi } from 'vitest';
 import { createApp } from '../src/app.ts';
 import { hashPassword } from '../src/lib/password.ts';
 import { prisma } from '../src/lib/prisma.ts';
@@ -105,7 +105,7 @@ test('TC-BRW-04: handler checks out two items; handler from the session, semeste
   const before = Date.now();
   const res = await checkout(handler, [
     { itemId: laptop.id, quantity: 1 },
-    { itemId: cords.id, quantity: 3, note: 'returning at 3pm', expectedReturnDate: '2026-11-06' },
+    { itemId: cords.id, quantity: 3, note: 'returning at 3pm', expectedReturnDate: '2099-12-31' },
   ]).expect(201);
 
   const { transaction } = res.body;
@@ -119,7 +119,7 @@ test('TC-BRW-04: handler checks out two items; handler from the session, semeste
         itemId: cords.id,
         quantity: 3,
         note: 'returning at 3pm',
-        expectedReturnDate: '2026-11-06',
+        expectedReturnDate: '2099-12-31',
       }),
     ]),
   );
@@ -204,6 +204,48 @@ test('ids in capitals work, and the same item in two cases is a repeated item', 
     })
     .expect(201);
   expect(res.body.transaction).toMatchObject({ borrowerId, locationId });
+});
+
+test('TC-BRW-35: an expected return date before today in Asia/Manila is VALIDATION_ERROR (BR 7)', async () => {
+  const cords = await supply(10);
+  let agent = handler;
+  const withDate = (expectedReturnDate: string) =>
+    checkout(agent, [{ itemId: cords.id, quantity: 1, expectedReturnDate }]);
+  // Only Date is faked, so timers in supertest and pg keep working.
+  vi.useFakeTimers({ toFake: ['Date'] });
+  try {
+    // 23:59:59 on 5 Nov in Manila (UTC+8): today is 5 Nov there, though 4 Nov is long gone in UTC.
+    vi.setSystemTime(new Date('2026-11-05T15:59:59Z'));
+    // Sign in at the faked time, so the session is not idle-expired.
+    agent = await signIn('hal');
+    const res = await withDate('2026-11-04').expect(400);
+    expect(res.body.error.details.fields['lines.0.expectedReturnDate']).toEqual([
+      'Choose today or a later date.',
+    ]);
+    await withDate('2026-11-05').expect(201);
+    // 00:00 on 6 Nov in Manila, still 5 Nov in UTC: 5 Nov is now in the past.
+    vi.setSystemTime(new Date('2026-11-05T16:00:00Z'));
+    await withDate('2026-11-05').expect(400);
+    await withDate('2026-11-06').expect(201);
+  } finally {
+    vi.useRealTimers();
+  }
+});
+
+test('TC-BRW-34: checkout in an inactive room is LOCATION_INACTIVE, for admins too (BR 2)', async () => {
+  const cords = await supply(10);
+  await prisma.location.update({ where: { id: locationId }, data: { active: false } });
+  await prisma.user.create({
+    data: { name: 'Ana Admin', username: 'ana', passwordHash, role: 'ADMIN' },
+  });
+  for (const agent of [handler, await signIn('ana')]) {
+    const res = await checkout(agent, [{ itemId: cords.id, quantity: 1 }]).expect(409);
+    expect(res.body.error).toMatchObject({
+      code: 'LOCATION_INACTIVE',
+      message: 'This room is no longer in use. Ask an admin to reactivate it.',
+    });
+  }
+  expect(await counts()).toEqual({ transactions: 0, lines: 0 });
 });
 
 test('an expected return date in year 0 is VALIDATION_ERROR, not a 500', async () => {

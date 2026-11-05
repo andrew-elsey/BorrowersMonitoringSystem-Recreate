@@ -1,5 +1,7 @@
 import type { Checkout, CheckoutInput, ItemStatus, TrackingType } from '@bms/shared';
+import { DateTime } from 'luxon';
 import { audit } from '../lib/audit.ts';
+import { config } from '../lib/config.ts';
 import { ApiError } from '../lib/errors.ts';
 import { prisma } from '../lib/prisma.ts';
 import { getAvailability } from './availability.ts';
@@ -20,6 +22,20 @@ type LockedItem = {
 
 const label = (item: LockedItem) => (item.asset_tag ? `${item.name} ${item.asset_tag}` : item.name);
 const toDate = (date: string) => new Date(`${date}T00:00:00Z`);
+
+// BR 7: an expected return date is today or later in the app timezone (owner decision 2026-11-05).
+// YYYY-MM-DD strings sort in date order.
+function checkExpectedReturnDates(lines: CheckoutInput['lines']): void {
+  const today = DateTime.now().setZone(config.timezone).toISODate();
+  lines.forEach((line, index) => {
+    if (line.expectedReturnDate && line.expectedReturnDate < today!) {
+      const message = 'Choose today or a later date.';
+      throw new ApiError(400, 'VALIDATION_ERROR', message, {
+        fields: { [`lines.${index}.expectedReturnDate`]: [message] },
+      });
+    }
+  });
+}
 
 // The first problem with a line, checked in the order of S14, or null when it can be issued.
 function lineError(item: LockedItem, quantity: number, available: number): ApiError | null {
@@ -63,6 +79,7 @@ const REFUSAL_MESSAGES: Record<string, string> = {
 };
 
 export async function checkout(issuedById: string, input: CheckoutInput): Promise<Checkout> {
+  checkExpectedReturnDates(input.lines);
   // BR 3: inactive (and, from FLG-3, blocked) borrowers cannot borrow.
   const eligibility = await borrowerService.isEligible(input.borrowerId);
   if (!eligibility.eligible) {
@@ -77,11 +94,20 @@ export async function checkout(issuedById: string, input: CheckoutInput): Promis
   return prisma.$transaction(async (tx) => {
     // BR 2: no current semester, no checkout.
     const semester = await requireCurrentSemester(tx);
-    // FOR KEY SHARE: an admin deleting this room now waits for the checkout, then gets
-    // HAS_HISTORY (BR 15). Renaming or deactivating it is not blocked.
-    const [location] = await tx.$queryRaw<{ id: string }[]>`
-      SELECT id FROM locations WHERE id = ${input.locationId}::uuid FOR KEY SHARE`;
+    // FOR SHARE: an admin deleting or deactivating this room at the same moment waits for the
+    // checkout (a delete then gets HAS_HISTORY, BR 15), and a checkout never uses a room that
+    // was just deactivated.
+    const [location] = await tx.$queryRaw<{ id: string; active: boolean }[]>`
+      SELECT id, active FROM locations WHERE id = ${input.locationId}::uuid FOR SHARE`;
     if (!location) throw new ApiError(404, 'NOT_FOUND', 'Room or lab not found.');
+    // BR 2: only an active room, for admins too (owner decision 2026-11-05).
+    if (!location.active) {
+      throw new ApiError(
+        409,
+        'LOCATION_INACTIVE',
+        'This room is no longer in use. Ask an admin to reactivate it.',
+      );
+    }
 
     // BR 4: lock the item rows before re-checking availability, so a second checkout of the same
     // items waits until this one commits. ORDER BY id: two checkouts listing the same items in
