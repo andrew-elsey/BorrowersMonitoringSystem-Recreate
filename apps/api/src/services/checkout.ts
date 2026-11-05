@@ -57,21 +57,30 @@ function lineError(item: LockedItem, quantity: number, available: number): ApiEr
   return null;
 }
 
+// BR 3: the message for each reason isEligible can give. FLG-3 adds BORROWER_BLOCKED here.
+const REFUSAL_MESSAGES: Record<string, string> = {
+  BORROWER_INACTIVE: 'This borrower is inactive and cannot borrow.',
+};
+
 export async function checkout(issuedById: string, input: CheckoutInput): Promise<Checkout> {
   // BR 3: inactive (and, from FLG-3, blocked) borrowers cannot borrow.
   const eligibility = await borrowerService.isEligible(input.borrowerId);
   if (!eligibility.eligible) {
-    if (eligibility.reason === 'NOT_FOUND') {
-      throw new ApiError(404, 'NOT_FOUND', 'Borrower not found.');
-    }
-    throw new ApiError(409, eligibility.reason!, 'This borrower is inactive and cannot borrow.');
+    const { reason } = eligibility;
+    if (reason === 'NOT_FOUND') throw new ApiError(404, 'NOT_FOUND', 'Borrower not found.');
+    // A refusal without a reason is a BorrowerService bug, so it is a 500, not a guessed code.
+    if (!reason) throw new Error('BorrowerService.isEligible refused without a reason.');
+    throw new ApiError(409, reason, REFUSAL_MESSAGES[reason] ?? 'This borrower cannot borrow.');
   }
 
   // BR 4: everything below commits together or not at all.
   return prisma.$transaction(async (tx) => {
     // BR 2: no current semester, no checkout.
     const semester = await requireCurrentSemester(tx);
-    const location = await tx.location.findUnique({ where: { id: input.locationId } });
+    // FOR KEY SHARE: an admin deleting this room now waits for the checkout, then gets
+    // HAS_HISTORY (BR 15). Renaming or deactivating it is not blocked.
+    const [location] = await tx.$queryRaw<{ id: string }[]>`
+      SELECT id FROM locations WHERE id = ${input.locationId}::uuid FOR KEY SHARE`;
     if (!location) throw new ApiError(404, 'NOT_FOUND', 'Room or lab not found.');
 
     // BR 4: lock the item rows before re-checking availability, so a second checkout of the same

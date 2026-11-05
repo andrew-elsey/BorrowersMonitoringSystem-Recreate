@@ -18,12 +18,13 @@ export const noteField = z
 // POST /api/transactions. The issuing handler, issue time, and semester are never sent: the server
 // takes them from the session, the clock, and the current semester (BR 2).
 export const checkoutSchema = z.object({
-  borrowerId: z.guid('Choose a borrower.'),
-  locationId: z.guid('Choose a room or lab.'),
+  // Lower case, as PostgreSQL returns ids, so lookups and the repeated-item check match any case.
+  borrowerId: z.guid('Choose a borrower.').toLowerCase(),
+  locationId: z.guid('Choose a room or lab.').toLowerCase(),
   lines: z
     .array(
       z.object({
-        itemId: z.guid('Choose an item.'),
+        itemId: z.guid('Choose an item.').toLowerCase(),
         quantity: z
           .number({ error: QUANTITY_MESSAGE })
           .int(QUANTITY_MESSAGE)
@@ -31,7 +32,11 @@ export const checkoutSchema = z.object({
           .max(LINE_QUANTITY_MAX, QUANTITY_MESSAGE),
         note: noteField.optional(),
         // A calendar date in the app timezone (ARCHITECTURE.md 7).
-        expectedReturnDate: z.iso.date('Enter a date as YYYY-MM-DD.').optional(),
+        expectedReturnDate: z.iso
+          .date('Enter a date as YYYY-MM-DD.')
+          // PostgreSQL has no year 0, so 0000-01-01 could not be stored.
+          .refine((date) => date >= '0001-01-01', 'Enter a real date.')
+          .optional(),
       }),
     )
     .min(1, 'Add at least one item.')

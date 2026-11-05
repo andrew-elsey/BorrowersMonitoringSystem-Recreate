@@ -1,3 +1,4 @@
+import { randomUUID } from 'node:crypto';
 import type { ItemStatus } from '@bms/shared';
 import request from 'supertest';
 import { beforeAll, beforeEach, expect, test } from 'vitest';
@@ -172,6 +173,47 @@ test('TC-BRW-06: issuing 4 of a quantity item with 3 available is INSUFFICIENT_Q
   await checkout(handler, [{ itemId: cords.id, quantity: 3 }]).expect(201);
 });
 
+test('a quantity item with none left is INSUFFICIENT_QUANTITY with available 0 (BR 1)', async () => {
+  const cords = await supply(2);
+  await checkout(handler, [{ itemId: cords.id, quantity: 2 }]).expect(201);
+  const res = await checkout(handler, [{ itemId: cords.id, quantity: 1 }]).expect(409);
+  expect(res.body.error).toMatchObject({
+    code: 'INSUFFICIENT_QUANTITY',
+    details: { itemId: cords.id, available: 0 },
+  });
+});
+
+test('ids in capitals work, and the same item in two cases is a repeated item', async () => {
+  const laptop = await unit('LT-001');
+  const cords = await supply(10);
+  const upper = cords.id.toUpperCase();
+  await checkout(handler, [
+    { itemId: cords.id, quantity: 1 },
+    { itemId: upper, quantity: 1 },
+  ]).expect(400);
+  const res = await handler
+    .post('/api/transactions')
+    .set('X-Requested-With', 'fetch')
+    .send({
+      borrowerId: borrowerId.toUpperCase(),
+      locationId: locationId.toUpperCase(),
+      lines: [
+        { itemId: laptop.id.toUpperCase(), quantity: 1 },
+        { itemId: upper, quantity: 1 },
+      ],
+    })
+    .expect(201);
+  expect(res.body.transaction).toMatchObject({ borrowerId, locationId });
+});
+
+test('an expected return date in year 0 is VALIDATION_ERROR, not a 500', async () => {
+  const cords = await supply(10);
+  const res = await checkout(handler, [
+    { itemId: cords.id, quantity: 1, expectedReturnDate: '0000-01-01' },
+  ]).expect(400);
+  expect(res.body.error.details.fields.lines).toEqual(['Enter a real date.']);
+});
+
 test.each(['UNDER_REPAIR', 'LOST', 'RETIRED'] as const)(
   'TC-BRW-07: issuing a %s item is ITEM_UNAVAILABLE (S14)',
   async (status) => {
@@ -241,9 +283,11 @@ test('two checkouts listing the same items in opposite orders both finish (no de
 
 test('TC-BRW-12: 51 lines, quantity 0, or quantity 10,001 is VALIDATION_ERROR (SPEC 7, S21)', async () => {
   const cords = await supply(10);
-  const many = Array.from({ length: 51 }, () => ({ itemId: cords.id, quantity: 1 }));
+  // 51 different ids, so only the line limit can refuse it.
+  const many = Array.from({ length: 51 }, () => ({ itemId: randomUUID(), quantity: 1 }));
+  const tooMany = await checkout(handler, many).expect(400);
+  expect(tooMany.body.error.details.fields.lines).toEqual(['At most 50 items per checkout.']);
   for (const lines of [
-    many,
     [{ itemId: cords.id, quantity: 0 }],
     [{ itemId: cords.id, quantity: 10_001 }],
   ]) {
