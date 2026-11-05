@@ -51,6 +51,25 @@ const createSemester = (body: object) => send(admin, 'post', '/semesters', body)
 const setCurrent = (agent: Agent, id: string) => send(agent, 'post', `/semesters/${id}/current`);
 const saveSettings = (body: object) => send(admin, 'put', '/settings', body);
 
+test('TC-BRW-38: every staff role can read the closing time; only admins can change it (rule 3)', async () => {
+  await saveSettings({
+    closingTime: '18:30',
+    warningThreshold: 3,
+    noticeThreshold: 4,
+    blockThreshold: 5,
+  }).expect(200);
+  for (const username of ['ana', 'hal', 'vic']) {
+    const staff = await signIn(username);
+    expect((await staff.get('/api/closing-time').expect(200)).body).toEqual({
+      closingTime: '18:30',
+    });
+  }
+  const handler = await signIn('hal');
+  expect((await handler.get('/api/settings')).status).toBe(403);
+  expect((await send(handler, 'put', '/settings', { closingTime: '19:00' })).status).toBe(403);
+  expect((await request(createApp()).get('/api/closing-time')).status).toBe(401);
+});
+
 const auditFor = (entity: string) =>
   prisma.auditLog.findMany({ where: { entity }, orderBy: { createdAt: 'asc' } });
 
