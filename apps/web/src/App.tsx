@@ -1,16 +1,27 @@
 import { PERMISSIONS, type Role } from '@bms/shared';
-import type { ReactNode } from 'react';
+import { lazy, type ReactNode } from 'react';
 import { Navigate, useLocation, type RouteObject } from 'react-router';
 import { AppShell } from './AppShell';
 import { useAuth } from './auth';
-import { BorrowersPage } from './pages/BorrowersPage';
-import { ChangePasswordPage } from './pages/ChangePasswordPage';
-import { HomePage } from './pages/HomePage';
-import { InventoryPage } from './pages/InventoryPage';
 import { LoginPage } from './pages/LoginPage';
 import { NotAllowedPage } from './pages/NotAllowedPage';
-import { RoomsPage } from './pages/RoomsPage';
-import { SettingsPage } from './pages/SettingsPage';
+
+// Screen pages load on demand so the sign-in screen and the app shell download first (HRD-6).
+// AppShell shows the Suspense fallback while a page's chunk loads.
+const HomePage = lazy(() => import('./pages/HomePage').then((m) => ({ default: m.HomePage })));
+const InventoryPage = lazy(() =>
+  import('./pages/InventoryPage').then((m) => ({ default: m.InventoryPage })),
+);
+const BorrowersPage = lazy(() =>
+  import('./pages/BorrowersPage').then((m) => ({ default: m.BorrowersPage })),
+);
+const RoomsPage = lazy(() => import('./pages/RoomsPage').then((m) => ({ default: m.RoomsPage })));
+const SettingsPage = lazy(() =>
+  import('./pages/SettingsPage').then((m) => ({ default: m.SettingsPage })),
+);
+const ChangePasswordPage = lazy(() =>
+  import('./pages/ChangePasswordPage').then((m) => ({ default: m.ChangePasswordPage })),
+);
 
 // Route guard: signed-out users go to the login page. After an expired session, login sends them
 // back to this page; after Sign out it sends them home.

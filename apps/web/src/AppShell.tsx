@@ -1,4 +1,5 @@
 import { PERMISSIONS } from '@bms/shared';
+import { Suspense } from 'react';
 import { NavLink, Outlet } from 'react-router';
 import { ROLE_LABELS, useAuth } from './auth';
 import { BoxIcon } from './components/icons';
@@ -94,7 +95,16 @@ export function AppShell() {
           className="flex min-w-0 flex-[999_1_560px] flex-col gap-5 px-6 py-8 focus:outline-none"
         >
           <NotificationProvider>
-            <Outlet />
+            {/* Fallback while a lazy screen page's chunk downloads (HRD-6, see App.tsx). */}
+            <Suspense
+              fallback={
+                <p role="status" className="text-muted">
+                  Loading…
+                </p>
+              }
+            >
+              <Outlet />
+            </Suspense>
           </NotificationProvider>
         </main>
       </div>

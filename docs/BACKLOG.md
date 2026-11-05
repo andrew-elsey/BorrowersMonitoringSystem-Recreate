@@ -14,12 +14,12 @@ Document references: `BR` = `BUSINESS_RULES.md`, `ARCH` = `ARCHITECTURE.md`, `SP
 |---|---|---|---|
 | 1 | Foundation and sign-in: running Docker environment, schema, seed data, role-based login with protected hashing, sign-in screens and app shell, UTC timestamp fix, login limiter memory fix | FND-1, FND-2, FND-3, FND-4, AUTH-1, AUTH-2, AUTH-4, FND-6, AUTH-5 | 26 |
 | 2 | Shared components and master data: shared form and table components, admins manage items, rooms, borrowers, semesters, settings, API field error focus fix | FND-5, MD-1, MD-2, MD-3, MD-4, MD-5, MD-7, DOC-1, FND-7 | 23 |
-| 3 | Checkout: handlers can check items out; return API works; rate limits and request limits in place | BRW-1, BRW-2, BRW-3, BRW-4, SEC-1 | 21 |
+| 3 | Checkout: handlers can check items out; return API works; rate limits and request limits in place; web bundle split | BRW-1, BRW-2, BRW-3, BRW-4, SEC-1, HRD-6 | 22 |
 | 4 | Returns and flagging: full return flow, end-of-day flagging, strikes, blocking, override | BRW-5, FLG-1, FLG-2, FLG-3, FLG-4 | 19 |
 | 5 | Dashboard, reports, admin tools | BRW-6, RPT-1, RPT-2, RPT-3, RPT-4, AUTH-3, MD-6 | 20 |
 | 6 | Hardening, abuse testing, and release | HRD-1, HRD-2, HRD-3, HRD-4, HRD-5, SEC-2 | 20 |
 
-Total: 129 points. Sprints 1 (26), 2 (23), and 3 (21) are over the working capacity of about 20; that is accepted for now and will be revisited once Sprint 1 shows the real velocity.
+Total: 130 points. Sprints 1 (26), 2 (23), and 3 (22) are over the working capacity of about 20; that is accepted for now and will be revisited once Sprint 1 shows the real velocity.
 
 ## Epic FND: Foundation
 
@@ -165,6 +165,9 @@ Step-by-step instructions to run on a department PC and reach it from other mach
 
 **HRD-5 · UX and error handling pass** (3 pts, Sprint 6). Depends on: BRW-5.
 Clear validation and error messages; keyboard-friendly checkout; consistent loading and empty states.
+
+**HRD-6 · Split the web bundle** (1 pt, Sprint 3). Depends on: none.
+Acceptance: route-level code splitting with `React.lazy` and `Suspense` for the screen pages, using only what React and Vite already provide (no new dependency); `npm run build` shows no chunk-size warning, or the remaining large chunk is explained in ARCH; the sign-in screen and the app shell still load first, the existing tests pass, and every route still renders under `docker compose up`. Refs: SPEC 8, ARCH 3, 13.
 
 ## Epic DOC: Documentation
 
