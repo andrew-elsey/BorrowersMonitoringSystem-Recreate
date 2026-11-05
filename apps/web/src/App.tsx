@@ -9,6 +9,9 @@ import { NotAllowedPage } from './pages/NotAllowedPage';
 // Screen pages load on demand so the sign-in screen and the app shell download first (HRD-6).
 // AppShell shows the Suspense fallback while a page's chunk loads.
 const HomePage = lazy(() => import('./pages/HomePage').then((m) => ({ default: m.HomePage })));
+const CheckoutPage = lazy(() =>
+  import('./pages/CheckoutPage').then((m) => ({ default: m.CheckoutPage })),
+);
 const InventoryPage = lazy(() =>
   import('./pages/InventoryPage').then((m) => ({ default: m.InventoryPage })),
 );
@@ -61,6 +64,14 @@ export const routes: RouteObject[] = [
         element: (
           <RequireRole roles={PERMISSIONS.viewDashboardAndReports} pageName="Home">
             <HomePage />
+          </RequireRole>
+        ),
+      },
+      {
+        path: 'checkout',
+        element: (
+          <RequireRole roles={PERMISSIONS.checkoutAndReturn} pageName="Checkout">
+            <CheckoutPage />
           </RequireRole>
         ),
       },
