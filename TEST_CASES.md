@@ -135,16 +135,16 @@ Paths are shortened: `api/` is `apps/api/tests/`, `web/` is `apps/web/src/pages/
 | TC-BRW-01 | BRW-1 | BR 1 | unit | Ask availability of a UNIT item with and without an open line | Unavailable with an open line; available without | `api/availability.test.ts` (unit and integration: out, returned, never borrowed) |
 | TC-BRW-02 | BRW-1 | BR 1 | unit | QUANTITY item total 10, open lines 4 and 3 (1 returned on the second) | Available 4 | `api/availability.test.ts` (unit and integration through a transaction client; a fully returned line adds nothing) |
 | TC-BRW-03 | BRW-1 | BR 1 | unit | Ask availability of items with status `UNDER_REPAIR`, `LOST`, `RETIRED` | Not available | `api/availability.test.ts` (unit for UNIT and QUANTITY items; integration for UNIT items) |
-| TC-BRW-04 | BRW-2 | BR 2 | integration | Handler checks out two items to a borrower for a room | One transaction and two lines; handler from the session; issue time and current semester set; audited | not yet |
-| TC-BRW-05 | BRW-2 | BR 1, S14 | integration | Issue a unit item that is already out | `ITEM_UNAVAILABLE` | not yet |
-| TC-BRW-06 | BRW-2 | BR 1, S14 | integration | Issue 4 of a quantity item with 3 available | `INSUFFICIENT_QUANTITY` | not yet |
-| TC-BRW-07 | BRW-2 | BR 1, S14 | integration | Issue items with status `UNDER_REPAIR`, `LOST`, `RETIRED` | `ITEM_UNAVAILABLE` | not yet |
-| TC-BRW-08 | BRW-2 | BR 3, S14 | integration | Issue to an inactive borrower | `BORROWER_INACTIVE` | not yet |
-| TC-BRW-09 | BRW-2 | BR 2, S14 | integration | Check out with no current semester | `NO_CURRENT_SEMESTER` | not yet |
-| TC-BRW-10 | BRW-2 | BR 4, S14 | integration | Check out two lines where the second fails | No transaction and no lines are created | not yet |
-| TC-BRW-11 | BRW-2 | BR 4, S16 | integration | Two handlers issue the same unit item at the same moment | Exactly one succeeds; the other gets `ITEM_UNAVAILABLE` | not yet |
-| TC-BRW-12 | BRW-2 | SPEC 7, S21 | integration | Check out 51 lines; a line with quantity 0 or 10,001 | `VALIDATION_ERROR` | not yet |
-| TC-BRW-13 | BRW-2 | SPEC 3 | integration | View-only user calls checkout | 403 (S18) | not yet |
+| TC-BRW-04 | BRW-2 | BR 2 | integration | Handler checks out two items to a borrower for a room | One transaction and two lines; handler from the session; issue time and current semester set; audited | `api/checkout.test.ts` (also: an `issuedById` in the body is ignored) |
+| TC-BRW-05 | BRW-2 | BR 1, S14 | integration | Issue a unit item that is already out | `ITEM_UNAVAILABLE` | `api/checkout.test.ts` |
+| TC-BRW-06 | BRW-2 | BR 1, S14 | integration | Issue 4 of a quantity item with 3 available | `INSUFFICIENT_QUANTITY` | `api/checkout.test.ts` (3 of the same item then succeeds) |
+| TC-BRW-07 | BRW-2 | BR 1, S14 | integration | Issue items with status `UNDER_REPAIR`, `LOST`, `RETIRED` | `ITEM_UNAVAILABLE` | `api/checkout.test.ts` (UNIT and QUANTITY items) |
+| TC-BRW-08 | BRW-2 | BR 3, S14 | integration | Issue to an inactive borrower | `BORROWER_INACTIVE` | `api/checkout.test.ts` |
+| TC-BRW-09 | BRW-2 | BR 2, S14 | integration | Check out with no current semester | `NO_CURRENT_SEMESTER` | `api/checkout.test.ts` |
+| TC-BRW-10 | BRW-2 | BR 4, S14 | integration | Check out two lines where the second fails | No transaction and no lines are created | `api/checkout.test.ts` (no audit entry either) |
+| TC-BRW-11 | BRW-2 | BR 4, S16 | integration | Two handlers issue the same unit item at the same moment | Exactly one succeeds; the other gets `ITEM_UNAVAILABLE` | `api/checkout.test.ts` (fails if the row lock is removed; opposite line orders do not deadlock) |
+| TC-BRW-12 | BRW-2 | SPEC 7, S21 | integration | Check out 51 lines; a line with quantity 0 or 10,001 | `VALIDATION_ERROR` | `api/checkout.test.ts` (also: no lines, a repeated item, a 501-character note, a unit item with quantity 2; an unknown item, borrower, or room is `NOT_FOUND`) |
+| TC-BRW-13 | BRW-2 | SPEC 3 | integration | View-only user calls checkout | 403 (S18) | `api/checkout.test.ts` (signed out 401) |
 | TC-BRW-14 | BRW-3 | SPEC 5 | component | Look up a borrower | Name, type, and department shown | not yet |
 | TC-BRW-15 | BRW-3 | SPEC 5 | component | Pick a room; add a new room from the picker | Room selected; new room is created and selected | not yet |
 | TC-BRW-16 | BRW-3 | SPEC 5 | component | Search an item; enter quantity for a QUANTITY item; add a note and expected return date | Lines show with quantity, note, and date | not yet |
@@ -165,6 +165,8 @@ Paths are shortened: `api/` is `apps/api/tests/`, `web/` is `apps/web/src/pages/
 | TC-BRW-31 | BRW-6 | SPEC 7 | integration | Save a 501-character note; edit a note on a closed line | Rejected | not yet |
 | TC-BRW-32 | BRW-6 | BR 7, S4 | integration | James borrows 5 extension cables, handler notes "returning tomorrow" with tomorrow's date; job runs at 17:00 | Line is flagged anyway; strikes counted as usual | not yet |
 | TC-BRW-33 | BRW-6 | RPT-1 | component | Open the dashboard with a noted line | Note and expected return date shown | not yet |
+| TC-BRW-34 | BRW-2 | BR 2, SPEC 4 | integration | A handler, then an admin, checks out in a deactivated room | `LOCATION_INACTIVE` for both; nothing created | `api/checkout.test.ts` |
+| TC-BRW-35 | BRW-2 | BR 7, SPEC 7 | integration | Check out with an expected return date before today, today, and later in Asia/Manila, just before and just after Manila midnight | Before today: `VALIDATION_ERROR` on `lines.0.expectedReturnDate`; today and later: saved | `api/checkout.test.ts` (clock faked at 23:59:59 and 00:00 Manila time) |
 
 ## FLG: Flagging and strikes
 
@@ -257,12 +259,12 @@ Paths are shortened: `api/` is `apps/api/tests/`, `web/` is `apps/web/src/pages/
 | Rule or scenario | Cases |
 |---|---|
 | BR 1 Availability | TC-BRW-01, 02, 03, 05, 06, 07 |
-| BR 2 Who and when | TC-BRW-04, 09 |
+| BR 2 Who and when | TC-BRW-04, 09, 34 |
 | BR 3 Eligible borrowers | TC-MD-17, TC-BRW-08, TC-FLG-19 |
 | BR 4 Atomic and safe | TC-BRW-10, 11 |
 | BR 5 Return events | TC-BRW-20, 21, 22, 28 |
 | BR 6 Returning never touches flags | TC-BRW-23, 29, TC-FLG-08 |
-| BR 7 Notes are informational | TC-BRW-30, 32 |
+| BR 7 Notes are informational | TC-BRW-30, 32, 35 |
 | BR 8 End-of-day flagging | TC-FLG-06 to 12 |
 | BR 9 Catch-up | TC-FLG-10 |
 | BR 10 Strike count | TC-FLG-01 to 04 |
@@ -285,7 +287,7 @@ Paths are shortened: `api/` is `apps/api/tests/`, `web/` is `apps/web/src/pages/
 | S11 Service down at closing | TC-FLG-10 |
 | S12 Idempotent job | TC-FLG-11 |
 | S13 Overridden stays overridden | TC-FLG-12 |
-| S14 Checkout validations | TC-BRW-05 to 10 |
+| S14 Checkout validations | TC-BRW-05 to 10, 34 |
 | S15 Return validations | TC-BRW-24 |
 | S16 Concurrent checkout | TC-BRW-11 |
 | S17 Damaged return | TC-BRW-25 |

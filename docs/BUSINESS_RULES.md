@@ -19,7 +19,7 @@ All times below are `Asia/Manila` unless stated. Default closing time is 17:00.
 ### Checkout
 
 1. **Availability.** A `UNIT` item can be issued only if it has no open line. A `QUANTITY` item can be issued only up to total quantity minus the outstanding quantity on all open lines. Items whose status is not `ACTIVE` cannot be issued.
-2. **Who and when.** Every transaction records the borrower, the room or lab, the issuing handler (from the login, never typed), the issue time, and the current semester. If there is no current semester, checkout is rejected (`NO_CURRENT_SEMESTER`).
+2. **Who and when.** Every transaction records the borrower, the room or lab, the issuing handler (from the login, never typed), the issue time, and the current semester. If there is no current semester, checkout is rejected (`NO_CURRENT_SEMESTER`). The room or lab must be active; checkout in an inactive room is rejected for everyone, admins included (`LOCATION_INACTIVE`, owner decision 2026-11-05).
 3. **Eligible borrowers.** Inactive borrowers cannot borrow (`BORROWER_INACTIVE`). A borrower at or above the block threshold cannot borrow (`BORROWER_BLOCKED`, rule 11).
 4. **Atomic and safe.** A transaction and all its lines are created together or not at all. Availability is re-checked inside the database transaction after locking the item rows, so two handlers cannot issue the same unit item at once.
 
@@ -30,7 +30,7 @@ All times below are `Asia/Manila` unless stated. Default closing time is 17:00.
 
 ### Notes
 
-7. **Notes are informational.** A handler can add or edit a note and an expected return date on an open line (for example, "returning tomorrow"). Notes never prevent flagging and never change strikes. Edits are audited.
+7. **Notes are informational.** A handler can add or edit a note and an expected return date on an open line (for example, "returning tomorrow"). The expected return date is today or later in the app timezone, with no upper limit (owner decision 2026-11-05). Notes never prevent flagging and never change strikes. Edits are audited.
 
 ### Flagging
 
@@ -98,6 +98,7 @@ Notation: "Day 1" is a normal working day with closing time 17:00 and a current 
 - Issuing an item with status `UNDER_REPAIR`, `LOST`, or `RETIRED` fails with `ITEM_UNAVAILABLE`.
 - Issuing to an inactive borrower fails with `BORROWER_INACTIVE`.
 - With no current semester, checkout fails with `NO_CURRENT_SEMESTER`.
+- Checkout in an inactive room fails with `LOCATION_INACTIVE`, for admins too.
 - A failed checkout creates no transaction and no lines.
 
 **S15. Return validations.** Returning 3 when 2 are outstanding fails with `RETURN_EXCEEDS_OUTSTANDING`. Returning on a line with nothing outstanding fails the same way.

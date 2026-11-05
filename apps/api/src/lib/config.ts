@@ -1,5 +1,7 @@
 // Settings read from environment variables (ARCHITECTURE.md section 10). Never hardcode these.
 
+import { IANAZone } from 'luxon';
+
 function readInt(name: string, fallback: number, minimum: number): number {
   const raw = process.env[name];
   if (raw === undefined || raw === '') return fallback;
@@ -8,6 +10,15 @@ function readInt(name: string, fallback: number, minimum: number): number {
     throw new Error(`${name} must be an integer of at least ${minimum}, got "${raw}"`);
   }
   return value;
+}
+
+// An unknown zone would make Luxon return null dates and quietly switch off date rules (BR 7).
+export function readTimezone(): string {
+  const zone = process.env.APP_TIMEZONE || 'Asia/Manila';
+  if (!IANAZone.isValidZone(zone)) {
+    throw new Error(`APP_TIMEZONE must be an IANA time zone such as Asia/Manila, got "${zone}"`);
+  }
+  return zone;
 }
 
 export const config = {
@@ -25,7 +36,7 @@ export const config = {
   // Must stay false on a plain-HTTP LAN, or browsers drop the cookie.
   cookieSecure: process.env.COOKIE_SECURE === 'true',
   // Business dates (closing time, "today", semesters) use this zone (ARCHITECTURE.md 6).
-  timezone: process.env.APP_TIMEZONE || 'Asia/Manila',
+  timezone: readTimezone(),
   // The containers set NODE_ENV=production. The seed adds sample data only outside production.
   isProduction: process.env.NODE_ENV === 'production',
 };

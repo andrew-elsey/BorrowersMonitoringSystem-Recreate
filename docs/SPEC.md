@@ -20,7 +20,7 @@ A web-based Inventory and Borrowing System for a college department. It tracks e
 | Capability | Admin | Handler | View-only |
 |---|---|---|---|
 | Check out and return items | yes | yes | no |
-| Pick or add a room or lab at checkout (handlers see only active rooms) | yes | yes | no |
+| Pick or add a room or lab at checkout (handlers see only active rooms; checkout in an inactive room is refused for everyone, `LOCATION_INACTIVE`, BR 2) | yes | yes | no |
 | Add or edit a note on an open line | yes | yes | no |
 | Dashboard and reports | yes | yes | yes |
 | Manage inventory, categories, borrowers, rooms | yes | no | no |
@@ -41,7 +41,7 @@ All domain tables use UUID primary keys and `created_at` / `updated_at` timestam
 
 **categories**: name (unique, case-insensitive).
 
-**locations** (rooms and labs): name (unique, case-insensitive), active, created_by (user).
+**locations** (rooms and labs): name (unique, case-insensitive), active, created_by (user). Checkout only uses an active room (BR 2).
 
 **items**: name, category, description, tracking_type (`UNIT` or `QUANTITY`, fixed once the item is created), asset_tag (unique, case-insensitive; stored as typed; required for UNIT, null for QUANTITY), total_quantity (always 1 for UNIT; 0 or more for QUANTITY), condition (`NEW`, `GOOD`, `FAIR`, `DAMAGED`), status (`ACTIVE`, `UNDER_REPAIR`, `LOST`, `RETIRED`).
 - Status describes the item's lifecycle, not whether it is currently out. "Borrowed" or "available" is always calculated from open transaction lines and never stored.
@@ -91,7 +91,7 @@ Enforced on the server in the shared Zod schemas and mirrored in the forms. They
 
 - JSON request body: 100 KB. CSV upload: 2 MB, one file, at most 5,000 rows.
 - Lists: page size at most 100. Search text: 2 to 100 characters.
-- Checkout: at most 50 lines per transaction. Quantity per line is a whole number from 1 to 10,000 and never above what is available.
+- Checkout: at most 50 lines per transaction, each item on one line only. Quantity per line is a whole number from 1 to 10,000 and never above what is available. An expected return date is today or later in the app timezone (BR 7), with no upper limit.
 - Items: total quantity of a QUANTITY item is a whole number from 0 to 10,000.
 - Settings: closing time is `HH:mm` (00:00 to 23:59); each strike threshold is a whole number from 1 to 100, and warning < notice < block.
 - Text fields: names 200 characters, descriptions 1,000, notes 500, override reasons 500 (required, at least 5 characters).
