@@ -26,12 +26,14 @@ export async function recordReturn(
     // BR 5: lock the lines before checking outstanding, so two returns of the same line at once
     // cannot both pass. ORDER BY id: two requests listing the same lines never deadlock. Only the
     // line rows are locked here; item rows are locked below in id order, the same as checkout.
+    // NO KEY UPDATE (the lock the quantity_returned UPDATE takes anyway) lets foreign-key checks,
+    // such as an item delete, take their key-share lock without deadlocking with this return.
     const lineIds = input.lines.map((line) => line.lineId);
     const locked = await tx.$queryRaw<LockedLine[]>`
       SELECT ti.id, ti.item_id, ti.quantity_borrowed, ti.quantity_returned,
              i.name, i.asset_tag, i.tracking_type
       FROM transaction_items ti JOIN items i ON i.id = ti.item_id
-      WHERE ti.id = ANY(${lineIds}::uuid[]) ORDER BY ti.id FOR UPDATE OF ti`;
+      WHERE ti.id = ANY(${lineIds}::uuid[]) ORDER BY ti.id FOR NO KEY UPDATE OF ti`;
     const byId = new Map(locked.map((line) => [line.id, line]));
 
     for (const { lineId, quantity } of input.lines) {

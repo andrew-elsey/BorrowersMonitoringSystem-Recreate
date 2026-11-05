@@ -254,6 +254,23 @@ test('TC-BRW-25: a DAMAGED unit laptop marks the item DAMAGED, status stays ACTI
   });
 });
 
+test('returning an already DAMAGED laptop as DAMAGED again writes no second item change (S17)', async () => {
+  const item = await laptop();
+  const first = await issue(item.id, 1);
+  await giveBack(hal, [{ lineId: first.id, quantity: 1, condition: 'DAMAGED' }]).expect(201);
+  const second = await issue(item.id, 1);
+  await giveBack(hal, [{ lineId: second.id, quantity: 1, condition: 'DAMAGED' }]).expect(201);
+
+  expect((await prisma.item.findUniqueOrThrow({ where: { id: item.id } })).condition).toBe(
+    'DAMAGED',
+  );
+  const itemEntries = await prisma.auditLog.findMany({
+    where: { entityId: item.id, action: 'ITEM_UPDATED' },
+  });
+  expect(itemEntries).toHaveLength(1);
+  expect(itemEntries[0]).toMatchObject({ before: { condition: 'GOOD' } });
+});
+
 test('a GOOD return does not change the item condition', async () => {
   const item = await laptop();
   await prisma.item.update({ where: { id: item.id }, data: { condition: 'FAIR' } });
@@ -318,7 +335,7 @@ test('an unknown line is NOT_FOUND; ids in upper case work', async () => {
 
 test('input limits: quantity, condition, line count, repeated lines (SPEC 7)', async () => {
   const line = await issue((await cords()).id, 5);
-  const bad = async (body: unknown) => {
+  const bad = async (body: object) => {
     const res = await hal.post('/api/returns').set('X-Requested-With', 'fetch').send(body);
     expect(res.status).toBe(400);
     expect(res.body.error.code).toBe('VALIDATION_ERROR');
