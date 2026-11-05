@@ -37,7 +37,8 @@ const room = (id: string, name: string): Room => ({
 });
 const CL201 = room('c0000000-0000-4000-8000-000000000001', 'CL-201');
 const category = { id: 'c1', name: 'Laptops' };
-const LAPTOP: Item = {
+type ListedItem = Item & { available: number };
+const LAPTOP: ListedItem = {
   id: 'd0000000-0000-4000-8000-000000000001',
   name: 'Laptop, Dell Latitude 5440',
   category,
@@ -47,20 +48,29 @@ const LAPTOP: Item = {
   totalQuantity: 1,
   condition: 'GOOD',
   status: 'ACTIVE',
+  available: 1,
 };
-const REPAIR: Item = {
+const REPAIR: ListedItem = {
   ...LAPTOP,
   id: 'd0000000-0000-4000-8000-000000000002',
   assetTag: 'LT-0009',
   status: 'UNDER_REPAIR',
+  available: 0,
 };
-const CORD: Item = {
+const OUT: ListedItem = {
+  ...LAPTOP,
+  id: 'd0000000-0000-4000-8000-000000000004',
+  assetTag: 'LT-0012',
+  available: 0,
+};
+const CORD: ListedItem = {
   ...LAPTOP,
   id: 'd0000000-0000-4000-8000-000000000003',
   name: 'Extension cord, 5 m',
   trackingType: 'QUANTITY',
   assetTag: null,
   totalQuantity: 8,
+  available: 3,
 };
 const page = <T,>(data: T[]) => ({
   status: 200,
@@ -88,9 +98,13 @@ function fakeApi(answer?: Answer) {
     if (path === '/auth/me') return signedInAs(HANDLER);
     const reply = answer?.(method, path, body);
     if (reply) return reply as { status: number; body?: unknown };
-    if (method === 'GET' && path.startsWith('/borrowers?q=')) return page([PAOLO, RHEA]);
+    // The handler-allowed lookup, not the admin-only GET /borrowers.
+    if (method === 'GET' && path.startsWith('/borrowers/lookup?q=')) return page([PAOLO, RHEA]);
     if (method === 'GET' && path.startsWith('/rooms')) return page(rooms);
-    if (method === 'GET' && path.startsWith('/items?q=')) return page([LAPTOP, REPAIR, CORD]);
+    if (method === 'GET' && path.startsWith('/items?q=')) return page([LAPTOP, OUT, REPAIR, CORD]);
+    if (method === 'GET' && path === '/closing-time') {
+      return { status: 200, body: { closingTime: '17:00' } };
+    }
     if (method === 'POST' && path === '/rooms') {
       const added = room('c0000000-0000-4000-8000-000000000009', (body as { name: string }).name);
       rooms = [...rooms, added];
@@ -191,6 +205,44 @@ test('a duplicate room name shows under the new room field', async () => {
   expect(screen.getByLabelText('New room or lab name').getAttribute('aria-invalid')).toBe('true');
 });
 
+test('TC-BRW-37: item results show what is available; an item with none cannot be added (BR 1)', async () => {
+  fakeApi();
+  const user = userEvent.setup();
+  renderApp('/checkout');
+  await user.type(await screen.findByLabelText('Search by name or asset tag'), 'la');
+  const results = await screen.findByRole('list', { name: 'Search results' });
+  const rows = within(results)
+    .getAllByRole('listitem')
+    .map((row) => row.textContent);
+  expect(rows).toEqual([
+    'Laptop, Dell Latitude 5440Asset tag LT-0013AvailableAdd',
+    'Laptop, Dell Latitude 5440Asset tag LT-0012OutAdd',
+    'Laptop, Dell Latitude 5440Asset tag LT-0009Under repairAdd',
+    'Extension cord, 5 mQuantity item · 8 in total3 availableAdd',
+  ]);
+  const add = (name: string) => within(results).getByRole('button', { name: `Add ${name}` });
+  expect(add('Laptop, Dell Latitude 5440 LT-0012')).toHaveProperty('disabled', true);
+  expect(add('Laptop, Dell Latitude 5440 LT-0013')).toHaveProperty('disabled', false);
+  expect(add('Extension cord, 5 m')).toHaveProperty('disabled', false);
+});
+
+test('TC-BRW-38: the closing time comes from settings (rule 3)', async () => {
+  fakeApi((method, path) =>
+    method === 'GET' && path === '/closing-time'
+      ? { status: 200, body: { closingTime: '18:30' } }
+      : undefined,
+  );
+  const user = userEvent.setup();
+  renderApp('/checkout');
+  expect(
+    await within(await screen.findByRole('complementary')).findByText('Today by 18:30'),
+  ).toBeTruthy();
+  await fillCheckout(user);
+  expect(screen.getByText(/Lines still out at 18:30 are flagged anyway\./)).toBeTruthy();
+  await user.click(screen.getByRole('button', { name: 'Confirm checkout' }));
+  expect((await screen.findByRole('status')).textContent).toContain('Due back by 18:30 today.');
+});
+
 test('TC-BRW-16: search items, enter a quantity for a quantity item, and add a note and expected return date', async () => {
   fakeApi();
   const user = userEvent.setup();
@@ -201,6 +253,10 @@ test('TC-BRW-16: search items, enter a quantity for a quantity item, and add a n
   expect(
     screen.getByRole('button', { name: 'Add Laptop, Dell Latitude 5440 LT-0009' }),
   ).toHaveProperty('disabled', true);
+  const cordLine = within(screen.getByRole('table', { name: 'Items to check out' })).getByText(
+    'Quantity item · 3 available',
+  );
+  expect(cordLine).toBeTruthy();
   expect(screen.getByRole('button', { name: 'Add Extension cord, 5 m' })).toHaveProperty(
     'disabled',
     true,

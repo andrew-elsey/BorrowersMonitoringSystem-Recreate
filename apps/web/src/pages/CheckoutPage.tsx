@@ -16,7 +16,7 @@ import {
   SEARCH_MIN_LENGTH,
 } from '@bms/shared';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { keepPreviousData, useMutation, useQuery } from '@tanstack/react-query';
+import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { type ComponentProps, type ReactNode, useEffect, useRef, useState } from 'react';
 import { useFieldArray, useForm } from 'react-hook-form';
 import type { z } from 'zod';
@@ -79,9 +79,19 @@ function useSearchText(text: string): string {
 
 const itemLabel = (item: Item) => (item.assetTag ? `${item.name} ${item.assetTag}` : item.name);
 
+// An item from the list, with what can be issued now (BR 1).
+type ListedItem = ItemPage['data'][number];
+// Worded as in the approved mockup. Items that are not ACTIVE show their status (BR 1).
+function availabilityText(item: ListedItem): string {
+  if (item.status !== 'ACTIVE') return STATUS_TEXT[item.status];
+  if (item.trackingType === 'UNIT') return item.available > 0 ? 'Available' : 'Out';
+  return `${item.available} available`;
+}
+
 export function CheckoutPage() {
   const user = useAuth().user!;
   const notify = useNotify();
+  const queryClient = useQueryClient();
 
   const form = useForm<FormValues, unknown, CheckoutInput>({
     resolver: zodResolver(checkoutSchema),
@@ -93,7 +103,7 @@ export function CheckoutPage() {
 
   // The chosen borrower and the items on the lines, for display; the form holds only their ids.
   const [borrower, setBorrower] = useState<Borrower | null>(null);
-  const [items, setItems] = useState<Record<string, Item>>({});
+  const [items, setItems] = useState<Record<string, ListedItem>>({});
   const [borrowerText, setBorrowerText] = useState('');
   const [showBorrowers, setShowBorrowers] = useState(true);
   const [itemText, setItemText] = useState('');
@@ -108,7 +118,7 @@ export function CheckoutPage() {
     queryFn: () =>
       apiFetch<BorrowerPage>(
         'GET',
-        `/borrowers?q=${encodeURIComponent(borrowerQ)}&page=1&pageSize=${RESULTS}`,
+        `/borrowers/lookup?q=${encodeURIComponent(borrowerQ)}&page=1&pageSize=${RESULTS}`,
       ),
     enabled: borrowerQ !== '',
     placeholderData: keepPreviousData,
@@ -126,6 +136,13 @@ export function CheckoutPage() {
     queryKey: ['rooms', 'checkout'],
     queryFn: () => apiFetch<RoomPage>('GET', '/rooms?page=1&pageSize=100'),
   });
+  // Lines still out at closing time are flagged (BR 8). From settings, never hardcoded (rule 3);
+  // "closing time" stands in until it loads.
+  const closing = useQuery({
+    queryKey: ['closing-time'],
+    queryFn: () => apiFetch<{ closingTime: string }>('GET', '/closing-time'),
+  });
+  const closingTime = closing.data?.closingTime ?? 'closing time';
   // BR 2: only active rooms can be used. Handlers only get active rooms; admins get all of them.
   const activeRooms = (rooms.data?.data ?? []).filter((room) => room.active !== false);
   const roomOptions = [
@@ -157,7 +174,11 @@ export function CheckoutPage() {
     mutationFn: (input: CheckoutInput) =>
       apiFetch<{ transaction: Checkout }>('POST', '/transactions', input),
     // Confirm is disabled once saved, so focus goes to the next step instead of the page start.
-    onSuccess: () => setTimeout(() => document.getElementById('start-over')?.focus()),
+    onSuccess: () => {
+      setTimeout(() => document.getElementById('start-over')?.focus());
+      // What is available changed, so the next search must not show cached counts.
+      return queryClient.invalidateQueries({ queryKey: ['items'] });
+    },
     onError: (error, input) => markRefusedLine(error, input),
   });
   // A second click while the first request is on its way sends nothing (BRW-3).
@@ -208,7 +229,7 @@ export function CheckoutPage() {
     setShowBorrowers(false);
   }
 
-  function addLine(item: Item) {
+  function addLine(item: ListedItem) {
     setItems((current) => ({ ...current, [item.id]: item }));
     lines.append({ itemId: item.id, quantity: 1 }, { shouldFocus: false });
     form.clearErrors('lines');
@@ -246,7 +267,7 @@ export function CheckoutPage() {
         <Alert kind="success">
           <strong>Checkout saved.</strong> {plural(saved.lines.length, 'item')} issued to{' '}
           {borrower.name} for {chosenRoom?.name} at {issueTime.format(new Date(saved.issuedAt))}.
-          Due back by closing time today.{' '}
+          Due back by {closingTime} today.{' '}
           <button
             type="button"
             id="start-over"
@@ -455,17 +476,17 @@ export function CheckoutPage() {
                         </span>
                       </div>
                       <div className="flex items-center gap-3">
-                        {/* GET /api/items has no availability, so only the status shows here; */}
-                        {/* the API checks what is actually available on Confirm (BR 1, 4). */}
+                        {/* Availability as of the search; the API checks it again on Confirm */}
+                        {/* (BR 1, 4). */}
                         <span
-                          className={`text-sm font-semibold ${item.status === 'ACTIVE' ? 'text-primary' : 'text-muted'}`}
+                          className={`text-sm font-semibold ${item.available > 0 ? 'text-primary' : 'text-muted'}`}
                         >
-                          {onLines.has(item.id) ? 'Added' : STATUS_TEXT[item.status]}
+                          {onLines.has(item.id) ? 'Added' : availabilityText(item)}
                         </span>
                         <button
                           type="button"
                           aria-label={`Add ${itemLabel(item)}`}
-                          disabled={item.status !== 'ACTIVE' || onLines.has(item.id)}
+                          disabled={item.available === 0 || onLines.has(item.id)}
                           onClick={() => addLine(item)}
                           className={outlineButtonClass}
                         >
@@ -507,7 +528,7 @@ export function CheckoutPage() {
                               <div className="text-[13px] text-muted">
                                 {item.assetTag
                                   ? `Asset tag ${item.assetTag} · unit item`
-                                  : 'Quantity item'}
+                                  : `Quantity item · ${item.available} available`}
                               </div>
                               <LineError message={lineErrors?.itemId?.message} />
                             </td>
@@ -573,8 +594,8 @@ export function CheckoutPage() {
                   </table>
                 </div>
                 <p className="text-sm text-muted">
-                  Notes and expected return dates are for information only. Lines still out at
-                  closing time are flagged anyway.
+                  Notes and expected return dates are for information only. Lines still out at{' '}
+                  {closingTime} are flagged anyway.
                 </p>
               </>
             )}
@@ -612,7 +633,7 @@ export function CheckoutPage() {
             <dt className="text-muted">Issued by</dt>
             <dd>{user.name} (you)</dd>
             <dt className="text-muted">Due back</dt>
-            <dd>Today by closing time</dd>
+            <dd>Today by {closingTime}</dd>
           </dl>
           <button
             type="button"
