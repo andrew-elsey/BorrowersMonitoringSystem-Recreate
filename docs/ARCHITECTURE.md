@@ -289,7 +289,7 @@ Record the results and any tuned limits in this section.
 | UI colors | College of Fine Arts and Design logo colors (section 14) | The handout room belongs to the college; contrast checked against WCAG AA |
 | College logo | Not used | No license to use it |
 | UI font | System font stack (Segoe UI Variable on Windows 11) | No download, works offline on the LAN, no new dependency |
-| Web bundle | Screen pages lazy-loaded with `React.lazy` and one `Suspense` in `AppShell` | Sign-in and the app shell load first; the entry chunk (React, router, TanStack Query, shared Zod schemas, sign-in, shell) stays under Vite's 500 kB warning with no new dependency |
+| Web bundle | Screen pages lazy-loaded with `React.lazy` and one `Suspense` in `AppShell` | Sign-in and the app shell load first; the entry chunk (React, router, TanStack Query, shared Zod schemas, sign-in, shell) stays under Vite's 500 kB warning with no new dependency. If a page chunk fails to load (for example after a redeploy while a tab is open), React Router shows its default error page and a reload fixes it; a friendlier `errorElement` is left for HRD-5 |
 
 ## 14. UI theme
 

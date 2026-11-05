@@ -240,8 +240,8 @@ Paths are shortened: `api/` is `apps/api/tests/`, `web/` is `apps/web/src/pages/
 | TC-HRD-06 | HRD-3 | ARCH 12.6 | manual | Back up, restore on a clean environment | Data restored; backup files outside the web root, readable only by admin | not yet |
 | TC-HRD-07 | HRD-4 | ARCH 12.1 | manual | Follow the LAN guide on another PC | App reachable from the network with `COOKIE_SECURE=false`; port bound to the LAN address | not yet |
 | TC-HRD-08 | HRD-5 | SPEC 8 | manual | Go through each screen with bad input, slow loads, and empty data | Clear messages, consistent loading and empty states, keyboard-friendly checkout | not yet |
-| TC-HRD-09 | HRD-6 | SPEC 8, ARCH 3 | manual | Run `npm run build` | No chunk-size warning; each screen page (Home, Inventory, Borrowers, Rooms, Settings, Change password) is its own chunk | manual |
-| TC-HRD-10 | HRD-6 | SPEC 8 | component | Render the app at each route (`/`, `/inventory`, `/borrowers`, `/rooms`, `/settings`, `/password`, `/login`) with the lazy pages | Each page renders inside the app shell; sign-in renders without loading a page chunk | the page tests (`apps/web/src/pages/*.test.tsx`) through `renderApp` |
+| TC-HRD-09 | HRD-6 | SPEC 8, ARCH 3, 13 | manual | Run `npm run build` | No chunk-size warning; each screen page (Home, Inventory, Borrowers, Rooms, Settings, Change password) is its own chunk | manual |
+| TC-HRD-10 | HRD-6 | SPEC 8 | component | Render the app at each route (`/`, `/inventory`, `/borrowers`, `/rooms`, `/settings`, `/password`, `/login`) with the lazy pages | Each page renders inside the app shell | the page tests (`apps/web/src/pages/*.test.tsx`) through `renderApp` |
 | TC-HRD-11 | HRD-6 | SPEC 8 | manual | Under `docker compose up`, open sign-in with the browser network tab open, sign in, then open every menu item | Sign-in and the shell load from the entry chunk; each screen fetches its own chunk on first visit, shows "Loading…" briefly if slow, and renders | manual |
 
 ## DOC: Documentation

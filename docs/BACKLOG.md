@@ -167,7 +167,7 @@ Step-by-step instructions to run on a department PC and reach it from other mach
 Clear validation and error messages; keyboard-friendly checkout; consistent loading and empty states.
 
 **HRD-6 · Split the web bundle** (1 pt, Sprint 3). Depends on: none.
-Acceptance: route-level code splitting with `React.lazy` and `Suspense` for the screen pages, using only what React and Vite already provide (no new dependency); `npm run build` shows no chunk-size warning, or the remaining large chunk is explained in ARCH; the sign-in screen and the app shell still load first, the existing tests pass, and every route still renders under `docker compose up`. Refs: SPEC 8, ARCH 3.
+Acceptance: route-level code splitting with `React.lazy` and `Suspense` for the screen pages, using only what React and Vite already provide (no new dependency); `npm run build` shows no chunk-size warning, or the remaining large chunk is explained in ARCH; the sign-in screen and the app shell still load first, the existing tests pass, and every route still renders under `docker compose up`. Refs: SPEC 8, ARCH 3, 13.
 
 ## Epic DOC: Documentation
 
