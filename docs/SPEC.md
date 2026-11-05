@@ -92,6 +92,7 @@ Enforced on the server in the shared Zod schemas and mirrored in the forms. They
 - JSON request body: 100 KB. CSV upload: 2 MB, one file, at most 5,000 rows.
 - Lists: page size at most 100. Search text: 2 to 100 characters.
 - Checkout: at most 50 lines per transaction, each item on one line only. Quantity per line is a whole number from 1 to 10,000 and never above what is available. An expected return date is today or later in the app timezone (BR 7), with no upper limit.
+- Returns: at most 50 lines per request, each line once. Quantity per line is a whole number from 1 to 10,000 and never above what is outstanding (BR 5). Condition is `GOOD`, `FAIR`, or `DAMAGED`.
 - Items: total quantity of a QUANTITY item is a whole number from 0 to 10,000.
 - Settings: closing time is `HH:mm` (00:00 to 23:59); each strike threshold is a whole number from 1 to 100, and warning < notice < block.
 - Text fields: names 200 characters, descriptions 1,000, notes 500, override reasons 500 (required, at least 5 characters).
