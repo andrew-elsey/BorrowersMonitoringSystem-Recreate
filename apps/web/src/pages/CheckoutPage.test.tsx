@@ -384,10 +384,10 @@ test('TC-BRW-18: a refused line shows the API message and is marked, with focus 
           status: 409,
           body: apiError(
             'INSUFFICIENT_QUANTITY',
-            'Only 3 of Extension cord, 5 m available, 4 requested.',
+            'Only 1 of Extension cord, 5 m available, 4 requested.',
             {
               itemId: 'd0000000-0000-4000-8000-000000000003',
-              available: 3,
+              available: 1, // the search said 3; another checkout took 2 since
             },
           ),
         }
@@ -402,10 +402,12 @@ test('TC-BRW-18: a refused line shows the API message and is marked, with focus 
   await user.click(screen.getByRole('button', { name: 'Confirm checkout' }));
 
   expect(
-    await screen.findByText(/Only 3 of Extension cord, 5 m available, 4 requested\./),
+    await screen.findByText(/Only 1 of Extension cord, 5 m available, 4 requested\./),
   ).toBeTruthy();
   expect(topMessage().textContent).toContain('Nothing was issued.');
-  expect(screen.getByText('Only 3 available')).toBeTruthy();
+  expect(screen.getByText('Only 1 available')).toBeTruthy();
+  // The line shows the count from the refusal, not the one cached from the search.
+  expect(screen.getByText('Quantity item · 1 available')).toBeTruthy();
   expect(quantity.getAttribute('aria-invalid')).toBe('true');
   expect(document.activeElement).toBe(quantity);
 });

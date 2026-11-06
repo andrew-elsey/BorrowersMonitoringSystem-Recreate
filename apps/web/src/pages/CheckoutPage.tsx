@@ -213,10 +213,16 @@ export function CheckoutPage() {
     showApiFieldErrors(form.setError, error, ['borrowerId', 'locationId', ...dateFields]);
     if (!(error instanceof ApiRequestError)) return;
     const index = input.lines.findIndex((line) => line.itemId === error.details.itemId);
-    if (index < 0) return;
+    const line = input.lines[index];
+    if (!line) return;
     const { available } = error.details;
     if (typeof available === 'number') {
-      // INSUFFICIENT_QUANTITY (BR 1): the quantity is what needs changing.
+      // INSUFFICIENT_QUANTITY (BR 1): the quantity is what needs changing, and the line shows the
+      // count the API just checked instead of the one from the search.
+      setItems((current) => ({
+        ...current,
+        [line.itemId]: { ...current[line.itemId]!, available },
+      }));
       form.setError(
         `lines.${index}.quantity`,
         { message: `Only ${available} available` },
