@@ -371,6 +371,9 @@ test('nothing is sent until a borrower, a room, and an item are chosen', async (
   expect(await screen.findByText('Choose a borrower.')).toBeTruthy();
   expect(screen.getByText('Choose a room or lab.')).toBeTruthy();
   expect(screen.getByText('Add at least one item.')).toBeTruthy();
+  // Focus moves to the first missing field. QA round 1 saw it stay on Confirm in a browser, where a
+  // timer could run before React rendered the errors; jsdom renders first, so the focus now
+  // happens in an effect and this checks the result. TC-BRW-19 checks it by hand.
   await waitFor(() =>
     expect(document.activeElement).toBe(screen.getByLabelText('Find by name or school ID')),
   );
@@ -484,6 +487,27 @@ test('TC-BRW-18: a schema error under fields.lines and a room refusal show at th
   );
   await user.click(screen.getByRole('button', { name: 'Confirm checkout' }));
   expect(await screen.findByText(/This room is no longer in use\./)).toBeTruthy();
+});
+
+test('TC-BRW-17: focus goes to "Start a new checkout" even when the page renders the save late', async () => {
+  // After the save the item search is fetched again; holding that reply back delays the success
+  // render, which a focus on a timer used to miss (QA round 1: focus dropped to the page).
+  let saved = false;
+  const fetchMock = fakeApi((method, path) => {
+    if (method === 'POST' && path === '/transactions') saved = true;
+    return undefined;
+  });
+  const answer = fetchMock.getMockImplementation()!;
+  fetchMock.mockImplementation(async (url, init) => {
+    if (saved && url.startsWith('/api/items')) await new Promise((done) => setTimeout(done, 50));
+    return answer(url, init);
+  });
+  const user = userEvent.setup();
+  renderApp('/checkout');
+  await fillCheckout(user);
+  await user.click(screen.getByRole('button', { name: 'Confirm checkout' }));
+  const startOver = await screen.findByRole('button', { name: 'Start a new checkout' });
+  await waitFor(() => expect(document.activeElement).toBe(startOver));
 });
 
 test('TC-BRW-41: the form sections can shrink, so the lines table scrolls in its own box', async () => {

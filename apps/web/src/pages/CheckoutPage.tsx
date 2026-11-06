@@ -179,12 +179,9 @@ export function CheckoutPage() {
   const save = useMutation({
     mutationFn: (input: CheckoutInput) =>
       apiFetch<{ transaction: Checkout }>('POST', '/transactions', input),
-    // Confirm is disabled once saved, so focus goes to the next step instead of the page start.
-    onSuccess: () => {
-      setTimeout(() => document.getElementById('start-over')?.focus());
+    onSuccess: () =>
       // What is available changed, so the next search must not show cached counts.
-      return queryClient.invalidateQueries({ queryKey: ['items'] });
-    },
+      queryClient.invalidateQueries({ queryKey: ['items'] }),
     onError: (error, input) => markRefusedLine(error, input),
   });
   // A second click while the first request is on its way sends nothing (BRW-3).
@@ -201,9 +198,14 @@ export function CheckoutPage() {
     },
     // Focus the first field with an error in page order, as FND-7 does. The borrower has no input
     // of its own (its error shows on the search field), so React Hook Form cannot do this itself.
-    // setTimeout: after the errors have rendered.
-    () => setTimeout(() => document.querySelector<HTMLElement>('[aria-invalid="true"]')?.focus()),
+    // The focus happens in the effect below, once the errors have rendered.
+    () => setFocusFirstError((count) => count + 1),
   );
+  const [focusFirstError, setFocusFirstError] = useState(0);
+  // An effect, not setTimeout: in a browser a timer can run before React renders (BRW-3 QA).
+  useEffect(() => {
+    if (focusFirstError) document.querySelector<HTMLElement>('[aria-invalid="true"]')?.focus();
+  }, [focusFirstError]);
 
   // Puts the refusal next to the line it is about and moves focus there (FND-7). The API reports
   // only the first failing line: by itemId for item refusals, and as lines.N.expectedReturnDate
@@ -262,6 +264,11 @@ export function CheckoutPage() {
   const values = form.watch();
   const chosenRoom = activeRooms.find((room) => room.id === values.locationId);
   const saved = save.data?.transaction;
+  // Confirm is disabled once saved, so focus goes to the next step instead of the page start.
+  // An effect, so the button has rendered first.
+  useEffect(() => {
+    if (saved) document.getElementById('start-over')?.focus();
+  }, [saved]);
   // BR 3: an inactive borrower cannot borrow. The API refuses it too (BORROWER_INACTIVE).
   // FLG-3 adds the blocked borrower (BORROWER_BLOCKED) here.
   const locked = borrower !== null && !borrower.active;
