@@ -269,6 +269,7 @@ export function CheckoutPage() {
   useEffect(() => {
     if (saved) document.getElementById('start-over')?.focus();
   }, [saved]);
+  const dueNow = dueDay(new Date(), closingTime);
   // BR 3: an inactive borrower cannot borrow. The API refuses it too (BORROWER_INACTIVE).
   // FLG-3 adds the blocked borrower (BORROWER_BLOCKED) here.
   const locked = borrower !== null && !borrower.active;
@@ -614,7 +615,7 @@ export function CheckoutPage() {
                 </div>
                 <p className="text-sm text-muted">
                   Notes and expected return dates are for information only. Lines still out at{' '}
-                  {closingTime} are flagged anyway.
+                  {closingTime} {dueNow === 'tomorrow' && 'tomorrow '}are flagged anyway.
                 </p>
               </>
             )}
@@ -653,7 +654,7 @@ export function CheckoutPage() {
             <dd>{user.name} (you)</dd>
             <dt className="text-muted">Due back</dt>
             <dd>
-              {dueDay(new Date(), closingTime) === 'today' ? 'Today' : 'Tomorrow'} by {closingTime}
+              {dueNow === 'today' ? 'Today' : 'Tomorrow'} by {closingTime}
             </dd>
           </dl>
           <button

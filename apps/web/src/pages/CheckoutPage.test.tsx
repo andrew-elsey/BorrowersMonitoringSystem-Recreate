@@ -265,6 +265,7 @@ test('TC-BRW-40: after closing time the screen says the items are due back tomor
     await within(await screen.findByRole('complementary')).findByText('Tomorrow by 17:00'),
   ).toBeTruthy();
   await fillCheckout(user);
+  expect(screen.getByText(/Lines still out at 17:00 tomorrow are flagged anyway\./)).toBeTruthy();
   await user.click(screen.getByRole('button', { name: 'Confirm checkout' }));
   expect((await screen.findByRole('status')).textContent).toContain('Due back by 17:00 tomorrow.');
 });
