@@ -484,6 +484,21 @@ test('TC-BRW-18: a schema error under fields.lines and a room refusal show at th
   expect(await screen.findByText(/This room is no longer in use\./)).toBeTruthy();
 });
 
+test('TC-BRW-41: the form sections can shrink, so the lines table scrolls in its own box', async () => {
+  // jsdom has no layout, so this checks the class; the 360 to 1050 px check is manual (TC-BRW-41).
+  // A fieldset is min-content wide by default, which made the whole page scroll sideways.
+  fakeApi();
+  const user = userEvent.setup();
+  renderApp('/checkout');
+  await fillCheckout(user);
+  for (const name of ['1. Borrower', '2. Room or lab', '3. Items']) {
+    const section = screen.getByRole('heading', { name }).parentElement!;
+    expect(section.className.split(' ')).toContain('min-w-0');
+  }
+  const table = screen.getByRole('table', { name: 'Items to check out' });
+  expect(table.parentElement!.className).toContain('overflow-x-auto');
+});
+
 test('a view-only user cannot open Checkout, and it is not in their menu', async () => {
   mockApi((_method, path) => {
     if (path === '/auth/me') return signedInAs({ ...HANDLER, role: 'VIEWER' });

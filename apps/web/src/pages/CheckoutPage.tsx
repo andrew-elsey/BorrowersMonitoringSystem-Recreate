@@ -62,8 +62,10 @@ const STATUS_TEXT: Record<Item['status'], string> = {
   RETIRED: 'Retired',
 };
 
+// min-w-0: a fieldset is min-content wide by default, so the wide lines table would widen the page
+// instead of scrolling in its own box (BRW-3 QA BUG-1).
 const sectionClass =
-  'flex flex-col gap-3.5 rounded-xl border border-divider bg-surface p-5 disabled:opacity-55';
+  'flex min-w-0 flex-col gap-3.5 rounded-xl border border-divider bg-surface p-5 disabled:opacity-55';
 const outlineButtonClass =
   'h-10 cursor-pointer rounded-lg border border-primary bg-surface px-3.5 text-[15px] font-semibold text-primary hover:bg-primary-tint disabled:cursor-not-allowed disabled:border-field-border disabled:text-muted';
 const primaryButtonClass =
