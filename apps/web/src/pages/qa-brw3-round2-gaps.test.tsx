@@ -8,6 +8,7 @@ import { apiError, HANDLER, mockApi, renderApp, signedInAs } from '../test-utils
 // an INSUFFICIENT_QUANTITY refusal (only that line, also 0, not for ITEM_UNAVAILABLE); focus to the
 // first missing field for each section and on a repeated empty Confirm; focus to "Start a new
 // checkout" on every save; and the "tomorrow" helper text at the closing-time boundaries (BR 8, S10).
+// Round 3 (9a900d0..1bc7f02) adds browser-like first-error focus cases and the "Issued by" wrap.
 
 afterEach(() => {
   cleanup();
@@ -327,4 +328,111 @@ test.each([
   expect(
     within(screen.getByRole('complementary')).getByText(`${day} by ${closingTime}`),
   ).toBeTruthy();
+});
+
+// --- Round 3 (9a900d0..1bc7f02): first-error focus keyed on submitCount (QA BUG-3) ---
+// In a browser, window.event is still the click while the submit runs, so React renders an update
+// made there at once, before the errors exist. jsdom clears it, so these tests keep it set, as the
+// TC-BRW-17 test in CheckoutPage.test.tsx does. Without this, jsdom cannot tell the fix apart.
+const actLikeABrowser = () => vi.stubGlobal('event', new MouseEvent('click'));
+
+test.each([
+  [
+    'a borrower but no room',
+    'the room picker',
+    roomSelect,
+    async (user: User) => {
+      await chooseBorrower(user);
+      await addItems(user, 'QA Cord');
+    },
+  ],
+  [
+    'a borrower and a room but no item',
+    'the item search',
+    itemSearch,
+    async (user: User) => {
+      await chooseBorrower(user);
+      await chooseRoom(user);
+    },
+  ],
+])('in a browser, Confirm with %s moves focus to %s', async (_what, _where, target, fill) => {
+  fakeApi();
+  const user = userEvent.setup();
+  renderApp('/checkout');
+  await fill(user);
+  actLikeABrowser();
+  await user.click(confirmButton());
+  await waitFor(() => expect(document.activeElement).toBe(target()));
+});
+
+test('in a browser, a quantity of 0 on Confirm moves focus to that quantity field', async () => {
+  fakeApi();
+  const user = userEvent.setup();
+  renderApp('/checkout');
+  await fillCheckout(user);
+  const quantity = screen.getByLabelText('Quantity of QA Cord');
+  await user.clear(quantity);
+  await user.type(quantity, '0');
+  actLikeABrowser();
+  await user.click(confirmButton());
+  await waitFor(() => expect(document.activeElement).toBe(quantity));
+});
+
+test('in a browser, an empty Confirm, then a fixed and saved one, focuses Start a new checkout', async () => {
+  // The first-error effect must not run again on the successful submit and pull focus back.
+  const fetchMock = fakeApi();
+  const user = userEvent.setup();
+  renderApp('/checkout');
+  await screen.findByRole('heading', { name: 'Checkout' });
+  actLikeABrowser();
+  await user.click(confirmButton());
+  await waitFor(() => expect(document.activeElement).toBe(borrowerSearch()));
+
+  await fillCheckout(user);
+  await user.click(confirmButton());
+  const startOver = await screen.findByRole('button', { name: 'Start a new checkout' });
+  await waitFor(() => expect(document.activeElement).toBe(startOver));
+  expect(fetchMock.mock.calls.filter(([, init]) => init?.method === 'POST')).toHaveLength(1);
+});
+
+test('in a browser, an invalid Confirm after a server refusal still moves focus to the error', async () => {
+  // After a refusal isSubmitSuccessful is true; the next invalid submit must set it back and focus.
+  fakeApi(() => ({
+    status: 409,
+    body: apiError('ITEM_UNAVAILABLE', 'QA Cord is not available.', { itemId: CORD.id }),
+  }));
+  const user = userEvent.setup();
+  renderApp('/checkout');
+  await fillCheckout(user);
+  actLikeABrowser();
+  await user.click(confirmButton());
+  await screen.findByText('QA Cord is not available.');
+  await user.click(screen.getByRole('button', { name: /^Remove/ }));
+
+  confirmButton().focus();
+  await user.click(confirmButton());
+  await screen.findByText('Add at least one item.');
+  await waitFor(() => expect(document.activeElement).toBe(itemSearch()));
+});
+
+test('"Start a new checkout" resets the count, so the next page does not jump to an error', async () => {
+  fakeApi();
+  const user = userEvent.setup();
+  renderApp('/checkout');
+  await fillCheckout(user);
+  await user.click(confirmButton());
+  await user.click(await screen.findByRole('button', { name: 'Start a new checkout' }));
+  await waitFor(() => expect(document.activeElement).toBe(borrowerSearch()));
+  expect(screen.queryByText('Choose a borrower.')).toBeNull();
+  expect(document.querySelector('[aria-invalid="true"]')).toBeNull();
+});
+
+test('the Summary "Issued by" wraps a long handler name instead of widening the page (BUG-2)', async () => {
+  // jsdom has no layout, so this checks the class; the widths are checked by hand (TC-BRW-41).
+  fakeApi();
+  renderApp('/checkout');
+  const issuedBy = await within(await screen.findByRole('complementary')).findByText(
+    `${HANDLER.name} (you)`,
+  );
+  expect(issuedBy.className.split(' ')).toContain('wrap-anywhere');
 });
