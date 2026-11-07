@@ -186,17 +186,15 @@ export function CheckoutPage() {
   });
   // A second click while the first request is on its way sends nothing (BRW-3).
   const sending = useRef(false);
-  const submit = form.handleSubmit(
-    (input) => {
-      if (sending.current) return;
-      sending.current = true;
-      save.mutate(input, {
-        onSettled: () => {
-          sending.current = false;
-        },
-      });
-    },
-  );
+  const submit = form.handleSubmit((input) => {
+    if (sending.current) return;
+    sending.current = true;
+    save.mutate(input, {
+      onSettled: () => {
+        sending.current = false;
+      },
+    });
+  });
   // Focus the first field with an error in page order, as FND-7 does. The borrower has no input
   // of its own (its error shows on the search field), so React Hook Form cannot do this itself.
   // Keyed on submitCount, which arrives in the same update as the errors. A state set from
