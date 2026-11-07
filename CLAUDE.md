@@ -39,6 +39,7 @@ npm run lint
 npm run typecheck
 npm run test:db             # start the throwaway test database (needed by npm test)
 npm test                    # unit and integration tests
+npm run test:nginx          # check the nginx limits through a real nginx in throwaway containers (needs Docker, uses port 18080)
 npm run build               # compile shared and api with tsc, build web with Vite
 npm run format              # Prettier (Markdown is excluded)
 npm run dev:db              # start only the dev database, published on 127.0.0.1:5432

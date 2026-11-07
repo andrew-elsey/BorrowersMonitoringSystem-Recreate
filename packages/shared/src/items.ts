@@ -1,6 +1,6 @@
 import { z } from 'zod';
-import { CONTROL_CHARACTER, pageQuerySchema, textField } from './categories.ts';
-import { SEARCH_MAX_LENGTH, SEARCH_MIN_LENGTH } from './borrowers.ts';
+import { pageQuerySchema, textField } from './categories.ts';
+import { searchTextField } from './borrowers.ts';
 import { ItemCondition, ItemStatus, TrackingType } from './enums.ts';
 
 // Items (MD-2, SPEC.md 4). Limits from SPEC.md 7.
@@ -30,7 +30,6 @@ export type ItemPage = {
 // A description may have line breaks and tabs, but no other control characters (NUL cannot be stored).
 const OTHER_CONTROL_CHARACTER = /(?![\t\n\r])\p{Cc}/u;
 const QUANTITY_MESSAGE = `Enter a whole number from 0 to ${TOTAL_QUANTITY_MAX.toLocaleString('en-US')}.`;
-const SEARCH_MESSAGE = `Search text must be ${SEARCH_MIN_LENGTH} to ${SEARCH_MAX_LENGTH} characters.`;
 
 const itemFields = {
   name: textField('Enter a name.'),
@@ -108,16 +107,7 @@ export type ItemUpdate = z.infer<typeof itemUpdateSchema>;
 
 // GET /api/items?q=&categoryId=&status=&trackingType=&page=&pageSize=. q matches name or asset tag.
 export const itemListQuerySchema = pageQuerySchema.extend({
-  q: z
-    .string()
-    .trim()
-    .min(SEARCH_MIN_LENGTH, SEARCH_MESSAGE)
-    .max(SEARCH_MAX_LENGTH, SEARCH_MESSAGE)
-    .refine(
-      (value) => !CONTROL_CHARACTER.test(value),
-      'Search text cannot contain control characters.',
-    )
-    .optional(),
+  q: searchTextField.optional(),
   categoryId: z.guid().optional(),
   status: z.enum(ItemStatus).optional(),
   trackingType: z.enum(TrackingType).optional(),

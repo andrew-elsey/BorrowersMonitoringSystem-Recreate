@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { pageQuerySchema, textField } from './categories.ts';
+import { CONTROL_CHARACTER, pageQuerySchema, textField } from './categories.ts';
 import { BorrowerType } from './enums.ts';
 
 // A borrower as every caller sees it (SPEC.md 4). Read only through BorrowerService (CLAUDE.md
@@ -20,6 +20,18 @@ export type BorrowerPage = { data: Borrower[]; page: number; pageSize: number; t
 export const SEARCH_MIN_LENGTH = 2;
 export const SEARCH_MAX_LENGTH = 100;
 export const SEARCH_MAX_LIMIT = 100;
+const SEARCH_MESSAGE = `Search text must be ${SEARCH_MIN_LENGTH} to ${SEARCH_MAX_LENGTH} characters.`;
+
+// The ?q= search text of a list request, trimmed. Shared by the borrower and item lists.
+export const searchTextField = z
+  .string()
+  .trim()
+  .min(SEARCH_MIN_LENGTH, SEARCH_MESSAGE)
+  .max(SEARCH_MAX_LENGTH, SEARCH_MESSAGE)
+  .refine(
+    (value) => !CONTROL_CHARACTER.test(value),
+    'Search text cannot contain control characters.',
+  );
 
 // Create body. School ID is unique, ignoring case (SPEC.md 4); the API answers DUPLICATE_VALUE. New borrowers
 // are active.
@@ -35,10 +47,10 @@ export type BorrowerInput = z.infer<typeof borrowerSchema>;
 export const borrowerUpdateSchema = borrowerSchema.extend({ active: z.boolean() }).partial();
 export type BorrowerUpdate = z.infer<typeof borrowerUpdateSchema>;
 
-// GET /api/borrowers?q=&type=&active=&page=&pageSize=. BorrowerService checks q against the search
-// bounds. type and active are filters from the Borrowers screen; left out, they match everyone.
+// GET /api/borrowers?q=&type=&active=&page=&pageSize=. q has the search bounds (SPEC.md 7); BorrowerService
+// checks them again for callers that skip this schema. type and active are filters from the Borrowers screen; left out, they match everyone.
 export const borrowerListQuerySchema = pageQuerySchema.extend({
-  q: z.string().optional(),
+  q: searchTextField.optional(),
   type: z.enum(BorrowerType).optional(),
   // Query strings are text: only "true" or "false" (z.coerce.boolean would read "false" as true).
   active: z

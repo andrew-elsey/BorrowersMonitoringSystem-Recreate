@@ -220,16 +220,16 @@ Paths are shortened: `api/` is `apps/api/tests/`, `web/` is `apps/web/src/pages/
 
 | ID | Ticket | Rule | Level | Steps | Expected | Automated by |
 |---|---|---|---|---|---|---|
-| TC-SEC-01 | SEC-1 | ARCH 12.2 | integration | Exceed the nginx general, login, and CSV limits through port 8080 | 429 with the standard JSON error `RATE_LIMITED` and `Retry-After`, never HTML | not yet |
-| TC-SEC-02 | SEC-1 | ARCH 7, 12.2 | integration | POST a 200 KB body through nginx to `/api/auth/login` | 413 with the standard JSON error `PAYLOAD_TOO_LARGE`, never HTML | not yet |
-| TC-SEC-03 | SEC-1 | ARCH 12.2 | integration | Open more than 30 connections from one IP | Extra connections refused with 429 | not yet |
-| TC-SEC-04 | SEC-1 | ARCH 12.2 | manual | `curl -I` a file under `/assets/` | Exactly one `Cache-Control: public, max-age=31536000, immutable` header | not yet |
-| TC-SEC-05 | SEC-1 | ARCH 12.3 | integration | Exceed the Express global limit and the expensive-endpoint limit | 429 `RATE_LIMITED` with `Retry-After` | not yet |
-| TC-SEC-06 | SEC-1 | ARCH 12.2, 12.3 | integration | Two clients with different addresses hit the limit; one sends a fake `X-Forwarded-For` | Limited independently; nginx overwrites the fake header | not yet |
-| TC-SEC-07 | SEC-1 | ARCH 12.3 | integration | Check the Node server timeouts | `headersTimeout` 15000, `requestTimeout` 30000, `keepAliveTimeout` 5000 | not yet |
-| TC-SEC-08 | SEC-1 | ARCH 12.3 | integration | Cause an unexpected error in a route; cause an unhandled rejection | Route: `INTERNAL_ERROR` with no internals; unhandled: logged and the process exits so Docker restarts it | `api/errors.test.ts` (standard format); not yet (crash and restart) |
+| TC-SEC-01 | SEC-1 | ARCH 12.2 | integration | Exceed the nginx general, login, and CSV limits through the nginx check (real nginx config on port 18080, so it never clashes with the stack on 8080) | 429 with the standard JSON error `RATE_LIMITED` and `Retry-After`, never HTML | `apps/web/scripts/check-nginx.ts` (`npm run test:nginx`) (general and login; the CSV limit comes with MD-6) |
+| TC-SEC-02 | SEC-1 | ARCH 7, 12.2 | integration | POST a 200 KB body through nginx to `/api/auth/login` | 413 with the standard JSON error `PAYLOAD_TOO_LARGE`, never HTML | `apps/web/scripts/check-nginx.ts` (`npm run test:nginx`) |
+| TC-SEC-03 | SEC-1 | ARCH 12.2 | integration | Open more than 30 connections from one IP | Extra connections refused with 429 | `apps/web/scripts/check-nginx.ts` (`npm run test:nginx`) |
+| TC-SEC-04 | SEC-1 | ARCH 12.2 | manual | `curl -I` a file under `/assets/` | Exactly one `Cache-Control: public, max-age=31536000, immutable` header | manual; also `apps/web/scripts/check-nginx.ts` (`npm run test:nginx`) |
+| TC-SEC-05 | SEC-1 | ARCH 12.3 | integration | Exceed the Express global limit and the expensive-endpoint limit | 429 `RATE_LIMITED` with `Retry-After` | `api/request-limits.test.ts` |
+| TC-SEC-06 | SEC-1 | ARCH 12.2, 12.3 | integration | Two clients with different addresses hit the limit; one sends a fake `X-Forwarded-For` | Limited independently; nginx overwrites the fake header | `apps/web/scripts/check-nginx.ts` (`npm run test:nginx`), `api/request-limits.test.ts` |
+| TC-SEC-07 | SEC-1 | ARCH 12.3 | integration | Check the Node server timeouts | `headersTimeout` 15000, `requestTimeout` 30000, `keepAliveTimeout` 5000 | `api/request-limits.test.ts` |
+| TC-SEC-08 | SEC-1 | ARCH 12.3 | integration | Cause an unexpected error in a route; cause an unhandled rejection | Route: `INTERNAL_ERROR` with no internals; unhandled: logged and the process exits so Docker restarts it | `api/errors.test.ts` (standard format), `api/request-limits.test.ts` (exit on unhandled errors) |
 | TC-SEC-09 | SEC-1 | SPEC 7, S21 | integration | Send a body over 100 KB to Express directly | `PAYLOAD_TOO_LARGE` | `api/auth.test.ts` |
-| TC-SEC-10 | SEC-1 | SPEC 7 | unit | Validate the shared Zod schemas at and over every SPEC 7 limit | At the limit accepted; over it rejected | not yet |
+| TC-SEC-10 | SEC-1 | SPEC 7 | unit | Validate the shared Zod schemas at and over every SPEC 7 limit | At the limit accepted; over it rejected | `packages/shared/src/limits.test.ts` (override reasons, report ranges, and CSV rows come with their tickets) |
 | TC-SEC-11 | SEC-2 | ARCH 12.7 | manual | Login flood: 200 connections for 60 s while a signed-in client from another source works | p95 under 2 s; api under its memory limit with no restart; valid login works after the window | not yet |
 | TC-SEC-12 | SEC-2 | ARCH 12.7 | manual | Slow-connection (slowloris) test | Other clients keep working | not yet |
 | TC-SEC-13 | SEC-2 | ARCH 12.7, S21 | manual | Oversized JSON body and oversized CSV under load | Rejected with 413 without reaching a service | not yet |
