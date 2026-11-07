@@ -178,11 +178,11 @@ Paths are shortened: `api/` is `apps/api/tests/`, `web/` is `apps/web/src/pages/
 
 | ID | Ticket | Rule | Level | Steps | Expected | Automated by |
 |---|---|---|---|---|---|---|
-| TC-FLG-01 | FLG-1 | BR 10, S2 | integration | Ben has one transaction with a flagged line | 1 strike | not yet |
-| TC-FLG-02 | FLG-1 | BR 10, S5 | integration | Dan's one transaction has three flagged lines | 1 strike, not 3 | not yet |
-| TC-FLG-03 | FLG-1 | BR 10, S6 | integration | Eva has two transactions the same day, both flagged | 2 strikes | not yet |
-| TC-FLG-04 | FLG-1 | BR 10, 13, S7 | integration | A transaction has two flagged lines; override one, then the other | 1 strike after the first override; 0 after the second | not yet |
-| TC-FLG-05 | FLG-1 | BR 12, S9 | integration | Gio has 4 strikes in semester 1; admin sets semester 2 current | 0 strikes; semester 1 history still shows the flags | not yet |
+| TC-FLG-01 | FLG-1 | BR 10, S2 | integration | Ben has one transaction with a flagged line | 1 strike | `api/strikes.test.ts` |
+| TC-FLG-02 | FLG-1 | BR 10, S5 | integration | Dan's one transaction has three flagged lines | 1 strike, not 3 | `api/strikes.test.ts` |
+| TC-FLG-03 | FLG-1 | BR 10, S6 | integration | Eva has two transactions the same day, both flagged | 2 strikes | `api/strikes.test.ts` |
+| TC-FLG-04 | FLG-1 | BR 10, 13, S7 | integration | A transaction has two flagged lines; override one, then the other | 1 strike after the first override; 0 after the second | `api/strikes.test.ts` |
+| TC-FLG-05 | FLG-1 | BR 12, S9 | integration | Gio has 4 strikes in semester 1; admin sets semester 2 current, then semester 1 again | 0 strikes in semester 2; semester 1 history still shows the flags; back to 4 strikes when semester 1 is current again | `api/strikes.test.ts` |
 | TC-FLG-06 | FLG-2 | BR 8, S1 | integration | Ana borrows at 10:00 and returns at 15:00; job runs at 17:00 | Nothing flagged; 0 strikes | not yet |
 | TC-FLG-07 | FLG-2 | BR 8, S2 | integration | Ben borrows a laptop at 10:00 and keeps it; job runs at 17:00 | Line `FLAGGED` with `flagged_at` set; audited | not yet |
 | TC-FLG-08 | FLG-2 | BR 8, S3 | integration | Cara has 2 of 5 cords outstanding at 17:00; returns the 2 next morning | Line flagged at 17:00; stays `FLAGGED` after the return; 1 strike | not yet |
