@@ -381,6 +381,22 @@ test('nothing is sent until a borrower, a room, and an item are chosen', async (
   expect(posts(fetchMock, '/transactions')).toEqual([]);
 });
 
+test('TC-BRW-17: the first empty Confirm on a fresh page moves focus to the borrower search', async () => {
+  // In a browser, window.event is still the click while the submit's promises run, so React
+  // renders an update made there at once, before the errors exist (QA round 2, BUG-3). jsdom
+  // clears window.event when the click returns, so the test keeps it set the way a browser does.
+  fakeApi();
+  const user = userEvent.setup();
+  renderApp('/checkout');
+  await screen.findByRole('option', { name: 'CL-201' });
+  vi.stubGlobal('event', new MouseEvent('click'));
+  await user.click(screen.getByRole('button', { name: 'Confirm checkout' }));
+  await screen.findByText('Choose a borrower.');
+  await waitFor(() =>
+    expect(document.activeElement).toBe(screen.getByLabelText('Find by name or school ID')),
+  );
+});
+
 test('TC-BRW-18: a refused line shows the API message and is marked, with focus on its field', async () => {
   fakeApi((method, path) =>
     method === 'POST' && path === '/transactions'

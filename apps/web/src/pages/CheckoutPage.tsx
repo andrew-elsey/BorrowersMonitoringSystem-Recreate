@@ -102,7 +102,7 @@ export function CheckoutPage() {
   const form = useForm<FormValues, unknown, CheckoutInput>({
     resolver: zodResolver(checkoutSchema),
     defaultValues: EMPTY,
-    shouldFocusError: false, // see onInvalid in submit below
+    shouldFocusError: false, // see the focus effect below submit
   });
   const lines = useFieldArray({ control: form.control, name: 'lines', keyName: 'key' });
   const errors = form.formState.errors;
@@ -196,16 +196,18 @@ export function CheckoutPage() {
         },
       });
     },
-    // Focus the first field with an error in page order, as FND-7 does. The borrower has no input
-    // of its own (its error shows on the search field), so React Hook Form cannot do this itself.
-    // The focus happens in the effect below, once the errors have rendered.
-    () => setFocusFirstError((count) => count + 1),
   );
-  const [focusFirstError, setFocusFirstError] = useState(0);
-  // An effect, not setTimeout: in a browser a timer can run before React renders (BRW-3 QA).
+  // Focus the first field with an error in page order, as FND-7 does. The borrower has no input
+  // of its own (its error shows on the search field), so React Hook Form cannot do this itself.
+  // Keyed on submitCount, which arrives in the same update as the errors. A state set from
+  // onInvalid can render before them (a browser renders it at once during the click), when
+  // nothing is invalid yet (BRW-3 QA BUG-3).
+  const { submitCount, isSubmitSuccessful } = form.formState;
   useEffect(() => {
-    if (focusFirstError) document.querySelector<HTMLElement>('[aria-invalid="true"]')?.focus();
-  }, [focusFirstError]);
+    if (submitCount && !isSubmitSuccessful) {
+      document.querySelector<HTMLElement>('[aria-invalid="true"]')?.focus();
+    }
+  }, [submitCount, isSubmitSuccessful]);
 
   // Puts the refusal next to the line it is about and moves focus there (FND-7). The API reports
   // only the first failing line: by itemId for item refusals, and as lines.N.expectedReturnDate
