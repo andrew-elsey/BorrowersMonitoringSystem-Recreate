@@ -395,7 +395,8 @@ export function CheckoutPage() {
               <RetryAlert query={rooms} onRetried={() => form.setFocus('locationId')} />
             ) : (
               <div className="flex flex-wrap items-end gap-3">
-                <div className="flex-[1_1_260px]">
+                {/* min-w-0: a long room name must not widen the page (BRW-3 QA BUG-2). */}
+                <div className="min-w-0 flex-[1_1_260px]">
                   <SelectField
                     id="room"
                     label="Where will the items be used?"
@@ -519,7 +520,9 @@ export function CheckoutPage() {
               ))}
             {lines.fields.length > 0 && !saved && (
               <>
-                <div className="overflow-x-auto">
+                {/* relative: the sr-only caption and header are absolute, so they must be clipped here, */}
+                {/* not by the page (BRW-3 QA BUG-1). */}
+                <div className="relative overflow-x-auto">
                   <table className="w-full min-w-[760px] border-collapse">
                     <caption className="sr-only">Items to check out</caption>
                     <thead>
@@ -651,7 +654,7 @@ export function CheckoutPage() {
               )}
             </dd>
             <dt className="text-muted">Issued by</dt>
-            <dd>{user.name} (you)</dd>
+            <dd className="wrap-anywhere">{user.name} (you)</dd>
             <dt className="text-muted">Due back</dt>
             <dd>
               {dueNow === 'today' ? 'Today' : 'Tomorrow'} by {closingTime}

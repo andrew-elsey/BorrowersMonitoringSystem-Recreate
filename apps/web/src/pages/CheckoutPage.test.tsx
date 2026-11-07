@@ -538,8 +538,15 @@ test('TC-BRW-41: the form sections can shrink, so the lines table scrolls in its
     const section = screen.getByRole('heading', { name }).parentElement!;
     expect(section.className.split(' ')).toContain('min-w-0');
   }
+  // relative: the sr-only caption and "Remove" header are absolute and must be clipped by the
+  // scroll box, not the page (QA round 2: 714 px page at a 320 to 700 px window).
   const table = screen.getByRole('table', { name: 'Items to check out' });
-  expect(table.parentElement!.className).toContain('overflow-x-auto');
+  expect(table.parentElement!.className.split(' ')).toEqual(
+    expect.arrayContaining(['relative', 'overflow-x-auto']),
+  );
+  // A long room name made the room picker as wide as its longest option (QA round 2, BUG-2).
+  const roomPicker = screen.getByLabelText('Where will the items be used?').parentElement!;
+  expect(roomPicker.parentElement!.className.split(' ')).toContain('min-w-0');
 });
 
 test('a view-only user cannot open Checkout, and it is not in their menu', async () => {
