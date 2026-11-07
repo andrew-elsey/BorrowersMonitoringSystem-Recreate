@@ -20,22 +20,37 @@ type Notify = { success: (text: string) => void; error: (error: unknown) => void
 type Notice = { id: number; kind: 'success' | 'error' | 'wait'; text: string };
 
 const NotifyContext = createContext<Notify | null>(null);
+const MessageAreaContext = createContext<HTMLDivElement | null>(null);
 
 export function NotificationProvider({ children }: { children: ReactNode }) {
   const [notices, setNotices] = useState<Notice[]>([]);
   const nextId = useRef(0);
   const area = useRef<HTMLDivElement>(null);
+  // The same element as state, so pages re-render with it and can portal into it.
+  const [areaElement, setAreaElement] = useState<HTMLDivElement | null>(null);
+  const setArea = useCallback((element: HTMLDivElement | null) => {
+    area.current = element;
+    setAreaElement(element);
+  }, []);
 
   // When the browser scrolls a focused field into view, it keeps it below the pinned messages,
-  // so they never cover the field being used.
+  // so they never cover the field being used. It watches the area's contents rather than
+  // `notices`, because pages also put their own messages here (useMessageArea).
   useLayoutEffect(() => {
-    const height = notices.length ? area.current!.offsetHeight : 0;
-    document.documentElement.style.scrollPaddingTop = `${height}px`;
+    const element = area.current!;
+    const update = () => {
+      const height = element.childElementCount ? element.offsetHeight : 0;
+      document.documentElement.style.scrollPaddingTop = `${height}px`;
+    };
+    update();
+    const observer = new MutationObserver(update);
+    observer.observe(element, { childList: true, subtree: true, characterData: true });
     // Cleared on unmount too, so sign-out never leaves the padding on the sign-in page.
     return () => {
+      observer.disconnect();
       document.documentElement.style.scrollPaddingTop = '';
     };
-  }, [notices]);
+  }, []);
 
   const add = useCallback((kind: Notice['kind'], text: string) => {
     nextId.current += 1;
@@ -65,7 +80,7 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
       {/* <main>, below the top bar. Always rendered, so screen readers announce messages added */}
       {/* to it. empty:-mb-5 cancels the gap of AppShell's <main> while there is no message. */}
       <div
-        ref={area}
+        ref={setArea}
         aria-live="polite"
         className="sticky top-0 z-10 flex flex-col gap-2 bg-page py-2 empty:-mb-5 empty:py-0"
       >
@@ -75,9 +90,15 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
           </Alert>
         ))}
       </div>
-      {children}
+      <MessageAreaContext.Provider value={areaElement}>{children}</MessageAreaContext.Provider>
     </NotifyContext.Provider>
   );
+}
+
+// The pinned message area itself, for a page message that needs more than text (a button, say)
+// and must stay in sight like the others: createPortal(<Alert>…</Alert>, area). Null until mounted.
+export function useMessageArea(): HTMLDivElement | null {
+  return useContext(MessageAreaContext);
 }
 
 export function useNotify(): Notify {

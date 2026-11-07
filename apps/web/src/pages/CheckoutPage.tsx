@@ -18,13 +18,14 @@ import {
 import { zodResolver } from '@hookform/resolvers/zod';
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { type ComponentProps, type ReactNode, useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { useFieldArray, useForm } from 'react-hook-form';
 import type { z } from 'zod';
 import { ApiRequestError, apiFetch, errorText, fieldErrors } from '../api';
 import { useAuth } from '../auth';
 import { Alert } from '../components/Alert';
 import { Field, SelectField, showApiFieldErrors } from '../components/Field';
-import { useNotify } from '../components/Notifications';
+import { useMessageArea, useNotify } from '../components/Notifications';
 import { RetryAlert } from '../components/RetryAlert';
 import { StatusBadge } from '../components/StatusBadge';
 
@@ -97,6 +98,7 @@ function availabilityText(item: ListedItem): string {
 export function CheckoutPage() {
   const user = useAuth().user!;
   const notify = useNotify();
+  const messageArea = useMessageArea();
   const queryClient = useQueryClient();
 
   const form = useForm<FormValues, unknown, CheckoutInput>({
@@ -283,30 +285,40 @@ export function CheckoutPage() {
     <>
       <h1 className="text-[28px] leading-tight font-bold">Checkout</h1>
 
-      {saved && borrower && (
-        <Alert kind="success">
-          <strong>Checkout saved.</strong> {plural(saved.lines.length, 'item')} issued to{' '}
-          {borrower.name} for {chosenRoom?.name} at {issueTime.format(new Date(saved.issuedAt))}.
-          Due back by {closingTime} {dueDay(new Date(saved.issuedAt), closingTime)}.{' '}
-          <button
-            type="button"
-            id="start-over"
-            onClick={startOver}
-            className="cursor-pointer font-semibold underline underline-offset-4"
-          >
-            Start a new checkout
-          </button>
-        </Alert>
-      )}
-      {save.isError && (
-        <Alert kind="error">
-          <strong>Checkout not saved.</strong> {errorText(save.error)}
-          {lineSchemaError &&
-            lineSchemaError !== errorText(save.error) &&
-            ` ${lineSchemaError}`}{' '}
-          Nothing was issued.
-        </Alert>
-      )}
+      {/* The result of Confirm goes in the pinned message area, so it stays in sight on a long */}
+      {/* page (ARCHITECTURE 14.1, TC-BRW-39). A portal, not notify(), keeps the Start a new */}
+      {/* checkout button in it and lets it disappear when the checkout is reset. */}
+      {messageArea &&
+        createPortal(
+          <>
+            {saved && borrower && (
+              <Alert kind="success">
+                <strong>Checkout saved.</strong> {plural(saved.lines.length, 'item')} issued to{' '}
+                {borrower.name} for {chosenRoom?.name} at{' '}
+                {issueTime.format(new Date(saved.issuedAt))}. Due back by {closingTime}{' '}
+                {dueDay(new Date(saved.issuedAt), closingTime)}.{' '}
+                <button
+                  type="button"
+                  id="start-over"
+                  onClick={startOver}
+                  className="cursor-pointer font-semibold underline underline-offset-4"
+                >
+                  Start a new checkout
+                </button>
+              </Alert>
+            )}
+            {save.isError && (
+              <Alert kind="error">
+                <strong>Checkout not saved.</strong> {errorText(save.error)}
+                {lineSchemaError &&
+                  lineSchemaError !== errorText(save.error) &&
+                  ` ${lineSchemaError}`}{' '}
+                Nothing was issued.
+              </Alert>
+            )}
+          </>,
+          messageArea,
+        )}
 
       <div className="flex flex-wrap items-start gap-5">
         <div className="flex min-w-0 flex-[999_1_520px] flex-col gap-5">

@@ -338,9 +338,12 @@ test('TC-BRW-17: the summary shows what will be sent, and a double click sends o
   fireEvent.click(confirm);
   fireEvent.click(confirm);
 
-  expect((await screen.findByRole('status')).textContent).toContain(
+  const savedMessage = await screen.findByRole('status');
+  expect(savedMessage.textContent).toContain(
     'Checkout saved. 2 items issued to Paolo Garcia for CL-201 at 14:20.',
   );
+  // TC-BRW-39: it sits in the pinned message area, so it stays in sight on a long page.
+  expect(savedMessage.closest('[aria-live="polite"]')).not.toBeNull();
   // The issuing handler and semester are never sent (BR 2); empty notes and dates are left out.
   expect(posts(fetchMock, '/transactions')).toEqual([
     {
@@ -358,6 +361,7 @@ test('TC-BRW-17: the summary shows what will be sent, and a double click sends o
   await waitFor(() => expect(document.activeElement).toBe(startOver));
   await user.click(startOver);
   expect(document.activeElement).toBe(screen.getByLabelText('Find by name or school ID'));
+  expect(screen.queryByText(/Checkout saved\./)).toBeNull();
   expect(screen.queryByRole('group', { name: 'Chosen borrower' })).toBeNull();
   expect(within(screen.getByRole('complementary')).getByText('None')).toBeTruthy();
 });
@@ -425,6 +429,8 @@ test('TC-BRW-18: a refused line shows the API message and is marked, with focus 
     await screen.findByText(/Only 1 of Extension cord, 5 m available, 4 requested\./),
   ).toBeTruthy();
   expect(topMessage().textContent).toContain('Nothing was issued.');
+  // TC-BRW-39: the refusal is in the pinned message area too.
+  expect(topMessage().closest('[aria-live="polite"]')).not.toBeNull();
   expect(screen.getByText('Only 1 available')).toBeTruthy();
   // The line shows the count from the refusal, not the one cached from the search.
   expect(screen.getByText('Quantity item · 1 available')).toBeTruthy();
