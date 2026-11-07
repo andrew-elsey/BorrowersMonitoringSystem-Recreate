@@ -171,13 +171,19 @@ const checks: [string, () => Promise<void>][] = [
     'TC-SEC-01: the general API limit (10 a second, burst 30) answers 429 RATE_LIMITED with Retry-After',
     async () => {
       await sleep(4000); // let the earlier checks' requests drain from the bucket
-      const responses = await Promise.all(
-        Array.from({ length: 60 }, () => fetch(`${BASE}/api/echo`)),
-      );
-      const limited = responses.filter((response) => response.status === 429);
-      assert.ok(limited.length >= 25, `expected at least 25 limited, got ${limited.length}`);
-      await expectJsonError(limited[0]!, 429, 'RATE_LIMITED');
-      assert.equal(limited[0]!.headers.get('retry-after'), '1');
+      // One request at a time: never near the connection limit, so only the rate limit can answer 429.
+      let limited = 0;
+      for (let i = 0; i < 60; i++) {
+        const response = await fetch(`${BASE}/api/echo`);
+        if (response.status === 429 && limited++ === 0) {
+          assert.equal(response.headers.get('retry-after'), '1');
+          await expectJsonError(response, 429, 'RATE_LIMITED');
+        } else {
+          await response.arrayBuffer(); // frees the connection for the next request
+        }
+      }
+      // 31 pass at once (burst 30); the rest come far faster than 10 a second.
+      assert.ok(limited >= 15, `expected at least 15 limited, got ${limited}`);
     },
   ],
   [
@@ -185,12 +191,20 @@ const checks: [string, () => Promise<void>][] = [
     async () => {
       await sleep(4000);
       // A second client inside the Docker network floods nginx from its own address...
-      const flood = `Promise.all(Array.from({ length: 60 }, () => fetch('http://${NAME}-web:8080/api/echo')))
-        .then((rs) => console.log(rs.filter((r) => r.status === 429).length))`;
+      // One request at a time, as above, so only the rate limit can answer 429.
+      const flood = `(async () => {
+        let limited = 0;
+        for (let i = 0; i < 60; i++) {
+          const r = await fetch('http://${NAME}-web:8080/api/echo');
+          await r.arrayBuffer();
+          if (r.status === 429) limited++;
+        }
+        console.log(limited);
+      })()`;
       const limited = Number(
         docker('run', '--rm', '--network', NAME, NODE_IMAGE, 'node', '-e', flood),
       );
-      assert.ok(limited >= 25, `the second client should be limited, got ${limited} 429s`);
+      assert.ok(limited >= 15, `the second client should be limited, got ${limited} 429s`);
       // ...while this client, on another address, is still allowed.
       assert.equal((await fetch(`${BASE}/api/echo`)).status, 200);
     },
