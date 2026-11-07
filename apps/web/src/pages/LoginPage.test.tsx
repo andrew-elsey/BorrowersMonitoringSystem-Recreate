@@ -30,7 +30,10 @@ test('a signed-out user is sent to login, signs in, and sees home with their nam
   expect(screen.getByText('Handler', { selector: 'span' })).toBeTruthy();
   // AUTH-4: only built screens are in the menu, and only the ones this role may use.
   const menu = screen.getByRole('navigation', { name: 'Main' });
-  expect([...menu.querySelectorAll('a')].map((link) => link.textContent)).toEqual(['Home']);
+  expect([...menu.querySelectorAll('a')].map((link) => link.textContent)).toEqual([
+    'Home',
+    'Checkout',
+  ]);
   const [, init] = fetchMock.mock.calls.find(([url]) => url === '/api/auth/login')!;
   expect(JSON.parse(init!.body as string)).toEqual({
     username: 'jdelacruz',

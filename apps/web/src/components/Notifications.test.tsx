@@ -104,6 +104,24 @@ test('messages appear inside a live region that is always on the page', () => {
   expect(document.querySelector('[aria-live="polite"]')).toBeTruthy();
 });
 
+test('TC-BRW-39: the message area is pinned, and focused fields scroll in below it', async () => {
+  const user = renderWithProvider();
+  const area = document.querySelector<HTMLElement>('[aria-live="polite"]')!;
+  // Sticky (in the page flow, so it never covers the top bar), with a background of its own.
+  expect(area.className).toMatch(/\bsticky top-0\b/);
+  expect(area.className).toMatch(/\bbg-page\b/);
+  // jsdom has no layout, so the height is faked.
+  Object.defineProperty(area, 'offsetHeight', { configurable: true, value: 64 });
+  await user.click(screen.getByRole('button', { name: 'Save' }));
+  expect(document.documentElement.style.scrollPaddingTop).toBe('64px');
+  await user.click(screen.getByRole('button', { name: 'Dismiss' }));
+  expect(document.documentElement.style.scrollPaddingTop).toBe('0px');
+  // Signing out unmounts the provider: no padding is left on the sign-in page.
+  await user.click(screen.getByRole('button', { name: 'Save' }));
+  cleanup();
+  expect(document.documentElement.style.scrollPaddingTop).toBe('');
+});
+
 test('useNotify outside the provider fails clearly', () => {
   expect(() => render(<Buttons />)).toThrow('useNotify needs a NotificationProvider above it');
 });

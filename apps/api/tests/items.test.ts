@@ -84,8 +84,12 @@ function expectFieldError(response: request.Response, status: number, code: stri
   expect(response.body.error.details.fields[field]).toHaveLength(1);
 }
 
-// One past transaction line for the item, so it has history.
-async function borrowOnce(itemId: string) {
+// One transaction line for the item, so it has history. Fully returned unless told otherwise.
+async function borrowOnce(
+  itemId: string,
+  quantityBorrowed = 1,
+  quantityReturned = quantityBorrowed,
+) {
   const borrower = await prisma.borrower.create({
     data: { schoolId: '2026-0001', name: 'Student', type: 'STUDENT', department: 'IT' },
   });
@@ -107,9 +111,47 @@ async function borrowOnce(itemId: string) {
     },
   });
   await prisma.transactionItem.create({
-    data: { transactionId: transaction.id, itemId, quantityBorrowed: 1, quantityReturned: 1 },
+    data: { transactionId: transaction.id, itemId, quantityBorrowed, quantityReturned },
   });
 }
+
+test('TC-BRW-37: the item list gives each item its available count, with no borrower details (BR 1)', async () => {
+  const out = (await post(admin, laptop('LT-001')).expect(201)).body.item;
+  const free = (await post(admin, laptop('LT-002')).expect(201)).body.item;
+  const repair = (await post(admin, laptop('LT-003', { status: 'UNDER_REPAIR' })).expect(201)).body
+    .item;
+  const cords = (await post(admin, cord()).expect(201)).body.item;
+  await borrowOnce(out.id, 1, 0);
+  await prisma.transactionItem.create({
+    data: {
+      transactionId: (await prisma.transaction.findFirstOrThrow()).id,
+      itemId: cords.id,
+      quantityBorrowed: 5,
+      quantityReturned: 2,
+    },
+  });
+
+  const { body } = await list(await signIn('hal'), 'pageSize=10').expect(200);
+  const available = Object.fromEntries(
+    body.data.map((item: { id: string; available: number }) => [item.id, item.available]),
+  );
+  // Unit out: 0; unit free: 1; not ACTIVE: 0; quantity: 20 - (5 - 2) = 17.
+  expect(available).toEqual({ [out.id]: 0, [free.id]: 1, [repair.id]: 0, [cords.id]: 17 });
+  expect(Object.keys(body.data[0]).sort()).toEqual(
+    [
+      'assetTag',
+      'available',
+      'category',
+      'condition',
+      'description',
+      'id',
+      'name',
+      'status',
+      'totalQuantity',
+      'trackingType',
+    ].sort(),
+  );
+});
 
 test('TC-MD-04: a UNIT item needs a unique asset tag and a total quantity of 1 (SPEC 4)', async () => {
   const created = await post(admin, laptop('LT-001')).expect(201);

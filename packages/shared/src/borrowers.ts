@@ -47,3 +47,11 @@ export const borrowerListQuerySchema = pageQuerySchema.extend({
     .optional(),
 });
 export type BorrowerListQuery = z.infer<typeof borrowerListQuerySchema>;
+
+// GET /api/borrowers/lookup?q=&page=&pageSize= (BRW-3): the checkout borrower search for admins
+// and handlers. q is required; BorrowerService checks it against the search bounds (SPEC.md 7).
+export const borrowerLookupQuerySchema = pageQuerySchema.extend({
+  q: z.string({
+    error: `Search text must be ${SEARCH_MIN_LENGTH} to ${SEARCH_MAX_LENGTH} characters.`,
+  }),
+});

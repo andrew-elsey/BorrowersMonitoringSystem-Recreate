@@ -1,5 +1,6 @@
 import {
   borrowerListQuerySchema,
+  borrowerLookupQuerySchema,
   borrowerSchema,
   borrowerUpdateSchema,
   PERMISSIONS,
@@ -15,6 +16,19 @@ const idParams = z.object({ id: z.guid() });
 
 export function createBorrowersRouter() {
   const router = Router();
+
+  // The checkout borrower search (BRW-3; SPEC.md 3: check out items). Registered before the admin
+  // guard below, which would otherwise cover this path too. Inactive borrowers are included
+  // (active: false); checkout refuses them (BR 3).
+  router.get(
+    '/borrowers/lookup',
+    requireRole(...PERMISSIONS.checkoutAndReturn),
+    async (req, res) => {
+      const { q, page, pageSize } = borrowerLookupQuerySchema.parse(req.query);
+      res.json(await borrowerService.list({ q, page, pageSize }));
+    },
+  );
+
   // Admins only (SPEC.md 3: manage borrowers).
   router.use('/borrowers', requireRole(...PERMISSIONS.manageMasterData));
 

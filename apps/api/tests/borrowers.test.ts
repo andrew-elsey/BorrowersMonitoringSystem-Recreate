@@ -281,3 +281,33 @@ test('a handler or viewer cannot list, create, or edit borrowers; signed out get
   ]);
   await request(createApp()).get('/api/borrowers').expect(401);
 });
+
+test('TC-BRW-36: admins and handlers look borrowers up for checkout; viewers cannot (SPEC 3, 7)', async () => {
+  const { id } = (await post(admin, CARLO).expect(201)).body.borrower;
+  await patch(admin, id, { active: false }).expect(200);
+  await post(admin, { ...CARLO, schoolId: '2021-1', name: 'Mia Cruz' }).expect(201);
+
+  for (const username of ['ana', 'hal']) {
+    const agent = await signIn(username);
+    const { body } = await agent.get('/api/borrowers/lookup?q=dizon').expect(200);
+    // Inactive borrowers stay in, so the screen can mark them (BR 3); only the Borrower fields.
+    expect(body).toEqual({
+      data: [{ id, ...CARLO, active: false }],
+      page: 1,
+      pageSize: 25,
+      total: 1,
+    });
+    const paged = await agent.get('/api/borrowers/lookup?q=20&page=2&pageSize=1').expect(200);
+    expect(paged.body).toMatchObject({ page: 2, pageSize: 1, total: 2 });
+    expect(paged.body.data).toHaveLength(1);
+    // q is required and 2 to 100 characters; pageSize at most 100.
+    for (const query of ['', '?q=a', `?q=${'a'.repeat(101)}`, '?q=ab&pageSize=101']) {
+      const refused = await agent.get(`/api/borrowers/lookup${query}`);
+      expect(refused.status).toBe(400);
+      expect(refused.body.error.code).toBe('VALIDATION_ERROR');
+    }
+  }
+  const viewer = await signIn('vic');
+  expect((await viewer.get('/api/borrowers/lookup?q=dizon')).status).toBe(403);
+  await request(createApp()).get('/api/borrowers/lookup?q=dizon').expect(401);
+});

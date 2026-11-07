@@ -19,7 +19,13 @@ export type Item = {
   condition: ItemCondition;
   status: ItemStatus;
 };
-export type ItemPage = { data: Item[]; page: number; pageSize: number; total: number };
+// One page of GET /api/items. available is what can be issued now (BR 1, BRW-1 getAvailability).
+export type ItemPage = {
+  data: (Item & { available: number })[];
+  page: number;
+  pageSize: number;
+  total: number;
+};
 
 // A description may have line breaks and tabs, but no other control characters (NUL cannot be stored).
 const OTHER_CONTROL_CHARACTER = /(?![\t\n\r])\p{Cc}/u;
