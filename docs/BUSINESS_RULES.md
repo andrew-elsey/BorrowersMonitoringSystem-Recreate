@@ -39,7 +39,7 @@ All times below are `Asia/Manila` unless stated. Default closing time is 17:00.
 
 ### Strikes and blocking
 
-10. **Strike count.** A borrower's strikes are the number of their transactions whose semester is the current semester and which have at least one `FLAGGED` line. A transaction counts once no matter how many flagged lines it has. When every flagged line of a transaction has been overridden, it stops counting.
+10. **Strike count.** A borrower's strikes are the number of their transactions whose semester is the current semester and which have at least one `FLAGGED` line. A transaction counts once no matter how many flagged lines it has. When every flagged line of a transaction has been overridden, it stops counting. With no current semester the count is 0: strikes are never carried over to another semester (owner decision 2026-11-08).
 11. **Thresholds** (from settings, defaults shown):
     - 3 strikes: checkout shows a **warning**.
     - 4 strikes: checkout shows a **stricter notice**.

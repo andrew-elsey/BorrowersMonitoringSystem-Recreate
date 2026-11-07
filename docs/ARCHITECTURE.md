@@ -194,7 +194,7 @@ Moving to a department PC means copying the repo, creating `.env`, and running `
 ## 11. Testing strategy
 
 - **Unit tests** (Vitest) for pure logic: availability math, strike counting, time helpers.
-- **Integration tests** (Vitest and Supertest) against a real PostgreSQL database, started through a Docker Compose test profile. Each test file starts from a clean schema. Every scenario S1 to S21 in `BUSINESS_RULES.md` becomes a test.
+- **Integration tests** (Vitest and Supertest) against a real PostgreSQL database, started through a Docker Compose test profile. Each test file starts from a clean schema. The database comes from `TEST_DATABASE_URL` (shell first, then `.env`), which is required with no default (owner decision 2026-11-08): two suites sharing one database wipe each other's rows, so each worktree running tests at the same time uses its own database name ending in `_test` (create it on the db-test container first). Every scenario S1 to S21 in `BUSINESS_RULES.md` becomes a test.
 - **Component tests** (React Testing Library in jsdom, with `fetch` replaced by a fake API) for the login and change-password forms (AUTH-4) and the checkout and return forms.
 - **End-to-end** (Playwright, HRD-2): checkout, partial return, flagging, strike, block, override.
 - **Abuse and load tests** (autocannon, SEC-2): login flood, slow connections, oversized bodies and uploads, maximum-range reports, all run from a separate container against the compose stack. Pass criteria are in section 12.7.
@@ -298,6 +298,7 @@ Record the results and any tuned limits in this section.
 | College logo | Not used | No license to use it |
 | UI font | System font stack (Segoe UI Variable on Windows 11) | No download, works offline on the LAN, no new dependency |
 | Web bundle | Screen pages lazy-loaded with `React.lazy` and one `Suspense` in `AppShell` | Sign-in and the app shell load first; the entry chunk (React, router, TanStack Query, shared Zod schemas, sign-in, shell) stays under Vite's 500 kB warning with no new dependency. If a page chunk fails to load (for example after a redeploy while a tab is open), React Router shows its default error page and a reload fixes it; a friendlier `errorElement` is left for HRD-5 |
+| Test database | `TEST_DATABASE_URL` required, no default (2026-11-08) | Two suites sharing one database wipe each other's rows |
 
 ## 14. UI theme
 

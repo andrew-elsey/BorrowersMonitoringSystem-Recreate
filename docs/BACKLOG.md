@@ -115,7 +115,7 @@ Acceptance: BR 7; handler can add or edit a note and expected return date on an 
 
 ## Epic FLG: Flagging and strikes
 
-**FLG-1 · Strike service** (3 pts, Sprint 4). Depends on: BRW-4.
+**FLG-1 · Strike service** (3 pts, Sprint 4). Depends on: BRW-2, MD-7. (BRW-4 dropped, owner decision 2026-11-08: the count reads only transactions, their lines, and the current semester.)
 Acceptance: BR 10 and 12; returns a borrower's strike count for the current semester; unit tests cover scenarios S5, S6, S7, S9.
 
 **FLG-2 · End-of-day flagging job** (5 pts, Sprint 4). Depends on: BRW-4, MD-7.
