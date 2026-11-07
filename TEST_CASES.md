@@ -151,13 +151,13 @@ Paths are shortened: `api/` is `apps/api/tests/`, `web/` is `apps/web/src/pages/
 | TC-BRW-17 | BRW-3 | SPEC 5 | component | Review and submit, clicking submit twice quickly | Confirmation summary shown; only one request is sent | not yet |
 | TC-BRW-18 | BRW-3 | ARCH 7 | component | Submit a checkout the API refuses | The API error `message` is shown | not yet |
 | TC-BRW-19 | BRW-3 | SPEC 8 | manual | Complete a checkout with the keyboard only | Possible without a mouse | manual |
-| TC-BRW-20 | BRW-4 | BR 5 | integration | Return a line in full | Return event with quantity, time, condition, and receiving handler from the session; audited | not yet |
-| TC-BRW-21 | BRW-4 | BR 5 | integration | Handler B returns an item issued by handler A | Receiving handler is B; issuing handler stays A | not yet |
-| TC-BRW-22 | BRW-4 | BR 5, S3 | integration | Cara borrows 5 extension cords at 09:00 and returns 3 at 14:00 | Line open with 2 outstanding | not yet |
-| TC-BRW-23 | BRW-4 | BR 6 | integration | Return a flagged line in full | Quantities change; `flag_status` stays `FLAGGED` | not yet |
-| TC-BRW-24 | BRW-4 | S15 | integration | Return 3 when 2 are outstanding; return on a line with nothing outstanding | `RETURN_EXCEEDS_OUTSTANDING` both times | not yet |
-| TC-BRW-25 | BRW-4 | S17 | integration | Return a unit laptop as `DAMAGED`; return a quantity item as `DAMAGED` | Laptop: event and item condition `DAMAGED`, status stays `ACTIVE`; quantity item: condition on the event only | not yet |
-| TC-BRW-26 | BRW-4 | BR 11 | integration | Return items for a borrower at 5 strikes | Return works (returns are never blocked) | not yet |
+| TC-BRW-20 | BRW-4 | BR 5 | integration | Return a line in full | Return event with quantity, time, condition, and receiving handler from the session; audited | `api/returns.test.ts` |
+| TC-BRW-21 | BRW-4 | BR 5 | integration | Handler B returns an item issued by handler A | Receiving handler is B; issuing handler stays A | `api/returns.test.ts` |
+| TC-BRW-22 | BRW-4 | BR 5, S3 | integration | Cara borrows 5 extension cords at 09:00 and returns 3 at 14:00 | Line open with 2 outstanding | `api/returns.test.ts` |
+| TC-BRW-23 | BRW-4 | BR 6 | integration | Return a flagged line in full | Quantities change; `flag_status` stays `FLAGGED` | `api/returns.test.ts` |
+| TC-BRW-24 | BRW-4 | S15 | integration | Return 3 when 2 are outstanding; return on a line with nothing outstanding | `RETURN_EXCEEDS_OUTSTANDING` both times | `api/returns.test.ts` |
+| TC-BRW-25 | BRW-4 | S17 | integration | Return a unit laptop as `DAMAGED`; return a quantity item as `DAMAGED` | Laptop: event and item condition `DAMAGED`, status stays `ACTIVE`; quantity item: condition on the event only | `api/returns.test.ts` |
+| TC-BRW-26 | BRW-4 | BR 11 | integration | Return items for a borrower at 5 strikes | Return works (returns are never blocked) | `api/returns.test.ts` (5 transactions with a `FLAGGED` line, borrower also inactive; re-check once FLG-3 adds blocking) |
 | TC-BRW-27 | BRW-5 | SPEC 5 | component | Find open borrowings by borrower, by item, and by asset tag | Matching open lines shown | not yet |
 | TC-BRW-28 | BRW-5 | BR 5 | component | Return all of one line and part of another, choosing condition | Requests sent with the chosen quantities and conditions | not yet |
 | TC-BRW-29 | BRW-5 | BR 6 | component | Show a borrower with a flagged line | The flagged line is clearly marked | not yet |

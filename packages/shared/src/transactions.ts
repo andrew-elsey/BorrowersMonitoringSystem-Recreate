@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { CONTROL_CHARACTER } from './categories.ts';
+import { ReturnCondition } from './enums.ts';
 
 // Checkout (BRW-2, BR 1 to 4). Limits from SPEC.md 7.
 export const CHECKOUT_MAX_LINES = 50;
@@ -65,4 +66,43 @@ export type Checkout = {
   issuedAt: string;
   semesterId: string;
   lines: CheckoutLine[];
+};
+
+// Returns (BRW-4, BR 5 and 6). One request returns part or all of up to 50 lines, together or not at
+// all. The receiving handler and the return time come from the session and the clock (BR 5).
+export const RETURN_MAX_LINES = 50;
+
+export const returnSchema = z.object({
+  lines: z
+    .array(
+      z.object({
+        lineId: z.guid('Choose a line.').toLowerCase(),
+        quantity: z
+          .number({ error: QUANTITY_MESSAGE })
+          .int(QUANTITY_MESSAGE)
+          .min(1, QUANTITY_MESSAGE)
+          .max(LINE_QUANTITY_MAX, QUANTITY_MESSAGE),
+        condition: z.enum(ReturnCondition, { error: 'Choose a condition.' }),
+      }),
+    )
+    .min(1, 'Add at least one line.')
+    .max(RETURN_MAX_LINES, `At most ${RETURN_MAX_LINES} lines per return.`)
+    // One entry per line, so each quantity is checked against that line's whole outstanding.
+    .refine(
+      (lines) => new Set(lines.map((line) => line.lineId)).size === lines.length,
+      'Each line can appear only once. Change its quantity instead.',
+    ),
+});
+export type ReturnInput = z.infer<typeof returnSchema>;
+
+// The 201 reply: one return event per line. returnedAt is ISO 8601 in UTC; outstanding is what is
+// still out on the line after this return (0 means the line is complete).
+export type ReturnEvent = {
+  id: string;
+  lineId: string;
+  quantity: number;
+  condition: ReturnCondition;
+  receivedById: string;
+  returnedAt: string;
+  outstanding: number;
 };
