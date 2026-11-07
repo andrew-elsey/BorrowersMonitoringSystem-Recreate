@@ -214,18 +214,20 @@ Required settings, kept in `apps/web/nginx.conf` and tuned on the department PC:
 
 - `limit_req_zone` per client IP: general API 10 requests per second (burst 30), login endpoint 5 per minute (burst 5), CSV import 2 per minute.
 - `limit_conn` 30 connections per IP.
-- `limit_req_status 429` and `limit_conn_status 429`, answered with the standard JSON error body. nginx's own 413 is answered with the standard JSON error body too (`PAYLOAD_TOO_LARGE`).
+- `limit_req_status 429` and `limit_conn_status 429`, answered with the standard JSON error body and a `Retry-After` header (12 seconds on login, the time one more login is allowed; 1 second otherwise). nginx's own 413 is answered with the standard JSON error body too (`PAYLOAD_TOO_LARGE`).
 - `client_max_body_size 100k`, except 2m on the CSV import location.
 - Slow-connection protection: `client_header_timeout 10s`, `client_body_timeout 10s`, `send_timeout 15s`, `keepalive_timeout 15s`, `proxy_read_timeout 30s`.
 - Set `X-Forwarded-For` to `$remote_addr` (overwrite, never append) so a client cannot fake its address.
-- Gzip and cache static assets so page loads cost the API nothing.
+- Gzip and cache static assets so page loads cost the API nothing. `/assets` sends one `Cache-Control: public, max-age=31536000, immutable` header.
+- The CSV import zone, its location, and its 2m body limit are added with MD-6, when the endpoint exists.
+- `npm run test:nginx` checks these limits through a real nginx: it runs the nginx image with this config and a stub API in throwaway containers on port 18080, never touching the compose stack.
 
 ### 12.3 Express
 
 - `app.set('trust proxy', TRUST_PROXY_HOPS)`. Without it every request looks like it comes from nginx's address and the rate limits would block everyone at once.
-- A global `express-rate-limit` of 600 requests per minute per IP (the same ceiling as nginx, so direct access to the API is still protected), and stricter limits (30 per minute per IP) on expensive endpoints: reports, search, CSV import.
+- A global `express-rate-limit` of 600 requests per minute per IP (the same ceiling as nginx, so direct access to the API is still protected), and stricter limits (30 per minute per IP) on expensive endpoints: reports, search, CSV import. Search means a list request with `?q=` (`GET /api/items`, `GET /api/borrowers`); each endpoint has its own count. The health check is outside the global limit.
 - `express.json({ limit: '100kb' })`. CSV upload through multer: 2 MB, one file, at most 5,000 rows, checked before parsing.
-- Node timeouts: `server.headersTimeout = 15000`, `server.requestTimeout = 30000`, `server.keepAliveTimeout = 5000`.
+- Node timeouts (set in `apps/api/src/server.ts`): `server.headersTimeout = 15000`, `server.requestTimeout = 30000`, `server.keepAliveTimeout = 5000`.
 - The input bounds in `SPEC.md` section 7 (page size, search length, lines per checkout, field lengths, report date range) are enforced in the shared Zod schemas.
 - No user-supplied regular expressions. Search uses parameterized queries with escaped wildcards.
 - No heavy synchronous work in request handlers. Anything slow is paginated, aggregated in SQL, or capped.
