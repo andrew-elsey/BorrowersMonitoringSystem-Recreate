@@ -7,6 +7,7 @@ import {
 import { Router } from 'express';
 import { z } from 'zod';
 import { requireRole } from '../middleware/auth.ts';
+import { createSearchRateLimiter } from '../middleware/request-rate-limit.ts';
 import { borrowerService, createBorrower, updateBorrower } from '../services/borrowers.ts';
 
 // HTTP only: parse, authorize, call the service (ARCHITECTURE.md 4). Rules live in services/borrowers.ts.
@@ -18,7 +19,7 @@ export function createBorrowersRouter() {
   // Admins only (SPEC.md 3: manage borrowers).
   router.use('/borrowers', requireRole(...PERMISSIONS.manageMasterData));
 
-  router.get('/borrowers', async (req, res) => {
+  router.get('/borrowers', createSearchRateLimiter(), async (req, res) => {
     res.json(await borrowerService.list(borrowerListQuerySchema.parse(req.query)));
   });
 

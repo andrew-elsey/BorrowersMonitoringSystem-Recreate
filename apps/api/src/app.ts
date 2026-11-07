@@ -5,6 +5,7 @@ import { ApiError } from './lib/errors.ts';
 import { getSessionMiddleware } from './lib/session.ts';
 import { requireFetchHeader } from './middleware/auth.ts';
 import { errorHandler } from './middleware/errors.ts';
+import { createGlobalRateLimiter } from './middleware/request-rate-limit.ts';
 import { createAuthRouter } from './routes/auth.ts';
 import { createBorrowersRouter } from './routes/borrowers.ts';
 import { createCategoriesRouter } from './routes/categories.ts';
@@ -22,7 +23,7 @@ export function createApp() {
   app.use(express.json({ limit: '100kb' }));
   // Health stays free of session and database work (ARCHITECTURE.md 12.6).
   app.use('/api', healthRouter);
-  app.use('/api', requireFetchHeader, getSessionMiddleware());
+  app.use('/api', createGlobalRateLimiter(), requireFetchHeader, getSessionMiddleware());
   app.use('/api', createAuthRouter());
   app.use('/api', createCategoriesRouter());
   app.use('/api', createBorrowersRouter());
