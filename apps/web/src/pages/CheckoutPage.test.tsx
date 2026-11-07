@@ -423,11 +423,19 @@ test('TC-BRW-18: a refused line shows the API message and is marked, with focus 
   const quantity = screen.getByLabelText('Quantity of Extension cord, 5 m');
   await user.clear(quantity);
   await user.type(quantity, '4');
+  // jsdom has no scrollIntoView; record which element the page scrolls back into view.
+  const scrolled: Element[] = [];
+  HTMLElement.prototype.scrollIntoView = function (this: Element) {
+    scrolled.push(this);
+  };
   await user.click(screen.getByRole('button', { name: 'Confirm checkout' }));
 
   expect(
     await screen.findByText(/Only 1 of Extension cord, 5 m available, 4 requested\./),
   ).toBeTruthy();
+  // TC-BRW-39: once the pinned message is shown, the focused field is scrolled in below it.
+  await waitFor(() => expect(scrolled).toContain(quantity));
+  delete (HTMLElement.prototype as Partial<HTMLElement>).scrollIntoView;
   expect(topMessage().textContent).toContain('Nothing was issued.');
   // TC-BRW-39: the refusal is in the pinned message area too.
   expect(topMessage().closest('[aria-live="polite"]')).not.toBeNull();

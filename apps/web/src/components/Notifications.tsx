@@ -25,19 +25,15 @@ const MessageAreaContext = createContext<HTMLDivElement | null>(null);
 export function NotificationProvider({ children }: { children: ReactNode }) {
   const [notices, setNotices] = useState<Notice[]>([]);
   const nextId = useRef(0);
-  const area = useRef<HTMLDivElement>(null);
-  // The same element as state, so pages re-render with it and can portal into it.
+  // State, not a ref, so pages re-render with it and can portal into it (useMessageArea).
   const [areaElement, setAreaElement] = useState<HTMLDivElement | null>(null);
-  const setArea = useCallback((element: HTMLDivElement | null) => {
-    area.current = element;
-    setAreaElement(element);
-  }, []);
 
   // When the browser scrolls a focused field into view, it keeps it below the pinned messages,
   // so they never cover the field being used. It watches the area's contents rather than
   // `notices`, because pages also put their own messages here (useMessageArea).
   useLayoutEffect(() => {
-    const element = area.current!;
+    if (!areaElement) return;
+    const element = areaElement;
     const update = () => {
       const height = element.childElementCount ? element.offsetHeight : 0;
       document.documentElement.style.scrollPaddingTop = `${height}px`;
@@ -50,7 +46,7 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
       observer.disconnect();
       document.documentElement.style.scrollPaddingTop = '';
     };
-  }, []);
+  }, [areaElement]);
 
   const add = useCallback((kind: Notice['kind'], text: string) => {
     nextId.current += 1;
@@ -80,7 +76,7 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
       {/* <main>, below the top bar. Always rendered, so screen readers announce messages added */}
       {/* to it. empty:-mb-5 cancels the gap of AppShell's <main> while there is no message. */}
       <div
-        ref={setArea}
+        ref={setAreaElement}
         aria-live="polite"
         className="sticky top-0 z-10 flex flex-col gap-2 bg-page py-2 empty:-mb-5 empty:py-0"
       >

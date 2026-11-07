@@ -271,6 +271,13 @@ export function CheckoutPage() {
   useEffect(() => {
     if (saved) document.getElementById('start-over')?.focus();
   }, [saved]);
+  // markRefusedLine moves focus before the "not saved" message is pinned at the top, so the
+  // message could then cover that field. Once it has rendered (and the scroll padding counts it),
+  // scroll the focused field back into view below it. jsdom has no scrollIntoView.
+  useEffect(() => {
+    if (save.error)
+      (document.activeElement as HTMLElement | null)?.scrollIntoView?.({ block: 'nearest' });
+  }, [save.error]);
   const dueNow = dueDay(new Date(), closingTime);
   // BR 3: an inactive borrower cannot borrow. The API refuses it too (BORROWER_INACTIVE).
   // FLG-3 adds the blocked borrower (BORROWER_BLOCKED) here.
