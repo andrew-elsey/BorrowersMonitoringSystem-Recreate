@@ -18,9 +18,16 @@ const PORT = Number(process.env.NGINX_CHECK_PORT ?? 18080);
 const BASE = `http://127.0.0.1:${PORT}`;
 const CONF = new URL('../nginx.conf', import.meta.url).pathname.replace(/^\/(\w:)/, '$1');
 
+const EXPRESS_429_BODY = '{"error":{"code":"RATE_LIMITED","message":"From Express.","details":{}}}';
+
 // Answers like the API would, holding /api/slow open so connections stay in use.
+// /api/express-429 answers like the Express limiters, so nginx must pass it through untouched.
 const STUB = `require('http').createServer((req, res) => {
   req.resume();
+  if (req.url === '/api/express-429') {
+    res.writeHead(429, { 'Content-Type': 'application/json', 'Retry-After': '42' });
+    return res.end(${JSON.stringify(EXPRESS_429_BODY)});
+  }
   const reply = () => res.end(JSON.stringify({ xff: req.headers['x-forwarded-for'] }));
   req.url === '/api/slow' ? setTimeout(reply, 6000) : reply();
 }).listen(3000);`;
@@ -129,6 +136,23 @@ const checks: [string, () => Promise<void>][] = [
       const { xff } = (await response.json()) as { xff: string };
       assert.notEqual(xff, '6.6.6.6');
       assert.doesNotMatch(xff, /6\.6\.6\.6|,/);
+    },
+  ],
+  [
+    'an Express 429 passes through nginx with its own body and Retry-After',
+    async () => {
+      const response = await fetch(`${BASE}/api/express-429`);
+      assert.equal(response.status, 429);
+      assert.equal(response.headers.get('retry-after'), '42');
+      assert.equal(await response.text(), EXPRESS_429_BODY);
+    },
+  ],
+  [
+    'TC-SEC-02: a 200 KB body on another API path also gets 413 PAYLOAD_TOO_LARGE as JSON',
+    async () => {
+      const body = JSON.stringify({ name: 'a'.repeat(200_000) });
+      const response = await fetch(`${BASE}/api/items`, { method: 'POST', body });
+      await expectJsonError(response, 413, 'PAYLOAD_TOO_LARGE');
     },
   ],
   [
