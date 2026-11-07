@@ -3,14 +3,15 @@ import { randomUUID } from 'node:crypto';
 import { beforeEach, expect, test } from 'vitest';
 import { prisma } from '../src/lib/prisma.ts';
 import { setCurrentSemester } from '../src/services/semesters.ts';
+import { recordReturn } from '../src/services/returns.ts';
 import { countStrikes } from '../src/services/strikes.ts';
 import { resetDatabase } from './setup/reset-database.ts';
 
 // QA (automated) gap tests for FLG-1 (strike service, BR 6, 10, 12; S3, S5 to S9): returned
 // flagged lines still count, mixed FLAGGED/OVERRIDDEN/NONE lines count once, other semesters do
 // not count, unknown and inactive borrowers, no cap at the block threshold, and a call made with
-// a Prisma transaction client. Flags and returns are written directly on the rows, as in
-// strikes.test.ts: the flagging job (FLG-2) and the return service (BRW-4) are not on this branch.
+// a Prisma transaction client. Flags are written directly on the rows, as in strikes.test.ts,
+// because the flagging job (FLG-2) is not built yet; returns go through the return service (BRW-4).
 
 let adminId: string;
 let borrowerId: string;
@@ -104,15 +105,10 @@ function transaction(
   });
 }
 
-// Records a return of `quantity` on a line, as BRW-4 does: a return event plus the returned total.
+// Returns `quantity` on a line through the real return service (BRW-4), so BR 6 is checked end to
+// end: a return never changes flag_status.
 async function returnOn(lineId: string, quantity: number) {
-  await prisma.return.create({
-    data: { transactionItemId: lineId, quantity, receivedById: adminId, condition: 'GOOD' },
-  });
-  await prisma.transactionItem.update({
-    where: { id: lineId },
-    data: { quantityReturned: { increment: quantity } },
-  });
+  await recordReturn(adminId, { lines: [{ lineId, quantity, condition: 'GOOD' }] });
 }
 
 test('BR 6, S3: a flagged quantity line still counts after a partial return', async () => {
