@@ -51,6 +51,7 @@ test('a delete refused with HAS_HISTORY reloads the list, and the row then shows
   expect(await screen.findByText('Used by 1 item')).toBeTruthy();
 });
 
+// BRW-3 pinned the area with `sticky` (owner decision 2026-11-05); it stays in the page flow.
 test('an error notification sits in <main> above the heading, outside the table, and not fixed', async () => {
   mockApi((method, path) => {
     if (path === '/auth/me') return signedInAs(ADMIN);
@@ -65,7 +66,7 @@ test('an error notification sits in <main> above the heading, outside the table,
 
   const message = await within(screen.getByRole('main')).findByRole('alert');
   const region = message.closest('[aria-live="polite"]') as HTMLElement;
-  expect(region.className).not.toMatch(/\b(fixed|absolute|sticky)\b/);
+  expect(region.className).not.toMatch(/\b(fixed|absolute)\b/);
   expect(region.contains(screen.getByRole('table', { name: 'Categories' }))).toBe(false);
   const heading = screen.getByRole('heading', { level: 1 });
   expect(region.compareDocumentPosition(heading) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();

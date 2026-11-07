@@ -2,6 +2,7 @@ import {
   createContext,
   useCallback,
   useContext,
+  useLayoutEffect,
   useMemo,
   useRef,
   useState,
@@ -23,6 +24,18 @@ const NotifyContext = createContext<Notify | null>(null);
 export function NotificationProvider({ children }: { children: ReactNode }) {
   const [notices, setNotices] = useState<Notice[]>([]);
   const nextId = useRef(0);
+  const area = useRef<HTMLDivElement>(null);
+
+  // When the browser scrolls a focused field into view, it keeps it below the pinned messages,
+  // so they never cover the field being used.
+  useLayoutEffect(() => {
+    const height = notices.length ? area.current!.offsetHeight : 0;
+    document.documentElement.style.scrollPaddingTop = `${height}px`;
+    // Cleared on unmount too, so sign-out never leaves the padding on the sign-in page.
+    return () => {
+      document.documentElement.style.scrollPaddingTop = '';
+    };
+  }, [notices]);
 
   const add = useCallback((kind: Notice['kind'], text: string) => {
     nextId.current += 1;
@@ -47,10 +60,15 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
 
   return (
     <NotifyContext.Provider value={notify}>
-      {/* In the page flow above the page content, as in the approved mockup, so a message never */}
-      {/* covers a button. Always rendered, so screen readers announce messages added to it. */}
-      {/* empty:-mb-5 cancels the gap of AppShell's <main> while there is no message. */}
-      <div aria-live="polite" className="flex flex-col gap-2 empty:-mb-5">
+      {/* Above the page content, as in the approved mockup. Sticky: on a long page it stays at */}
+      {/* the top of the window, so a result is never scrolled out of sight (BRW-3). It sits in */}
+      {/* <main>, below the top bar. Always rendered, so screen readers announce messages added */}
+      {/* to it. empty:-mb-5 cancels the gap of AppShell's <main> while there is no message. */}
+      <div
+        ref={area}
+        aria-live="polite"
+        className="sticky top-0 z-10 flex flex-col gap-2 bg-page py-2 empty:-mb-5 empty:py-0"
+      >
         {notices.map((notice) => (
           <Alert key={notice.id} kind={notice.kind} onDismiss={() => dismiss(notice.id)}>
             {notice.text}

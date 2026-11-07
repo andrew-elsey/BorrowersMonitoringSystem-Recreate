@@ -2,6 +2,7 @@ import { itemListQuerySchema, itemSchema, itemUpdateSchema, PERMISSIONS } from '
 import { Router } from 'express';
 import { z } from 'zod';
 import { requireRole } from '../middleware/auth.ts';
+import { createSearchRateLimiter } from '../middleware/request-rate-limit.ts';
 import { createItem, deleteItem, listItems, updateItem } from '../services/items.ts';
 
 // HTTP only: parse, authorize, call the service (ARCHITECTURE.md 4). Rules live in services/items.ts.
@@ -14,9 +15,14 @@ export function createItemsRouter() {
   const router = Router();
 
   // Every signed-in staff member can look items up (owner decision 2026-11-03).
-  router.get('/items', requireRole(...PERMISSIONS.viewDashboardAndReports), async (req, res) => {
-    res.json(await listItems(itemListQuerySchema.parse(req.query)));
-  });
+  router.get(
+    '/items',
+    requireRole(...PERMISSIONS.viewDashboardAndReports),
+    createSearchRateLimiter(),
+    async (req, res) => {
+      res.json(await listItems(itemListQuerySchema.parse(req.query)));
+    },
+  );
 
   router.post('/items', admin, async (req, res) => {
     const input = itemSchema.parse(req.body);

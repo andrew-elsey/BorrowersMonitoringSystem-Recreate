@@ -511,10 +511,12 @@ describe('search, filters, and page bounds (SPEC 7)', () => {
     expect((await list(`categoryId=${MISSING_ID}`).expect(200)).body.total).toBe(0);
   });
 
+  // BRW-3 added `available` to list rows (owner decision 2026-11-05).
   test('a list row has exactly the shared Item fields and nothing internal', async () => {
     const [row] = (await list('q=lt-001').expect(200)).body.data;
     expect(Object.keys(row).sort()).toEqual([
       'assetTag',
+      'available',
       'category',
       'condition',
       'description',

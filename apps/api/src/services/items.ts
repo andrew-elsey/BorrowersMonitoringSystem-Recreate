@@ -10,6 +10,7 @@ import type { Prisma } from '../generated/prisma/client.ts';
 import { audit } from '../lib/audit.ts';
 import { ApiError, isPrismaError } from '../lib/errors.ts';
 import { prisma } from '../lib/prisma.ts';
+import { getAvailability } from './availability.ts';
 
 // Items (MD-2). Writes are admin only and the list is open to all staff; the routes check the role.
 
@@ -85,7 +86,14 @@ export async function listItems({
     }),
     prisma.item.count({ where }),
   ]);
-  return { data: data, page, pageSize, total };
+  // One availability read for the whole page (BR 1), so the checkout search can show what is left.
+  const available = await getAvailability(data.map((item) => item.id));
+  return {
+    data: data.map((item) => ({ ...item, available: available.get(item.id) ?? 0 })),
+    page,
+    pageSize,
+    total,
+  };
 }
 
 export async function createItem(actorId: string, input: ItemInput): Promise<Item> {

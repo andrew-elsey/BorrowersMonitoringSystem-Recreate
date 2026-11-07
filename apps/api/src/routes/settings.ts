@@ -17,6 +17,17 @@ const idParams = z.object({ id: z.guid() });
 
 export function createSettingsRouter() {
   const router = Router();
+
+  // The closing time, read-only, for all staff (BRW-3): the checkout screen shows when items are
+  // due back (CLAUDE.md rule 3: never hardcoded). Changing it stays admin only (PUT /settings).
+  router.get(
+    '/closing-time',
+    requireRole(...PERMISSIONS.viewDashboardAndReports),
+    async (_req, res) => {
+      res.json({ closingTime: (await getSettings()).closingTime });
+    },
+  );
+
   // Admins only (SPEC.md 3: manage settings and semesters).
   router.use(['/settings', '/semesters'], requireRole(...PERMISSIONS.manageSettingsAndSemesters));
 

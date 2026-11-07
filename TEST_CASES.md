@@ -145,19 +145,19 @@ Paths are shortened: `api/` is `apps/api/tests/`, `web/` is `apps/web/src/pages/
 | TC-BRW-11 | BRW-2 | BR 4, S16 | integration | Two handlers issue the same unit item at the same moment | Exactly one succeeds; the other gets `ITEM_UNAVAILABLE` | `api/checkout.test.ts` (fails if the row lock is removed; opposite line orders do not deadlock) |
 | TC-BRW-12 | BRW-2 | SPEC 7, S21 | integration | Check out 51 lines; a line with quantity 0 or 10,001 | `VALIDATION_ERROR` | `api/checkout.test.ts` (also: no lines, a repeated item, a 501-character note, a unit item with quantity 2; an unknown item, borrower, or room is `NOT_FOUND`) |
 | TC-BRW-13 | BRW-2 | SPEC 3 | integration | View-only user calls checkout | 403 (S18) | `api/checkout.test.ts` (signed out 401) |
-| TC-BRW-14 | BRW-3 | SPEC 5 | component | Look up a borrower | Name, type, and department shown | not yet |
-| TC-BRW-15 | BRW-3 | SPEC 5 | component | Pick a room; add a new room from the picker | Room selected; new room is created and selected | not yet |
-| TC-BRW-16 | BRW-3 | SPEC 5 | component | Search an item; enter quantity for a QUANTITY item; add a note and expected return date | Lines show with quantity, note, and date | not yet |
-| TC-BRW-17 | BRW-3 | SPEC 5 | component | Review and submit, clicking submit twice quickly | Confirmation summary shown; only one request is sent | not yet |
-| TC-BRW-18 | BRW-3 | ARCH 7 | component | Submit a checkout the API refuses | The API error `message` is shown | not yet |
+| TC-BRW-14 | BRW-3 | SPEC 5 | component | Look up a borrower | Name, type, and department shown | `web/CheckoutPage.test.tsx` (also: an inactive borrower shows "Inactive borrower." and Confirm is disabled, BR 3) |
+| TC-BRW-15 | BRW-3 | SPEC 5 | component | Pick a room; add a new room from the picker | Room selected; new room is created and selected | `web/CheckoutPage.test.tsx` (also: a duplicate name shows under the new room field) |
+| TC-BRW-16 | BRW-3 | SPEC 5 | component | Search an item; enter quantity for a QUANTITY item; add a note and expected return date | Lines show with quantity, note, and date | `web/CheckoutPage.test.tsx` (also: non-active items and items already on a line cannot be added; a unit line has no quantity field) |
+| TC-BRW-17 | BRW-3 | SPEC 5 | component | Review and submit, clicking submit twice quickly | Confirmation summary shown; only one request is sent | `web/CheckoutPage.test.tsx` (two clicks in the same moment send one request; nothing is sent while the borrower, room, or items are missing, and focus goes to the first missing one; after a save focus goes to "Start a new checkout") |
+| TC-BRW-18 | BRW-3 | ARCH 7 | component | Submit a checkout the API refuses | The API error `message` is shown | `web/CheckoutPage.test.tsx` (`INSUFFICIENT_QUANTITY` and `ITEM_UNAVAILABLE` marked on the line by `details.itemId`, the line's availability updated from `details.available`, `lines.N.expectedReturnDate` on that line, `fields.lines` and `LOCATION_INACTIVE` at the top) |
 | TC-BRW-19 | BRW-3 | SPEC 8 | manual | Complete a checkout with the keyboard only | Possible without a mouse | manual |
-| TC-BRW-20 | BRW-4 | BR 5 | integration | Return a line in full | Return event with quantity, time, condition, and receiving handler from the session; audited | not yet |
-| TC-BRW-21 | BRW-4 | BR 5 | integration | Handler B returns an item issued by handler A | Receiving handler is B; issuing handler stays A | not yet |
-| TC-BRW-22 | BRW-4 | BR 5, S3 | integration | Cara borrows 5 extension cords at 09:00 and returns 3 at 14:00 | Line open with 2 outstanding | not yet |
-| TC-BRW-23 | BRW-4 | BR 6 | integration | Return a flagged line in full | Quantities change; `flag_status` stays `FLAGGED` | not yet |
-| TC-BRW-24 | BRW-4 | S15 | integration | Return 3 when 2 are outstanding; return on a line with nothing outstanding | `RETURN_EXCEEDS_OUTSTANDING` both times | not yet |
-| TC-BRW-25 | BRW-4 | S17 | integration | Return a unit laptop as `DAMAGED`; return a quantity item as `DAMAGED` | Laptop: event and item condition `DAMAGED`, status stays `ACTIVE`; quantity item: condition on the event only | not yet |
-| TC-BRW-26 | BRW-4 | BR 11 | integration | Return items for a borrower at 5 strikes | Return works (returns are never blocked) | not yet |
+| TC-BRW-20 | BRW-4 | BR 5 | integration | Return a line in full | Return event with quantity, time, condition, and receiving handler from the session; audited | `api/returns.test.ts` |
+| TC-BRW-21 | BRW-4 | BR 5 | integration | Handler B returns an item issued by handler A | Receiving handler is B; issuing handler stays A | `api/returns.test.ts` |
+| TC-BRW-22 | BRW-4 | BR 5, S3 | integration | Cara borrows 5 extension cords at 09:00 and returns 3 at 14:00 | Line open with 2 outstanding | `api/returns.test.ts` |
+| TC-BRW-23 | BRW-4 | BR 6 | integration | Return a flagged line in full | Quantities change; `flag_status` stays `FLAGGED` | `api/returns.test.ts` |
+| TC-BRW-24 | BRW-4 | S15 | integration | Return 3 when 2 are outstanding; return on a line with nothing outstanding | `RETURN_EXCEEDS_OUTSTANDING` both times | `api/returns.test.ts` |
+| TC-BRW-25 | BRW-4 | S17 | integration | Return a unit laptop as `DAMAGED`; return a quantity item as `DAMAGED` | Laptop: event and item condition `DAMAGED`, status stays `ACTIVE`; quantity item: condition on the event only | `api/returns.test.ts` |
+| TC-BRW-26 | BRW-4 | BR 11 | integration | Return items for a borrower at 5 strikes | Return works (returns are never blocked) | `api/returns.test.ts` (5 transactions with a `FLAGGED` line, borrower also inactive; re-check once FLG-3 adds blocking) |
 | TC-BRW-27 | BRW-5 | SPEC 5 | component | Find open borrowings by borrower, by item, and by asset tag | Matching open lines shown | not yet |
 | TC-BRW-28 | BRW-5 | BR 5 | component | Return all of one line and part of another, choosing condition | Requests sent with the chosen quantities and conditions | not yet |
 | TC-BRW-29 | BRW-5 | BR 6 | component | Show a borrower with a flagged line | The flagged line is clearly marked | not yet |
@@ -167,6 +167,12 @@ Paths are shortened: `api/` is `apps/api/tests/`, `web/` is `apps/web/src/pages/
 | TC-BRW-33 | BRW-6 | RPT-1 | component | Open the dashboard with a noted line | Note and expected return date shown | not yet |
 | TC-BRW-34 | BRW-2 | BR 2, SPEC 4 | integration | A handler, then an admin, checks out in a deactivated room | `LOCATION_INACTIVE` for both; nothing created | `api/checkout.test.ts` |
 | TC-BRW-35 | BRW-2 | BR 7, SPEC 7 | integration | Check out with an expected return date before today, today, and later in Asia/Manila, just before and just after Manila midnight | Before today: `VALIDATION_ERROR` on `lines.0.expectedReturnDate`; today and later: saved | `api/checkout.test.ts` (clock faked at 23:59:59 and 00:00 Manila time) |
+| TC-BRW-36 | BRW-3 | SPEC 3, 7 | integration | Admin and handler call `GET /api/borrowers/lookup` with a matching `q`, a page, a missing, 1-character, and 101-character `q`, and `pageSize=101`; a viewer and a signed-out visitor call it | Admin and handler: 200 with only `id`, `schoolId`, `name`, `type`, `department`, `active` (inactive included), paginated; bad `q` or page size: `VALIDATION_ERROR`; viewer: 403; signed out: 401 | `api/borrowers.test.ts`; the screen uses it: `web/CheckoutPage.test.tsx` |
+| TC-BRW-37 | BRW-3 | BR 1 | integration | List items: a unit item out, one free, one under repair, and a quantity item of 20 with 3 outstanding; then search them on the Checkout screen | `available` is 0, 1, 0, 17, no borrower details; the screen shows "Out", "Available", "Under repair", "N available", and Add is disabled when 0 | `api/items.test.ts`, `api/qa-md2-gaps.test.ts` (row fields), `web/CheckoutPage.test.tsx` |
+| TC-BRW-38 | BRW-3 | Rule 3 | integration | Set closing time 18:30; every role reads `GET /api/closing-time`; a handler reads and writes `/api/settings`; open Checkout | All roles get `{ closingTime: "18:30" }`; handler gets 403 on settings; signed out 401; the screen shows "Today by 18:30", "Lines still out at 18:30", "Due back by 18:30 today" | `api/settings.test.ts`, `web/CheckoutPage.test.tsx` |
+| TC-BRW-39 | BRW-3 | ARCH 14.1, SPEC 8 | component | Show a message, scroll a long page, then tab to a field | The message area is sticky at the top of the window below the top bar, and a focused field scrolls in below the messages | `web/components/Notifications.test.tsx` (class and `scroll-padding-top`; the visual check is manual) |
+| TC-BRW-40 | BRW-3 | BR 8, S10 | component | Closing time 17:00; open Checkout at 17:30 Manila time and confirm a checkout issued at 17:30 | The Summary shows "Tomorrow by 17:00", the note under the lines says "Lines still out at 17:00 tomorrow", and the success message says "Due back by 17:00 tomorrow"; before closing they say "Today" and "today" (TC-BRW-38) | `web/CheckoutPage.test.tsx` |
+| TC-BRW-41 | BRW-3 | SPEC 8 | component | Open Checkout at 320, 360, 768, 900, and 1100 px wide with a 100-character room name, choose that room, and add an item line | The page stays the window width; the room picker shrinks; only the lines table scrolls sideways in its own box | `web/CheckoutPage.test.tsx` (`min-w-0` on each section and the room picker, `relative` on the table scroll box; the widths are checked by hand) |
 
 ## FLG: Flagging and strikes
 
@@ -214,16 +220,16 @@ Paths are shortened: `api/` is `apps/api/tests/`, `web/` is `apps/web/src/pages/
 
 | ID | Ticket | Rule | Level | Steps | Expected | Automated by |
 |---|---|---|---|---|---|---|
-| TC-SEC-01 | SEC-1 | ARCH 12.2 | integration | Exceed the nginx general, login, and CSV limits through port 8080 | 429 with the standard JSON error `RATE_LIMITED` and `Retry-After`, never HTML | not yet |
-| TC-SEC-02 | SEC-1 | ARCH 7, 12.2 | integration | POST a 200 KB body through nginx to `/api/auth/login` | 413 with the standard JSON error `PAYLOAD_TOO_LARGE`, never HTML | not yet |
-| TC-SEC-03 | SEC-1 | ARCH 12.2 | integration | Open more than 30 connections from one IP | Extra connections refused with 429 | not yet |
-| TC-SEC-04 | SEC-1 | ARCH 12.2 | manual | `curl -I` a file under `/assets/` | Exactly one `Cache-Control: public, max-age=31536000, immutable` header | not yet |
-| TC-SEC-05 | SEC-1 | ARCH 12.3 | integration | Exceed the Express global limit and the expensive-endpoint limit | 429 `RATE_LIMITED` with `Retry-After` | not yet |
-| TC-SEC-06 | SEC-1 | ARCH 12.2, 12.3 | integration | Two clients with different addresses hit the limit; one sends a fake `X-Forwarded-For` | Limited independently; nginx overwrites the fake header | not yet |
-| TC-SEC-07 | SEC-1 | ARCH 12.3 | integration | Check the Node server timeouts | `headersTimeout` 15000, `requestTimeout` 30000, `keepAliveTimeout` 5000 | not yet |
-| TC-SEC-08 | SEC-1 | ARCH 12.3 | integration | Cause an unexpected error in a route; cause an unhandled rejection | Route: `INTERNAL_ERROR` with no internals; unhandled: logged and the process exits so Docker restarts it | `api/errors.test.ts` (standard format); not yet (crash and restart) |
+| TC-SEC-01 | SEC-1 | ARCH 12.2 | integration | Exceed the nginx general, login, and CSV limits through the nginx check (real nginx config on port 18080, so it never clashes with the stack on 8080) | 429 with the standard JSON error `RATE_LIMITED` and `Retry-After`, never HTML | `apps/web/scripts/check-nginx.ts` (`npm run test:nginx`) (general and login; the CSV limit comes with MD-6) |
+| TC-SEC-02 | SEC-1 | ARCH 7, 12.2 | integration | POST a 200 KB body through nginx to `/api/auth/login` | 413 with the standard JSON error `PAYLOAD_TOO_LARGE`, never HTML | `apps/web/scripts/check-nginx.ts` (`npm run test:nginx`) |
+| TC-SEC-03 | SEC-1 | ARCH 12.2 | integration | Open more than 30 connections from one IP | Extra connections refused with 429 | `apps/web/scripts/check-nginx.ts` (`npm run test:nginx`) |
+| TC-SEC-04 | SEC-1 | ARCH 12.2 | manual | `curl -I` a file under `/assets/` | Exactly one `Cache-Control: public, max-age=31536000, immutable` header | manual; also `apps/web/scripts/check-nginx.ts` (`npm run test:nginx`) |
+| TC-SEC-05 | SEC-1 | ARCH 12.3 | integration | Exceed the Express global limit and the expensive-endpoint limit | 429 `RATE_LIMITED` with `Retry-After` | `api/request-limits.test.ts` |
+| TC-SEC-06 | SEC-1 | ARCH 12.2, 12.3 | integration | Two clients with different addresses hit the limit; one sends a fake `X-Forwarded-For` | Limited independently; nginx overwrites the fake header | `apps/web/scripts/check-nginx.ts` (`npm run test:nginx`), `api/request-limits.test.ts` |
+| TC-SEC-07 | SEC-1 | ARCH 12.3 | integration | Check the Node server timeouts | `headersTimeout` 15000, `requestTimeout` 30000, `keepAliveTimeout` 5000 | `api/request-limits.test.ts` |
+| TC-SEC-08 | SEC-1 | ARCH 12.3 | integration | Cause an unexpected error in a route; cause an unhandled rejection | Route: `INTERNAL_ERROR` with no internals; unhandled: logged and the process exits so Docker restarts it | `api/errors.test.ts` (standard format), `api/request-limits.test.ts` (exit on unhandled errors) |
 | TC-SEC-09 | SEC-1 | SPEC 7, S21 | integration | Send a body over 100 KB to Express directly | `PAYLOAD_TOO_LARGE` | `api/auth.test.ts` |
-| TC-SEC-10 | SEC-1 | SPEC 7 | unit | Validate the shared Zod schemas at and over every SPEC 7 limit | At the limit accepted; over it rejected | not yet |
+| TC-SEC-10 | SEC-1 | SPEC 7 | unit | Validate the shared Zod schemas at and over every SPEC 7 limit | At the limit accepted; over it rejected | `packages/shared/src/limits.test.ts` (override reasons, report ranges, and CSV rows come with their tickets) |
 | TC-SEC-11 | SEC-2 | ARCH 12.7 | manual | Login flood: 200 connections for 60 s while a signed-in client from another source works | p95 under 2 s; api under its memory limit with no restart; valid login works after the window | not yet |
 | TC-SEC-12 | SEC-2 | ARCH 12.7 | manual | Slow-connection (slowloris) test | Other clients keep working | not yet |
 | TC-SEC-13 | SEC-2 | ARCH 12.7, S21 | manual | Oversized JSON body and oversized CSV under load | Rejected with 413 without reaching a service | not yet |
@@ -258,7 +264,7 @@ Paths are shortened: `api/` is `apps/api/tests/`, `web/` is `apps/web/src/pages/
 
 | Rule or scenario | Cases |
 |---|---|
-| BR 1 Availability | TC-BRW-01, 02, 03, 05, 06, 07 |
+| BR 1 Availability | TC-BRW-01, 02, 03, 05, 06, 07, 37 |
 | BR 2 Who and when | TC-BRW-04, 09, 34 |
 | BR 3 Eligible borrowers | TC-MD-17, TC-BRW-08, TC-FLG-19 |
 | BR 4 Atomic and safe | TC-BRW-10, 11 |
