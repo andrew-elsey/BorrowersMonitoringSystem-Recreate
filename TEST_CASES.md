@@ -214,7 +214,7 @@ Paths are shortened: `api/` is `apps/api/tests/`, `web/` is `apps/web/src/pages/
 
 | ID | Ticket | Rule | Level | Steps | Expected | Automated by |
 |---|---|---|---|---|---|---|
-| TC-SEC-01 | SEC-1 | ARCH 12.2 | integration | Exceed the nginx general, login, and CSV limits through port 8080 | 429 with the standard JSON error `RATE_LIMITED` and `Retry-After`, never HTML | `apps/web/scripts/check-nginx.ts` (`npm run test:nginx`) (general and login; the CSV limit comes with MD-6) |
+| TC-SEC-01 | SEC-1 | ARCH 12.2 | integration | Exceed the nginx general, login, and CSV limits through the nginx check (real nginx config on port 18080, so it never clashes with the stack on 8080) | 429 with the standard JSON error `RATE_LIMITED` and `Retry-After`, never HTML | `apps/web/scripts/check-nginx.ts` (`npm run test:nginx`) (general and login; the CSV limit comes with MD-6) |
 | TC-SEC-02 | SEC-1 | ARCH 7, 12.2 | integration | POST a 200 KB body through nginx to `/api/auth/login` | 413 with the standard JSON error `PAYLOAD_TOO_LARGE`, never HTML | `apps/web/scripts/check-nginx.ts` (`npm run test:nginx`) |
 | TC-SEC-03 | SEC-1 | ARCH 12.2 | integration | Open more than 30 connections from one IP | Extra connections refused with 429 | `apps/web/scripts/check-nginx.ts` (`npm run test:nginx`) |
 | TC-SEC-04 | SEC-1 | ARCH 12.2 | manual | `curl -I` a file under `/assets/` | Exactly one `Cache-Control: public, max-age=31536000, immutable` header | manual; also `apps/web/scripts/check-nginx.ts` (`npm run test:nginx`) |

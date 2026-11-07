@@ -11,7 +11,7 @@ import { resetDatabase } from './setup/reset-database.ts';
 type App = ReturnType<typeof createApp>;
 const PASSWORD = 'correct-horse-battery';
 const GLOBAL_LIMIT = 600;
-const SEARCH_LIMIT = 30;
+const SEARCH_LIMIT = 60;
 
 beforeEach(async () => {
   await resetDatabase();

@@ -7,7 +7,8 @@ import { ApiError } from '../lib/errors.ts';
 
 const ONE_MINUTE_MS = 60 * 1000;
 const GLOBAL_REQUESTS_PER_MINUTE = 600;
-const EXPENSIVE_REQUESTS_PER_MINUTE = 30;
+// Search is typed live at the counter, so it gets more room than reports and CSV import (owner decision 2026-11-07).
+const SEARCH_REQUESTS_PER_MINUTE = 60;
 
 function createRequestLimiter(limit: number, skip?: (req: Request) => boolean) {
   return rateLimit({
@@ -29,7 +30,7 @@ export function createGlobalRateLimiter() {
   return createRequestLimiter(GLOBAL_REQUESTS_PER_MINUTE);
 }
 
-// Expensive endpoints: search (a list request with ?q=), and later reports and CSV import.
+// Search: a list request with ?q=. Reports and CSV import get their own 30 a minute limit later.
 export function createSearchRateLimiter() {
-  return createRequestLimiter(EXPENSIVE_REQUESTS_PER_MINUTE, (req) => req.query.q === undefined);
+  return createRequestLimiter(SEARCH_REQUESTS_PER_MINUTE, (req) => req.query.q === undefined);
 }

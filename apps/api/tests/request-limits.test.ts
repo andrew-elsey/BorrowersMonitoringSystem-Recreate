@@ -60,7 +60,7 @@ async function signIn(app: ReturnType<typeof createApp>, ip: string) {
 }
 
 test.each(['/api/items', '/api/borrowers'])(
-  'TC-SEC-05: search on %s is limited to 30 a minute per client address',
+  'TC-SEC-05: search on %s is limited to 60 a minute per client address',
   async (path) => {
     const app = createApp();
     const agent = await signIn(app, '10.0.1.1');
@@ -70,7 +70,7 @@ test.each(['/api/items', '/api/borrowers'])(
         .set('X-Requested-With', 'fetch')
         .set('X-Forwarded-For', ip);
 
-    for (let i = 0; i < 30; i++) expect((await search('10.0.1.1')).status).toBe(200);
+    for (let i = 0; i < 60; i++) expect((await search('10.0.1.1')).status).toBe(200);
     expectRateLimited(await search('10.0.1.1'));
     // A plain list (no search text) is not an expensive request.
     expect((await search('10.0.1.1', '')).status).toBe(200);
