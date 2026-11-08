@@ -34,7 +34,7 @@ Run from the repo root:
 npm install         # install all workspaces
 npm run lint        # ESLint
 npm run typecheck   # tsc in every workspace
-npm test            # Vitest across all workspaces
+npm test            # Vitest across all workspaces (needs npm run test:db and TEST_DATABASE_URL)
 npm run test:nginx  # nginx limits through a real nginx (needs Docker)
 npm run build       # compile shared and api to dist/, build web with Vite
 npm run format      # Prettier

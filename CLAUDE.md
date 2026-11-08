@@ -38,7 +38,7 @@ docker compose up --build   # run db, api, and web at http://127.0.0.1:8080
 npm run lint
 npm run typecheck
 npm run test:db             # start the throwaway test database (needed by npm test)
-npm test                    # unit and integration tests
+npm test                    # unit and integration tests (needs TEST_DATABASE_URL in .env or the shell)
 npm run test:nginx          # check the nginx limits through a real nginx in throwaway containers (needs Docker, uses port 18080)
 npm run build               # compile shared and api with tsc, build web with Vite
 npm run format              # Prettier (Markdown is excluded)
