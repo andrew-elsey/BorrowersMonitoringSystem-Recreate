@@ -183,17 +183,17 @@ Paths are shortened: `api/` is `apps/api/tests/`, `web/` is `apps/web/src/pages/
 | TC-FLG-03 | FLG-1 | BR 10, S6 | integration | Eva has two transactions the same day, both flagged | 2 strikes | `api/strikes.test.ts` |
 | TC-FLG-04 | FLG-1 | BR 10, 13, S7 | integration | A transaction has two flagged lines; override one, then the other | 1 strike after the first override; 0 after the second | `api/strikes.test.ts` |
 | TC-FLG-05 | FLG-1 | BR 12, S9 | integration | Gio has 4 strikes in semester 1; admin sets semester 2 current, then semester 1 again | 0 strikes in semester 2; semester 1 history still shows the flags; back to 4 strikes when semester 1 is current again | `api/strikes.test.ts` |
-| TC-FLG-06 | FLG-2 | BR 8, S1 | integration | Ana borrows at 10:00 and returns at 15:00; job runs at 17:00 | Nothing flagged; 0 strikes | not yet |
-| TC-FLG-07 | FLG-2 | BR 8, S2 | integration | Ben borrows a laptop at 10:00 and keeps it; job runs at 17:00 | Line `FLAGGED` with `flagged_at` set; audited | not yet |
-| TC-FLG-08 | FLG-2 | BR 8, S3 | integration | Cara has 2 of 5 cords outstanding at 17:00; returns the 2 next morning | Line flagged at 17:00; stays `FLAGGED` after the return; 1 strike | not yet |
-| TC-FLG-09 | FLG-2 | BR 8, S10 | integration | Hana borrows at 17:30 | Not flagged tonight; flagged at tomorrow's 17:00 if still out | not yet |
-| TC-FLG-10 | FLG-2 | BR 9, S11 | integration | API stopped 16:30 to 18:00, started at 18:00 | Catch-up flags lines issued before 17:00; a line issued at 18:10 is not flagged | not yet |
-| TC-FLG-11 | FLG-2 | BR 8, S12 | integration | Run the job twice at 17:00 | Second run changes nothing | not yet |
-| TC-FLG-12 | FLG-2 | BR 8, S13 | integration | A flagged line is overridden while the item is still out; next closing passes | Not flagged again | not yet |
-| TC-FLG-13 | FLG-2 | ARCH 6, CLAUDE.md rule 3 | integration | With an injected clock, change closing time in settings | Job runs at the new time in `Asia/Manila` | not yet |
-| TC-FLG-14 | FLG-2 | ARCH 12.5 | integration | Start a scheduled run and a manual run at the same time | Advisory lock: runs never overlap | not yet |
-| TC-FLG-15 | FLG-2 | SPEC 3, ARCH 12.5 | integration | Admin triggers the job twice within a minute; handler triggers it | Second admin call refused (once per minute); handler gets 403 | not yet |
-| TC-FLG-16 | FLG-2 | BACKLOG FLG-2 | integration | Run the job | Each run is logged | not yet |
+| TC-FLG-06 | FLG-2 | BR 8, S1 | integration | Ana borrows at 10:00 and returns at 15:00; job runs at 17:00 | Nothing flagged; 0 strikes | `api/flagging.test.ts` |
+| TC-FLG-07 | FLG-2 | BR 8, S2 | integration | Ben borrows a laptop at 10:00 and keeps it; job runs at 17:00 | Line `FLAGGED` with `flagged_at` set; audited | `api/flagging.test.ts` |
+| TC-FLG-08 | FLG-2 | BR 8, S3 | integration | Cara has 2 of 5 cords outstanding at 17:00; returns the 2 next morning | Line flagged at 17:00; stays `FLAGGED` after the return; 1 strike | `api/flagging.test.ts` |
+| TC-FLG-09 | FLG-2 | BR 8, S10 | integration | Hana borrows at 17:30 | Not flagged tonight; flagged at tomorrow's 17:00 if still out | `api/flagging.test.ts` |
+| TC-FLG-10 | FLG-2 | BR 9, S11 | integration | API stopped 16:30 to 18:00, started at 18:00 | Catch-up flags lines issued before 17:00; a line issued at 18:10 is not flagged | `api/flagging.test.ts` |
+| TC-FLG-11 | FLG-2 | BR 8, S12 | integration | Run the job twice at 17:00 | Second run changes nothing | `api/flagging.test.ts` |
+| TC-FLG-12 | FLG-2 | BR 8, S13 | integration | A flagged line is overridden while the item is still out; next closing passes | Not flagged again | `api/flagging.test.ts` |
+| TC-FLG-13 | FLG-2 | ARCH 6, CLAUDE.md rule 3 | integration | With an injected clock, change closing time in settings | Job runs at the new time in `Asia/Manila` | `api/flagging.test.ts` |
+| TC-FLG-14 | FLG-2 | ARCH 12.5 | integration | Start a scheduled run and a manual run at the same time | Advisory lock: runs never overlap | `api/flagging.test.ts` |
+| TC-FLG-15 | FLG-2 | SPEC 3, ARCH 12.5 | integration | Admin triggers the job twice within a minute; handler triggers it | Second admin call refused (once per minute); handler gets 403 | `api/flagging.test.ts` |
+| TC-FLG-16 | FLG-2 | BACKLOG FLG-2 | integration | Run the job | Each run is logged | `api/flagging.test.ts` |
 | TC-FLG-17 | FLG-3 | BR 11, S8 | integration | Fil at 3 strikes checks out | Checkout works; the warning is shown | not yet |
 | TC-FLG-18 | FLG-3 | BR 11, S8 | integration | Fil at 4 strikes checks out | Checkout works; the stricter notice is shown | not yet |
 | TC-FLG-19 | FLG-3 | BR 3, 11, S8 | integration | Fil at 5 strikes checks out | `BORROWER_BLOCKED`; no transaction created | not yet |
