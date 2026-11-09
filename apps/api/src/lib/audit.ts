@@ -19,3 +19,11 @@ export type AuditEntry = {
 export async function audit(tx: Prisma.TransactionClient, entry: AuditEntry): Promise<void> {
   await tx.auditLog.create({ data: entry });
 }
+
+// Same as audit() for many entries at once (one INSERT), for set-based changes such as the flagging job.
+export async function auditMany(
+  tx: Prisma.TransactionClient,
+  entries: AuditEntry[],
+): Promise<void> {
+  await tx.auditLog.createMany({ data: entries });
+}
