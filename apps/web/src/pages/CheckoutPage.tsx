@@ -28,6 +28,7 @@ import { Field, SelectField, showApiFieldErrors } from '../components/Field';
 import { useMessageArea, useNotify } from '../components/Notifications';
 import { RetryAlert } from '../components/RetryAlert';
 import { StatusBadge } from '../components/StatusBadge';
+import { strikeCount, strikeLevel, useStrikes } from '../components/Strikes';
 import { TIMEZONE } from '../timezone';
 
 // Checkout (SPEC.md 5, admins and handlers, BRW-3). Steps 1 to 3 fill the form, the Summary panel
@@ -279,8 +280,10 @@ export function CheckoutPage() {
   }, [save.error]);
   const dueNow = dueDay(new Date(), closingTime);
   // BR 3: an inactive borrower cannot borrow. The API refuses it too (BORROWER_INACTIVE).
-  // FLG-3 adds the blocked borrower (BORROWER_BLOCKED) here.
-  const locked = borrower !== null && !borrower.active;
+  // BR 11: so is a blocked one (BORROWER_BLOCKED). The API enforces both; the screen mirrors them.
+  const strikes = useStrikes(borrower?.id).data;
+  const level = strikes ? strikeLevel(strikes) : 'none';
+  const locked = borrower !== null && (!borrower.active || level === 'blocked');
   const onLines = new Set(values.lines.map((line) => line.itemId));
   // VALIDATION_ERROR details the API keys as "lines" (a schema error on some line) belong to no
   // single field, so they go with the message at the top.
@@ -389,10 +392,26 @@ export function CheckoutPage() {
                     {borrowerLine(borrower)}
                   </span>
                 </div>
-                {/* FLG-3: the strike count for the current semester goes here (right side). */}
+                {strikes && (
+                  <div className="flex flex-col items-end gap-0.5">
+                    <span className="text-[15px] font-semibold">
+                      {strikeCount(strikes.strikes)}
+                    </span>
+                    {strikes.semesterName && (
+                      <span className="text-[13px] text-muted">{strikes.semesterName}</span>
+                    )}
+                  </div>
+                )}
               </div>
             )}
-            {/* FLG-3: the warning, notice, and blocked strike banners (BR 11) go here. */}
+            {strikes && borrower && level !== 'none' && (
+              <StrikeBanner
+                level={level}
+                strikes={strikes.strikes}
+                name={borrower.name}
+                block={strikes.blockThreshold}
+              />
+            )}
             {locked && (
               <Alert kind="error">
                 <strong>Inactive borrower.</strong> {borrower.name}&apos;s record is inactive, so
@@ -686,7 +705,13 @@ export function CheckoutPage() {
           >
             {saved ? 'Saved' : save.isPending ? 'Saving…' : 'Confirm checkout'}
           </button>
-          {locked && <p className="text-sm text-muted">Inactive borrowers cannot borrow.</p>}
+          {locked && (
+            <p className="text-sm text-muted">
+              {borrower?.active
+                ? `Checkout is blocked for this borrower (${strikeCount(strikes?.strikes ?? 0)}).`
+                : 'Inactive borrowers cannot borrow.'}
+            </p>
+          )}
         </aside>
       </div>
     </>
@@ -696,6 +721,41 @@ export function CheckoutPage() {
 const thClass =
   'border-b border-divider px-3 py-2.5 text-left text-sm font-semibold whitespace-nowrap text-muted';
 const tdClass = 'border-b border-divider px-3 py-2.5 align-top text-[15px]';
+
+// BR 11 wording from the approved mockup, with the first name where it has he or she (no gender on
+// the borrower record).
+function StrikeBanner(props: {
+  level: 'warning' | 'notice' | 'blocked';
+  strikes: number;
+  name: string;
+  block: number;
+}) {
+  const { level, strikes, block } = props;
+  const first = props.name.split(' ')[0];
+  const head = `${strikeCount(strikes)}.`;
+  if (level === 'warning') {
+    return (
+      <Alert kind="wait">
+        <strong>Warning: {head}</strong> {first} has {strikes} flagged checkouts this semester.
+        Checkout is allowed.
+      </Alert>
+    );
+  }
+  if (level === 'notice') {
+    return (
+      <Alert kind="error">
+        <strong>Notice: {head}</strong> {first} has {strikes} flagged checkouts this semester.
+        Checkout is allowed, but at {block} strikes {first} will be blocked from borrowing.
+      </Alert>
+    );
+  }
+  return (
+    <Alert kind="error">
+      <strong>Blocked: {head}</strong> {first} cannot borrow this semester unless an admin overrides
+      a flag. {first} can still return items.
+    </Alert>
+  );
+}
 
 const borrowerLine = (b: Borrower) => `${b.schoolId} · ${TYPE_LABELS[b.type]} · ${b.department}`;
 const plural = (count: number, word: string) => `${count} ${word}${count === 1 ? '' : 's'}`;

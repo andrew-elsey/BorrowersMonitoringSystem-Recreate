@@ -17,6 +17,7 @@ import { Field, SelectField } from '../components/Field';
 import { FlagIcon } from '../components/icons';
 import { useMessageArea } from '../components/Notifications';
 import { RetryAlert } from '../components/RetryAlert';
+import { StrikeBadge } from '../components/Strikes';
 import { TIMEZONE } from '../timezone';
 
 // Return (SPEC.md 5, admins and handlers, BRW-5). Finds open lines and returns all or part of one
@@ -270,6 +271,7 @@ export function ReturnPage() {
                 <strong className="text-ink">
                   {group[0]!.borrower.name} {group[0]!.borrower.schoolId}
                 </strong>
+                <StrikeBadge borrowerId={group[0]!.borrower.id} />
                 <span>{dateTime.format(new Date(group[0]!.issuedAt))}</span>
                 <span>Room: {group[0]!.location}</span>
                 <span>Issued by {group[0]!.issuedBy}</span>
