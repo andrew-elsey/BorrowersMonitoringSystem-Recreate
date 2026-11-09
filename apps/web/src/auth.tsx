@@ -14,6 +14,8 @@ import { Alert } from './components/Alert';
 export type SignedInUser = { id: string; name: string; username: string; role: Role };
 
 const ME_KEY = ['me'];
+// True after a 401 ended a session the user was really signed in to (not after Sign out).
+const EXPIRED_KEY = ['sessionExpired'];
 
 export const ROLE_LABELS: Record<Role, string> = {
   ADMIN: 'Admin',
@@ -29,8 +31,13 @@ export function createQueryClient(): QueryClient {
     mutationCache: new MutationCache({ onError: signOutOn401 }),
     defaultOptions: { queries: { retry: false } },
   });
+  // A query with no observer is dropped after gcTime, and the flag must outlive the login page.
+  queryClient.setQueryDefaults(EXPIRED_KEY, { gcTime: Infinity });
   function signOutOn401(error: Error) {
     if (error instanceof ApiRequestError && error.status === 401) {
+      // A 401 while nobody is signed in (first visit, wrong password) is not an expiry.
+      // Set before me is cleared: clearing me is what re-renders the login page.
+      if (queryClient.getQueryData(ME_KEY)) queryClient.setQueryData(EXPIRED_KEY, true);
       queryClient.setQueryData(ME_KEY, null);
     }
   }
@@ -51,6 +58,8 @@ type AuthValue = {
   // True after the Sign out button, false after a 401 (session expired). Only an expired session
   // returns the user to the page they were on, so the next person at the counter starts at home.
   signedOutOnPurpose: boolean;
+  // True after a 401 ended a real session: the login page says so.
+  sessionExpired: boolean;
   signIn: (user: SignedInUser) => void;
   signOut: () => Promise<void>;
 };
@@ -75,8 +84,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const value: AuthValue = {
     user: me.data,
     signedOutOnPurpose,
+    // Read here, so the flag must already be set when me is cleared (see signOutOn401).
+    sessionExpired: queryClient.getQueryData(EXPIRED_KEY) === true,
     signIn: (user) => {
       setSignedOutOnPurpose(false);
+      queryClient.setQueryData(EXPIRED_KEY, false);
       queryClient.setQueryData(ME_KEY, user);
     },
     signOut: async () => {

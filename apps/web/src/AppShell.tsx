@@ -1,6 +1,6 @@
 import { PERMISSIONS } from '@bms/shared';
-import { Suspense } from 'react';
-import { NavLink, Outlet } from 'react-router';
+import { Suspense, useEffect } from 'react';
+import { NavLink, Outlet, useLocation } from 'react-router';
 import { ROLE_LABELS, useAuth } from './auth';
 import { BoxIcon } from './components/icons';
 import { NotificationProvider } from './components/Notifications';
@@ -26,6 +26,19 @@ const onBarFocus = 'focus-visible:outline-accent';
 export function AppShell() {
   const { user, signOut } = useAuth();
   const role = user!.role;
+  // The tab title names the page. An unknown path redirects home, so it never reaches here.
+  const { pathname } = useLocation();
+  const path = pathname.replace(/\/+$/, '') || '/'; // /checkout/ is the same page as /checkout
+  const navItem = NAV_ITEMS.find((item) => item.to === path);
+  const page =
+    path === '/password'
+      ? 'Change password'
+      : navItem && !(navItem.roles as readonly string[]).includes(role)
+        ? 'Not allowed'
+        : (navItem?.label ?? 'Home');
+  useEffect(() => {
+    document.title = `${page} · Borrowers Monitoring System`;
+  }, [page]);
 
   return (
     <div className="flex min-h-screen flex-col bg-page">

@@ -18,7 +18,7 @@ import { useForm, type UseFormReturn } from 'react-hook-form';
 import { ApiRequestError, apiFetch } from '../api';
 import { Alert } from '../components/Alert';
 import { ConfirmDialog } from '../components/ConfirmDialog';
-import { DataTable } from '../components/DataTable';
+import { cellTextClass, DataTable } from '../components/DataTable';
 import { secondaryButtonClass } from '../components/Dialog';
 import { Field, SelectField, showApiFieldErrors, TextAreaField } from '../components/Field';
 import { FormDialog } from '../components/FormDialog';
@@ -359,7 +359,7 @@ export function InventoryItems() {
                 onChange={filterChanged(setStatusFilter)}
               />
             </div>
-            <div className="flex-[0_1_160px]">
+            <div className="flex-[0_1_180px]">
               <SelectField
                 id="tracking-filter"
                 label="Tracking"
@@ -390,16 +390,28 @@ export function InventoryItems() {
               columns={[
                 {
                   header: 'Name',
-                  cell: (i) => <strong className="wrap-anywhere">{i.name}</strong>,
+                  cell: (i) => <strong className={cellTextClass}>{i.name}</strong>,
                 },
                 {
                   header: 'Category',
-                  cell: (i) => <span className="wrap-anywhere">{i.category.name}</span>,
+                  cell: (i) => <span className={cellTextClass}>{i.category.name}</span>,
                 },
                 { header: 'Tracking', cell: (i) => TRACKING_LABELS[i.trackingType] },
                 {
                   header: 'Asset tag',
-                  cell: (i) => <span className="wrap-anywhere">{i.assetTag ?? '—'}</span>,
+                  cell: (i) => <span className={cellTextClass}>{i.assetTag ?? '—'}</span>,
+                },
+                {
+                  header: 'Available',
+                  // Worded as in the approved mockup. Only ACTIVE items can be issued (BR 1).
+                  cell: (i) =>
+                    i.status !== 'ACTIVE'
+                      ? '—'
+                      : i.trackingType === 'UNIT'
+                        ? i.available > 0
+                          ? 'Available'
+                          : 'Out'
+                        : `${i.available} of ${i.totalQuantity}`,
                 },
                 { header: 'Condition', cell: (i) => CONDITION_LABELS[i.condition] },
                 {

@@ -79,7 +79,9 @@ export function SelectField({
     <FieldShell id={id} label={label} error={error} hint={hint}>
       <select
         {...control}
-        className={`h-11 ${control.className} ${className ?? ''}`}
+        // w-full max-w-full: a select is as wide as its longest option, so a long category name
+        // would otherwise stretch the page sideways. The shown text is cut off instead.
+        className={`h-11 w-full max-w-full ${control.className} ${className ?? ''}`}
         {...selectProps}
       >
         {options.map((option) => (

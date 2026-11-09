@@ -20,7 +20,7 @@ import { useForm } from 'react-hook-form';
 import { apiFetch } from '../api';
 import { Alert } from '../components/Alert';
 import { ConfirmDialog } from '../components/ConfirmDialog';
-import { DataTable } from '../components/DataTable';
+import { cellTextClass, DataTable } from '../components/DataTable';
 import { Field, showApiFieldErrors } from '../components/Field';
 import { FormDialog } from '../components/FormDialog';
 import { CheckIcon } from '../components/icons';
@@ -309,7 +309,7 @@ function SemestersSection({
                   <span
                     id={`semester-name-${s.id}`}
                     tabIndex={-1}
-                    className={`wrap-anywhere ${s.isCurrent ? 'font-bold' : ''}`}
+                    className={`${cellTextClass} ${s.isCurrent ? 'font-bold' : ''}`}
                   >
                     {s.name}
                   </span>

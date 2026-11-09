@@ -3,6 +3,11 @@ import { useEffect, useRef, type ReactNode } from 'react';
 // A paginated table for list screens. The page passes one page of rows from a list endpoint
 // ({ data, page, pageSize, total }, ARCHITECTURE.md 7) and loads another page on onPageChange.
 
+// For name-like text in a cell. Browsers ignore break-words when sizing table columns, so the
+// block and max width are what make a long name with no spaces wrap instead of pushing the
+// buttons out of sight; normal names stay on one line.
+export const cellTextClass = 'block max-w-64 break-words';
+
 export type Column<T> = { header: string; cell: (row: T) => ReactNode };
 
 type DataTableProps<T> = {
