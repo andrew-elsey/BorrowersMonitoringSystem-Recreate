@@ -201,10 +201,12 @@ describe('SEC-1 limits on the checkout endpoints (ARCH 12.3, SPEC 7)', () => {
     const handler = await signIn(createApp(), 'HANDLER', '10.9.0.2');
     const lookup = () =>
       handler.get('/api/borrowers/lookup?q=ana').set('X-Forwarded-For', '10.9.0.2');
-    // The login used one request of the 600.
+    // The login used one request of the 600. Batches of 5: supertest adds listeners to the agent's
+    // server for each request waiting on it, and a batch of 10 or more prints MaxListenersExceededWarning.
+    const BATCH = 5;
     let ok = 0;
-    for (let sent = 1; sent < GLOBAL_LIMIT; sent += 100) {
-      const batch = Math.min(100, GLOBAL_LIMIT - sent);
+    for (let sent = 1; sent < GLOBAL_LIMIT; sent += BATCH) {
+      const batch = Math.min(BATCH, GLOBAL_LIMIT - sent);
       const replies = await Promise.all(Array.from({ length: batch }, lookup));
       ok += replies.filter((res) => res.status === 200).length;
     }
