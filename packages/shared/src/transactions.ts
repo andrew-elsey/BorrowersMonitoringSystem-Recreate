@@ -1,6 +1,7 @@
 import { z } from 'zod';
-import { CONTROL_CHARACTER } from './categories.ts';
-import { ReturnCondition } from './enums.ts';
+import { searchTextField } from './borrowers.ts';
+import { CONTROL_CHARACTER, pageQuerySchema } from './categories.ts';
+import { type FlagStatus, ReturnCondition, type TrackingType } from './enums.ts';
 
 // Checkout (BRW-2, BR 1 to 4). Limits from SPEC.md 7.
 export const CHECKOUT_MAX_LINES = 50;
@@ -106,3 +107,32 @@ export type ReturnEvent = {
   returnedAt: string;
   outstanding: number;
 };
+
+// GET /api/returns/open?by=&q=&page=&pageSize= (BRW-5): the open lines the Return screen lists, found
+// by borrower (name or school ID), item name, or asset tag. q is optional (left out, every open
+// line); when given it has the search bounds (SPEC.md 7).
+export const OPEN_LINE_SEARCH_BY = ['borrower', 'item', 'assetTag'] as const;
+export const openLinesQuerySchema = pageQuerySchema.extend({
+  by: z.enum(OPEN_LINE_SEARCH_BY).default('borrower'),
+  q: searchTextField.optional(),
+});
+export type OpenLinesQuery = z.infer<typeof openLinesQuerySchema>;
+
+// A line with something still out. flagStatus and flaggedAt are BR 8 and 9; FLAGGED stays on a
+// line until an admin overrides it, even after a return (BR 6).
+export type OpenLine = {
+  lineId: string;
+  transactionId: string;
+  borrower: { id: string; schoolId: string; name: string };
+  item: { id: string; name: string; assetTag: string | null; trackingType: TrackingType };
+  location: string;
+  issuedBy: string;
+  issuedAt: string;
+  expectedReturnDate: string | null;
+  note: string | null;
+  quantityBorrowed: number;
+  outstanding: number;
+  flagStatus: FlagStatus;
+  flaggedAt: string | null;
+};
+export type OpenLinePage = { data: OpenLine[]; page: number; pageSize: number; total: number };

@@ -23,6 +23,8 @@ import { prisma } from '../lib/prisma.ts';
 
 export interface BorrowerService {
   findById(id: string): Promise<Borrower | null>;
+  // Several at once; ids that do not exist are left out. For screens that list other records.
+  findByIds(ids: string[]): Promise<Borrower[]>;
   // Matches name or school ID. `query` is 2 to 100 characters, `limit` 1 to 100 (SPEC.md 7).
   search(query: string, limit?: number): Promise<Borrower[]>;
   // One page for the Borrowers screen: everyone, or those matching `q` (same bounds as search),
@@ -82,6 +84,11 @@ export class LocalBorrowerService implements BorrowerService {
     // z.guid, not z.uuid: PostgreSQL accepts any well-formed uuid, not only RFC versions 1 to 8.
     if (!z.guid().safeParse(id).success) return null;
     return prisma.borrower.findUnique({ where: { id }, select: borrowerFields });
+  }
+
+  async findByIds(ids: string[]): Promise<Borrower[]> {
+    const valid = ids.filter((id) => z.guid().safeParse(id).success);
+    return prisma.borrower.findMany({ where: { id: { in: valid } }, select: borrowerFields });
   }
 
   // async, so a bounds error rejects the promise instead of throwing.
