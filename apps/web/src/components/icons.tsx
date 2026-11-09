@@ -56,3 +56,10 @@ export const LockIcon = () => (
     <path d="M8 11V7a4 4 0 0 1 8 0v4" />
   </Icon>
 );
+
+export const FlagIcon = () => (
+  <Icon size={14}>
+    <path d="M5 21V4" />
+    <path d="M5 4h11l-2 4 2 4H5" />
+  </Icon>
+);

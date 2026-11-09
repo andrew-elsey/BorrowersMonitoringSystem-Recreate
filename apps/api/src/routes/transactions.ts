@@ -1,8 +1,8 @@
-import { checkoutSchema, PERMISSIONS, returnSchema } from '@bms/shared';
+import { checkoutSchema, openLinesQuerySchema, PERMISSIONS, returnSchema } from '@bms/shared';
 import { Router } from 'express';
 import { requireRole } from '../middleware/auth.ts';
 import { checkout } from '../services/checkout.ts';
-import { recordReturn } from '../services/returns.ts';
+import { listOpenLines, recordReturn } from '../services/returns.ts';
 
 // HTTP only: parse, authorize, call the service (ARCHITECTURE.md 4). Rules live in
 // services/checkout.ts and services/returns.ts.
@@ -20,6 +20,13 @@ export function createTransactionsRouter() {
   router.post('/returns', requireRole(...PERMISSIONS.checkoutAndReturn), async (req, res) => {
     const input = returnSchema.parse(req.body);
     res.status(201).json({ returns: await recordReturn(req.session.userId!, input) });
+  });
+
+  // The Return screen's search (BRW-5). Not under the search rate limit, like the checkout borrower
+  // lookup: bounded, staff-only, and cheap, and it runs only when Find is pressed. The global limit
+  // and nginx still apply.
+  router.get('/returns/open', requireRole(...PERMISSIONS.checkoutAndReturn), async (req, res) => {
+    res.json(await listOpenLines(openLinesQuerySchema.parse(req.query)));
   });
 
   return router;

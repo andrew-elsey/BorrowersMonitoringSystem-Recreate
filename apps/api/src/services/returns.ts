@@ -1,7 +1,18 @@
-import type { ItemCondition, ReturnEvent, ReturnInput, TrackingType } from '@bms/shared';
+import type {
+  FlagStatus,
+  ItemCondition,
+  OpenLine,
+  OpenLinePage,
+  OpenLinesQuery,
+  ReturnEvent,
+  ReturnInput,
+  TrackingType,
+} from '@bms/shared';
+import { Prisma } from '../generated/prisma/client.ts';
 import { audit } from '../lib/audit.ts';
 import { ApiError } from '../lib/errors.ts';
 import { prisma } from '../lib/prisma.ts';
+import { borrowerService } from './borrowers.ts';
 
 // Returns (BRW-4, BR 5 and 6). The route checks the role and passes the signed-in user as the
 // receiving handler (BR 5). There is no borrower check at all: returns are never blocked (BR 11).
@@ -45,7 +56,11 @@ export async function recordReturn(
         throw new ApiError(
           409,
           'RETURN_EXCEEDS_OUTSTANDING',
-          `Only ${outstanding} of ${label(line)} still out, ${quantity} returned.`,
+          // Worded as in the approved mockup, without pluralising the item name. The screen adds
+          // "Nothing was recorded." itself.
+          outstanding === 0
+            ? `${label(line)} on this line is already fully returned.`
+            : `You entered ${quantity} of ${label(line)}, but the amount still out on this line is ${outstanding}.`,
           { lineId, outstanding },
         );
       }
@@ -106,4 +121,112 @@ export async function recordReturn(
     }
     return events;
   });
+}
+
+type OpenLineRow = {
+  id: string;
+  transaction_id: string;
+  borrower_id: string;
+  item_id: string;
+  item_name: string;
+  asset_tag: string | null;
+  tracking_type: TrackingType;
+  location_name: string;
+  issued_by_name: string;
+  issued_at: Date;
+  expected_return_date: Date | null;
+  note: string | null;
+  quantity_borrowed: number;
+  quantity_returned: number;
+  flag_status: FlagStatus;
+  flagged_at: Date | null;
+};
+
+// Open lines for the Return screen (BRW-5, SPEC 5): lines with something still out, found by
+// borrower, item name, or asset tag. Retired and lost items are listed like any other (owner
+// decision 2026-11-10). Read-only, so no audit entry. Bounded: page size at most 100 (SPEC 7).
+// Rule 12: the most borrowers with open lines a borrower search will look through. `cap` is a
+// parameter only so a test can use a small number.
+export const OPEN_BORROWER_CAP = 5000;
+
+export async function listOpenLines(
+  { by, q, page, pageSize }: OpenLinesQuery,
+  cap = OPEN_BORROWER_CAP,
+): Promise<OpenLinePage> {
+  let search = Prisma.empty;
+  if (q !== undefined) {
+    // Escaped so % and _ in the text match literally.
+    const like = `%${q.replace(/[\\%_]/g, '\\$&')}%`;
+    if (by === 'item') search = Prisma.sql`AND i.name ILIKE ${like}`;
+    else if (by === 'assetTag') search = Prisma.sql`AND i.asset_tag ILIKE ${like}`;
+    else {
+      // Rule 1: borrowers are found through BorrowerService, never joined here.
+      // Search only among borrowers that have open lines, so a match is never cut off by the
+      // 100-result limit. Few borrowers have things out at once (everything is due the same day).
+      const withOpenLines = await prisma.$queryRaw<{ borrower_id: string }[]>`
+        SELECT DISTINCT t.borrower_id FROM transactions t
+        JOIN transaction_items ti ON ti.transaction_id = t.id
+        WHERE ti.quantity_borrowed > ti.quantity_returned LIMIT ${cap + 1}`;
+      // Never cut the list silently: a borrower past the cap would look like "nothing is out".
+      if (withOpenLines.length > cap) {
+        throw new ApiError(
+          422,
+          'SEARCH_TOO_BROAD',
+          'Too many borrowers have items out; search by item or asset tag.',
+        );
+      }
+      // shortcut: covers at most 100 borrowers with items out that match the text; upgrade if a
+      // search ever needs more.
+      const found = await borrowerService.search(q, 100, {
+        ids: withOpenLines.map((row) => row.borrower_id),
+      });
+      search = Prisma.sql`AND t.borrower_id = ANY(${found.map((b) => b.id)}::uuid[])`;
+    }
+  }
+  const from = Prisma.sql`
+    FROM transaction_items ti
+    JOIN transactions t ON t.id = ti.transaction_id
+    JOIN items i ON i.id = ti.item_id
+    JOIN locations l ON l.id = t.location_id
+    JOIN users u ON u.id = t.issued_by
+    WHERE ti.quantity_borrowed > ti.quantity_returned ${search}`;
+  const [rows, [{ total }]] = await Promise.all([
+    prisma.$queryRaw<OpenLineRow[]>`
+      SELECT ti.id, ti.transaction_id, t.borrower_id, i.id AS item_id, i.name AS item_name,
+             i.asset_tag, i.tracking_type, l.name AS location_name, u.name AS issued_by_name,
+             t.issued_at, ti.expected_return_date, ti.note, ti.quantity_borrowed,
+             ti.quantity_returned, ti.flag_status, ti.flagged_at
+      ${from} ORDER BY t.issued_at, ti.id LIMIT ${pageSize} OFFSET ${(page - 1) * pageSize}`,
+    prisma.$queryRaw<{ total: number }[]>`SELECT COUNT(*)::int AS total ${from}`,
+  ]);
+  const borrowers = new Map(
+    (await borrowerService.findByIds([...new Set(rows.map((row) => row.borrower_id))])).map((b) => [
+      b.id,
+      b,
+    ]),
+  );
+  const data: OpenLine[] = rows.map((row) => {
+    const borrower = borrowers.get(row.borrower_id)!;
+    return {
+      lineId: row.id,
+      transactionId: row.transaction_id,
+      borrower: { id: borrower.id, schoolId: borrower.schoolId, name: borrower.name },
+      item: {
+        id: row.item_id,
+        name: row.item_name,
+        assetTag: row.asset_tag,
+        trackingType: row.tracking_type,
+      },
+      location: row.location_name,
+      issuedBy: row.issued_by_name,
+      issuedAt: row.issued_at.toISOString(),
+      expectedReturnDate: row.expected_return_date?.toISOString().slice(0, 10) ?? null,
+      note: row.note,
+      quantityBorrowed: row.quantity_borrowed,
+      outstanding: row.quantity_borrowed - row.quantity_returned,
+      flagStatus: row.flag_status,
+      flaggedAt: row.flagged_at?.toISOString() ?? null,
+    };
+  });
+  return { data, page, pageSize, total };
 }

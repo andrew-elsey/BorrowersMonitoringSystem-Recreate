@@ -33,6 +33,7 @@ test('a signed-out user is sent to login, signs in, and sees home with their nam
   expect([...menu.querySelectorAll('a')].map((link) => link.textContent)).toEqual([
     'Home',
     'Checkout',
+    'Return',
   ]);
   const [, init] = fetchMock.mock.calls.find(([url]) => url === '/api/auth/login')!;
   expect(JSON.parse(init!.body as string)).toEqual({
