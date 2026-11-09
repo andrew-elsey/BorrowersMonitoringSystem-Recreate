@@ -3,6 +3,7 @@ import { afterEach, beforeAll, beforeEach, expect, test, vi } from 'vitest';
 import { createApp } from '../src/app.ts';
 import {
   FLAGGING_LOCK_KEY,
+  FLAGGING_RETRY_MS,
   rescheduleFlagging,
   runFlagging,
   startFlagging,
@@ -204,4 +205,82 @@ test('TC-FLG-16 (BACKLOG FLG-2): each run is logged', async () => {
   await line('2026-09-01T10:00:00+08:00');
   await runFlagging(at('17:00'));
   expect(log).toHaveBeenCalledWith(expect.stringContaining('"flagged":1'));
+});
+
+// Fakes only the clock and timers, so the database driver keeps working.
+const fakeClock = (time: string) => {
+  vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout', 'Date'] });
+  vi.setSystemTime(at(time));
+};
+
+test('TC-FLG-26 (BR 9, ARCH 6): the timer fires at closing, flags, and sets the next timer', async () => {
+  const id = await line('2026-09-01T10:00:00+08:00');
+  fakeClock('08:00');
+  await startFlagging();
+  expect(await flagStatus(id)).toBe('NONE');
+  await vi.advanceTimersByTimeAsync(9 * 3600 * 1000);
+  await vi.waitFor(async () => expect(await flagStatus(id)).toBe('FLAGGED'));
+  // The next timer is set: tomorrow's closing flags a line issued tomorrow.
+  const next = await line('2026-09-02T10:00:00+08:00');
+  await vi.advanceTimersByTimeAsync(24 * 3600 * 1000);
+  await vi.waitFor(async () => expect(await flagStatus(next)).toBe('FLAGGED'));
+});
+
+test('TC-FLG-27 (BR 9, S22): moving closing earlier past now runs the job at once, via PUT /settings', async () => {
+  const id = await line('2026-09-01T10:00:00+08:00');
+  const agent = request.agent(createApp());
+  await agent
+    .post('/api/auth/login')
+    .set('X-Requested-With', 'fetch')
+    .send({ username: 'ana', password: PASSWORD })
+    .expect(200);
+  vi.useFakeTimers({ toFake: ['Date'] });
+  vi.setSystemTime(at('16:00'));
+  await startFlagging();
+  expect(await flagStatus(id)).toBe('NONE');
+  await agent
+    .put('/api/settings')
+    .set('X-Requested-With', 'fetch')
+    .send({ closingTime: '15:00', warningThreshold: 3, noticeThreshold: 4, blockThreshold: 5 })
+    .expect(200);
+  expect(await flagStatus(id)).toBe('FLAGGED');
+});
+
+test('TC-FLG-28 (BR 9, S23): a skipped run is retried after 60 s until it succeeds', async () => {
+  const id = await line('2026-09-01T10:00:00+08:00');
+  fakeClock('17:30');
+  let release!: () => void;
+  let acquired!: () => void;
+  const held = new Promise<void>((resolve) => (release = resolve));
+  const gotLock = new Promise<void>((resolve) => (acquired = resolve));
+  const holder = prisma.$transaction(async (tx) => {
+    await tx.$queryRaw`SELECT pg_advisory_xact_lock(${FLAGGING_LOCK_KEY})::text`;
+    acquired();
+    await held;
+  });
+  await gotLock;
+  await startFlagging(); // skipped: the lock is taken
+  expect(await flagStatus(id)).toBe('NONE');
+  release();
+  await holder;
+  await vi.advanceTimersByTimeAsync(FLAGGING_RETRY_MS);
+  await vi.waitFor(async () => expect(await flagStatus(id)).toBe('FLAGGED'));
+});
+
+test('TC-FLG-29 (BR 9, S11): catch-up after a weekend flags every missed day', async () => {
+  const friday = await line('2026-09-04T10:00:00+08:00');
+  const saturday = await line('2026-09-05T10:00:00+08:00');
+  const monday = await line('2026-09-07T07:00:00+08:00');
+  await runFlagging(new Date('2026-09-07T08:00:00+08:00'));
+  expect(await flagStatus(friday)).toBe('FLAGGED');
+  expect(await flagStatus(saturday)).toBe('FLAGGED');
+  expect(await flagStatus(monday)).toBe('NONE');
+});
+
+test('TC-FLG-30 (BR 9, S23): a failing run does not throw at startup and is retried in 60 s', async () => {
+  vi.spyOn(console, 'error').mockImplementation(() => {});
+  vi.spyOn(prisma, '$transaction').mockRejectedValueOnce(new Error('boom'));
+  const timeouts = vi.spyOn(globalThis, 'setTimeout');
+  await startFlagging(at('17:00'));
+  expect(timeouts.mock.calls.map(([, delay]) => delay)).toContain(FLAGGING_RETRY_MS);
 });

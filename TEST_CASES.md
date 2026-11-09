@@ -203,6 +203,11 @@ Paths are shortened: `api/` is `apps/api/tests/`, `web/` is `apps/web/src/pages/
 | TC-FLG-23 | FLG-4 | BR 13, SPEC 7 | integration | Override with a reason of 4 characters, 5 characters, and 501 characters | 5 accepted; 4 and 501 rejected | not yet |
 | TC-FLG-24 | FLG-4 | BR 13 | integration | Override a line before it is returned and another after | Both become `OVERRIDDEN` with `override_by`, `override_at`, reason; audited | not yet |
 | TC-FLG-25 | FLG-4 | S18 | integration | Handler and view-only user call override | 403 | not yet |
+| TC-FLG-26 | FLG-2 | BR 9, ARCH 6 | integration | Fake clock 08:00, start the job, advance 9 hours | Line issued at 10:00 is `FLAGGED`; the next day's closing also fires | `api/flagging.test.ts` |
+| TC-FLG-27 | FLG-2 | BR 9, S22 | integration | Closing 17:00; at 16:00 admin does `PUT /api/settings` with closing 15:00 | Line issued at 10:00 is flagged at once | `api/flagging.test.ts` |
+| TC-FLG-28 | FLG-2 | BR 9, S23 | integration | Lock held at closing, so the run is skipped; release the lock | Retried after 60 s and the line is flagged; the next day's closing also fires | `api/flagging.test.ts` |
+| TC-FLG-29 | FLG-2 | BR 9, S11 | integration | Down Friday, started Monday 08:00 | Lines issued Friday and Saturday flagged; a Monday 07:00 line is not | `api/flagging.test.ts` |
+| TC-FLG-30 | FLG-2 | BR 9, S23 | integration | The scheduled run throws | Startup does not throw; retried after 60 s | `api/flagging.test.ts` |
 
 ## RPT: Dashboard and reports
 
@@ -257,7 +262,7 @@ Paths are shortened: `api/` is `apps/api/tests/`, `web/` is `apps/web/src/pages/
 | ID | Ticket | Rule | Level | Steps | Expected | Automated by |
 |---|---|---|---|---|---|---|
 | TC-DOC-01 | DOC-1 | CLAUDE.md | manual | Check that every ticket ID in `docs/BACKLOG.md` appears in this file | All present | manual |
-| TC-DOC-02 | DOC-1 | BR 1 to 16, S1 to S21 | manual | Check the coverage table | Every rule and scenario lists at least one case | manual |
+| TC-DOC-02 | DOC-1 | BR 1 to 16, S1 to S23 | manual | Check the coverage table | Every rule and scenario lists at least one case | manual |
 | TC-DOC-03 | DOC-1 | CLAUDE.md | manual | Run every test file named in "Automated by" (`npm test`) | All pass | manual |
 
 ## Coverage: business rules and scenarios
@@ -301,3 +306,5 @@ Paths are shortened: `api/` is `apps/api/tests/`, `web/` is `apps/web/src/pages/
 | S19 Retiring versus deleting | TC-MD-07 |
 | S20 Login flood | TC-AUTH-10, TC-SEC-11 |
 | S21 Oversized input | TC-MD-19, TC-BRW-12, TC-RPT-04, TC-SEC-02, 09, 13 |
+| S22 Closing time moved earlier | TC-FLG-27 |
+| S23 Failed or skipped run | TC-FLG-28, 30 |
