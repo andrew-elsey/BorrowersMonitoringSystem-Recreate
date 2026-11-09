@@ -70,8 +70,8 @@ All domain tables use UUID primary keys and `created_at` / `updated_at` timestam
 |---|---|---|
 | Login, change password | all | Sign in and change own password |
 | Dashboard | all | Currently unreturned items and flagged borrowers, with notes and expected return dates |
-| Checkout | admin, handler | Borrower lookup, room or lab picker with add-new, item search with quantity, per-line note and expected return date, strike banners |
-| Return | admin, handler | Find open borrowings by borrower, item, or asset tag; return all or part; select condition. Flagged lines are marked; a retired or lost item can still be returned (owner decision 2026-11-10); `GET /api/returns/open` feeds it |
+| Checkout | admin, handler | Borrower lookup, room or lab picker with add-new, item search with quantity, per-line note and expected return date, strike count and banners (warning, stricter notice, blocked; `GET /api/borrowers/:id/strikes`) |
+| Return | admin, handler | Find open borrowings by borrower, item, or asset tag; return all or part; select condition. Flagged lines are marked; a retired or lost item can still be returned (owner decision 2026-11-10); `GET /api/returns/open` feeds it; a strike badge sits next to each borrower (FLG-3) |
 | Flag review | admin | List of flagged lines; override with a reason |
 | Inventory and categories | admin | Item and category management |
 | Borrowers | admin | Management, search, Type and Status filters, CSV import |
