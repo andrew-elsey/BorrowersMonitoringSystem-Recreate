@@ -171,7 +171,7 @@ export function RoomsPage() {
               {
                 header: 'Name',
                 // A long name with no spaces must wrap, or it pushes the buttons out of sight.
-                cell: (room) => <strong className="wrap-anywhere">{room.name}</strong>,
+                cell: (room) => <strong className="break-words">{room.name}</strong>,
               },
               { header: 'Added by', cell: (room) => room.createdBy.name },
               { header: 'Added', cell: (room) => addedDate.format(new Date(room.createdAt)) },

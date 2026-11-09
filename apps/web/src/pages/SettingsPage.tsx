@@ -309,7 +309,7 @@ function SemestersSection({
                   <span
                     id={`semester-name-${s.id}`}
                     tabIndex={-1}
-                    className={`wrap-anywhere ${s.isCurrent ? 'font-bold' : ''}`}
+                    className={`break-words ${s.isCurrent ? 'font-bold' : ''}`}
                   >
                     {s.name}
                   </span>
