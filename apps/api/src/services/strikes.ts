@@ -1,5 +1,8 @@
+import type { StrikeStatus } from '@bms/shared';
 import type { Prisma } from '../generated/prisma/client.ts';
 import { prisma } from '../lib/prisma.ts';
+import { getCurrentSemester } from './semesters.ts';
+import { getSettings } from './settings.ts';
 
 // Strike service (FLG-1). Counted from transactions and their lines, never stored, and never
 // reads the borrowers table (CLAUDE.md rule 1). FLG-3 calls it to warn and block at checkout.
@@ -8,16 +11,35 @@ import { prisma } from '../lib/prisma.ts';
 // transaction counts once however many lines are flagged, and stops counting once every flagged
 // line is OVERRIDDEN. BR 12: the current semester is read from the database on every call, so
 // switching semesters resets the count and switching back brings it back. With no current
-// semester no transaction is in it, so the count is 0.
+// semester no transaction is in it, so the count is 0. Checkout passes the semester it records
+// (`semesterId`), so the block and the new transaction always use the same one (BR 11, 12).
 export function countStrikes(
   borrowerId: string,
   db: Prisma.TransactionClient = prisma,
+  semesterId?: string,
 ): Promise<number> {
   return db.transaction.count({
     where: {
       borrowerId,
-      semester: { isCurrent: true },
+      ...(semesterId ? { semesterId } : { semester: { isCurrent: true } }),
       lines: { some: { flagStatus: 'FLAGGED' } },
     },
   });
+}
+
+// The strike count with the thresholds from settings (rule 3), for the Checkout and Return screens
+// to show the warning, notice, and blocked messages (BR 11). The server still enforces the block.
+export async function getStrikeStatus(borrowerId: string): Promise<StrikeStatus> {
+  const [strikes, settings, semester] = await Promise.all([
+    countStrikes(borrowerId),
+    getSettings(),
+    getCurrentSemester(),
+  ]);
+  return {
+    strikes,
+    warningThreshold: settings.warningThreshold,
+    noticeThreshold: settings.noticeThreshold,
+    blockThreshold: settings.blockThreshold,
+    semesterName: semester?.name ?? null,
+  };
 }

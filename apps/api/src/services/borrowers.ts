@@ -14,6 +14,8 @@ import type { Prisma } from '../generated/prisma/client.ts';
 import { audit } from '../lib/audit.ts';
 import { ApiError, isPrismaError } from '../lib/errors.ts';
 import { prisma } from '../lib/prisma.ts';
+import { getSettings } from './settings.ts';
+import { countStrikes } from './strikes.ts';
 
 // BorrowerService (MD-4, ARCHITECTURE.md 4). INTEGRATION POINT: this file is the only code that
 // reads the borrowers table (CLAUDE.md rule 1). Checkout, reports, and the CSV import call
@@ -31,8 +33,15 @@ export interface BorrowerService {
   // One page for the Borrowers screen: everyone, or those matching `q` (same bounds as search),
   // narrowed to one `type` and to active or inactive borrowers when those are given.
   list(params: BorrowerListQuery): Promise<BorrowerPage>;
-  // `reason` is the error code checkout should answer with, such as BORROWER_INACTIVE.
-  isEligible(id: string): Promise<{ eligible: boolean; reason?: string }>;
+  // `reason` is the error code checkout should answer with: NOT_FOUND, BORROWER_INACTIVE, or
+  // BORROWER_BLOCKED. Checkout calls it inside its transaction (`tx`); the borrower row is locked
+  // FOR SHARE so the answer holds until commit. `semesterId` is the semester checkout records, so
+  // the strikes counted are the ones of that semester (BR 11, 12); left out, the current one.
+  isEligible(
+    id: string,
+    tx: Prisma.TransactionClient,
+    semesterId?: string,
+  ): Promise<{ eligible: boolean; reason?: string }>;
 }
 
 const SEARCH_DEFAULT_LIMIT = 25;
@@ -138,12 +147,19 @@ export class LocalBorrowerService implements BorrowerService {
     return { data, page, pageSize, total };
   }
 
-  async isEligible(id: string): Promise<{ eligible: boolean; reason?: string }> {
-    const borrower = await this.findById(id);
+  async isEligible(id: string, tx: Prisma.TransactionClient, semesterId?: string) {
+    if (!z.guid().safeParse(id).success) return { eligible: false, reason: 'NOT_FOUND' };
+    // FOR SHARE: an admin deactivating this borrower at the same moment waits for the checkout.
+    const [borrower] = await tx.$queryRaw<{ active: boolean }[]>`
+      SELECT active FROM borrowers WHERE id = ${id}::uuid FOR SHARE`;
     if (!borrower) return { eligible: false, reason: 'NOT_FOUND' };
-    // Rule 3: inactive borrowers cannot borrow.
+    // BR 3: inactive borrowers cannot borrow.
     if (!borrower.active) return { eligible: false, reason: 'BORROWER_INACTIVE' };
-    // Rule 3 and 11: the strike-based block (BORROWER_BLOCKED) is added here in FLG-3.
+    // BR 11: at or over the block threshold (from settings, rule 3), checkout is blocked.
+    const { blockThreshold } = await getSettings(tx);
+    if ((await countStrikes(id, tx, semesterId)) >= blockThreshold) {
+      return { eligible: false, reason: 'BORROWER_BLOCKED' };
+    }
     return { eligible: true };
   }
 }

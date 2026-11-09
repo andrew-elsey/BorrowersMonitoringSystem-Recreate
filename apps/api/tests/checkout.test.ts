@@ -25,6 +25,8 @@ beforeAll(async () => {
 
 beforeEach(async () => {
   await resetDatabase();
+  // FLG-3: checkout reads the strike thresholds from the settings row.
+  await prisma.setting.create({ data: { id: 1 } });
   const users = await prisma.user.createManyAndReturn({
     data: [
       { name: 'Hal Handler', username: 'hal', passwordHash, role: 'HANDLER' },
