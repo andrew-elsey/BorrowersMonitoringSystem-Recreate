@@ -37,9 +37,16 @@ async function signInAgain(user: ReturnType<typeof userEvent.setup>) {
 
 describe('session-expired message (TC-AUTH-37 edges)', () => {
   // `api.expired` makes every data request answer 401, as the server does once the session is gone.
-  function sessionApi(api: { expired: boolean }) {
+  // `api.loginFails` makes the next sign-in a wrong password.
+  function sessionApi(api: { expired: boolean; loginFails?: boolean }) {
     return mockApi((method, path) => {
       if (path === '/auth/me') return signedInAs(ADMIN);
+      if (path === '/auth/login' && api.loginFails) {
+        return {
+          status: 401,
+          body: apiError('INVALID_CREDENTIALS', 'Wrong username or password.'),
+        };
+      }
       if (path === '/auth/login') return { status: 200, body: { user: ADMIN } };
       if (path === '/auth/logout') return { status: 204 };
       if (api.expired) return unauthenticated;
@@ -118,6 +125,49 @@ describe('session-expired message (TC-AUTH-37 edges)', () => {
     api.expired = true;
     await router.navigate('/borrowers');
     expect(await screen.findByText(EXPIRED)).toBeTruthy();
+  });
+
+  test('a failed login after an expiry, then a sign-in and a later expiry, shows the message again', async () => {
+    const api = { expired: true, loginFails: true };
+    sessionApi(api);
+    const user = userEvent.setup();
+    const router = renderApp('/rooms');
+    expect(await screen.findByText(EXPIRED)).toBeTruthy();
+
+    api.expired = false;
+    await signInAgain(user);
+    await screen.findByText('Wrong username or password.');
+    expect(screen.queryByText(EXPIRED)).toBeNull();
+
+    api.loginFails = false;
+    await signInAgain(user);
+    await screen.findByRole('heading', { name: 'Rooms and labs' });
+
+    api.expired = true;
+    await router.navigate('/borrowers');
+    expect(await screen.findByText(EXPIRED)).toBeTruthy();
+    expect(screen.queryByText('Wrong username or password.')).toBeNull();
+  });
+});
+
+describe('every select is capped at its box width (TC-MD-35 automated part)', () => {
+  // SelectField holds the app's only <select>, so these list screens cover every filter and inline form select.
+  function expectCapped(select: HTMLElement) {
+    for (const token of ['w-full', 'max-w-full']) {
+      expect(select.classList.contains(token), `${select.id}: ${token}`).toBe(true);
+    }
+  }
+
+  test.each([
+    ['/inventory', 3],
+    ['/borrowers', 3], // Type and Status filters, and Type in the add form
+  ])('every filter select on %s has w-full max-w-full', async (path, count) => {
+    mockApi((method, p) => (p === '/auth/me' ? signedInAs(ADMIN) : emptyPage));
+    renderApp(path);
+    await screen.findByRole('heading', { level: 1 });
+    const selects = await screen.findAllByRole('combobox');
+    expect(selects).toHaveLength(count);
+    selects.forEach(expectCapped);
   });
 });
 
