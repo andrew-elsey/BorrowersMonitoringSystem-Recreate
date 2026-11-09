@@ -248,7 +248,8 @@ test('TC-FLG-34 (owner decision, BR 10, 12): only the current semester is listed
   // The old flag is kept (rule 7), and with no current semester nothing is listed.
   await prisma.semester.updateMany({ data: { isCurrent: false } });
   const none = await admin.get('/api/flags').expect(200);
-  expect(none.body).toMatchObject({ data: [], total: 0 });
+  expect(none.body).toMatchObject({ data: [], total: 0, hasCurrentSemester: false });
+  expect(res.body.hasCurrentSemester).toBe(true);
   expect(await prisma.transactionItem.count({ where: { flagStatus: 'FLAGGED' } })).toBe(2);
 });
 
@@ -271,19 +272,23 @@ test('TC-FLG-35 (rule 12): a borrower search is not cut off by 100 other name ma
   expect(res.body.data.map((row: { lineId: string }) => row.lineId)).toEqual([line!.id]);
 });
 
-test('TC-FLG-36 (rule 12): over the borrower cap a search is refused, never cut short', async () => {
+test('TC-FLG-36 (rule 12): over the borrower cap the name search is skipped, item matches still work', async () => {
   await transaction([{ item: 0 }]);
   const other = await prisma.borrower.create({
     data: { schoolId: '2026-0002', name: 'Other', type: 'STUDENT', department: 'IT' },
   });
   await transaction([{ item: 1 }], {}, { borrower: other.id });
-  const query = { returned: 'all' as const, q: 'Cruz', page: 1, pageSize: 25 };
-  await expect(listFlaggedLines(query, 1)).rejects.toMatchObject({
-    status: 422,
-    code: 'SEARCH_TOO_BROAD',
-    message: 'Too many borrowers have flagged lines; search by item or asset tag.',
-  });
-  expect((await listFlaggedLines(query, 2)).total).toBe(1); // exactly at the cap still works
+  const search = (q: string, cap: number) =>
+    listFlaggedLines({ returned: 'all', q, page: 1, pageSize: 25 }, cap);
+  // Two flagged borrowers and a cap of 1: the name is not searched, the item name still is.
+  expect(await search('Cruz', 1)).toMatchObject({ total: 0, borrowerSearchSkipped: true });
+  expect(await search('Cable', 1)).toMatchObject({ total: 1, borrowerSearchSkipped: true });
+  // Exactly at the cap the name is searched.
+  expect(await search('Cruz', 2)).toMatchObject({ total: 1, borrowerSearchSkipped: false });
+  // No search text, no skipping.
+  expect(
+    (await listFlaggedLines({ returned: 'all', page: 1, pageSize: 25 }, 1)).borrowerSearchSkipped,
+  ).toBe(false);
 });
 
 test('TC-FLG-37 (BR 10, 11): the list shows strikes and the block threshold; the override reports the new count', async () => {
@@ -307,8 +312,14 @@ test('TC-FLG-38: the batched strike count matches countStrikes', async () => {
   await transaction([{ item: 0 }]);
   await transaction([{ item: 0, flag: 'OVERRIDDEN' }]);
   await transaction([{ item: 1 }], {}, { borrower: other.id });
+  // A flagged transaction in an older semester does not count in the current one.
+  const old = await prisma.semester.create({
+    data: { name: 'S0', startDate: new Date('2026-01-05'), endDate: new Date('2026-05-31') },
+  });
+  await transaction([{ item: 0 }], {}, { semester: old.id });
   const counts = await countStrikesForBorrowers([borrowerId, other.id], semesterId);
   expect(counts.get(borrowerId)).toBe(await countStrikes(borrowerId));
   expect(counts.get(other.id)).toBe(await countStrikes(other.id));
   expect([counts.get(borrowerId), counts.get(other.id)]).toEqual([2, 1]);
+  expect(await countStrikesForBorrowers([], semesterId)).toEqual(new Map());
 });

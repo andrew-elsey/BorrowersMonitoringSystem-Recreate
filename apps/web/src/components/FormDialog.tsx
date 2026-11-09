@@ -14,6 +14,7 @@ type FormDialogProps = {
   onSubmit: FormEventHandler<HTMLFormElement>; // usually form.handleSubmit(...)
   onCancel: () => void;
   isPending?: boolean; // disables the buttons while the request runs, so it is sent once
+  describedBy?: string; // id of the text that explains the dialog, read by screen readers
   danger?: boolean; // red submit button, as ConfirmDialog has, for an action that is hard to undo
 };
 
@@ -24,6 +25,7 @@ export function FormDialog(props: FormDialogProps) {
       title={props.title}
       onCancel={props.onCancel}
       isPending={props.isPending}
+      describedBy={props.describedBy}
     >
       <form noValidate onSubmit={props.onSubmit} className="flex flex-col gap-4">
         {props.children}

@@ -43,7 +43,17 @@ export async function listFlaggedLines(
 ): Promise<FlaggedLinePage> {
   const { blockThreshold } = await getSettings();
   const semester = await getCurrentSemester();
-  if (!semester) return { data: [], page, pageSize, total: 0, blockThreshold };
+  if (!semester) {
+    return {
+      data: [],
+      page,
+      pageSize,
+      total: 0,
+      blockThreshold,
+      hasCurrentSemester: false,
+      borrowerSearchSkipped: false,
+    };
+  }
 
   const state =
     returned === 'out'
@@ -58,6 +68,7 @@ export async function listFlaggedLines(
     JOIN items i ON i.id = ti.item_id`;
 
   let search = Prisma.empty;
+  let borrowerSearchSkipped = false;
   if (q !== undefined) {
     const like = `%${q.replace(/[\\%_]/g, '\\$&')}%`;
     // Rule 1: borrowers are found through BorrowerService, never joined here. Search only among
@@ -65,19 +76,14 @@ export async function listFlaggedLines(
     // (the same fix as BRW-5's open-lines search).
     const withFlags = await prisma.$queryRaw<{ borrower_id: string }[]>`
       SELECT DISTINCT t.borrower_id ${join} ${where} LIMIT ${cap + 1}`;
-    // Never cut the list silently: a borrower past the cap would look like "no flagged lines".
-    if (withFlags.length > cap) {
-      throw new ApiError(
-        422,
-        'SEARCH_TOO_BROAD',
-        'Too many borrowers have flagged lines; search by item or asset tag.',
-      );
-    }
+    // Owner decision: over the cap the borrower-name part is skipped, not refused, so item and asset
+    // tag matches still work. The reply says so, so the screen can tell the user.
+    borrowerSearchSkipped = withFlags.length > cap;
     // shortcut: covers at most 100 flagged borrowers that match the text; upgrade if a search ever
     // needs more.
-    const found = await borrowerService.search(q, 100, {
-      ids: withFlags.map((row) => row.borrower_id),
-    });
+    const found = borrowerSearchSkipped
+      ? []
+      : await borrowerService.search(q, 100, { ids: withFlags.map((row) => row.borrower_id) });
     search = Prisma.sql`AND (i.name ILIKE ${like} OR i.asset_tag ILIKE ${like}
       OR t.borrower_id = ANY(${found.map((b) => b.id)}::uuid[]))`;
   }
@@ -112,7 +118,15 @@ export async function listFlaggedLines(
       expectedReturnDate: row.expected_return_date?.toISOString().slice(0, 10) ?? null,
     };
   });
-  return { data, page, pageSize, total, blockThreshold };
+  return {
+    data,
+    page,
+    pageSize,
+    total,
+    blockThreshold,
+    hasCurrentSemester: true,
+    borrowerSearchSkipped,
+  };
 }
 
 // BR 13: only a FLAGGED line can be overridden, before or after it is returned. Strikes are counted

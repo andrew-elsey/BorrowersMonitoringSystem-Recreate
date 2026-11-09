@@ -168,7 +168,10 @@ export function FlagReviewPage() {
         <h1 className="text-[28px] leading-tight font-bold">Flag review</h1>
         <button
           type="button"
-          onClick={() => setRunOpen(true)}
+          onClick={() => {
+            setRunRefused(undefined); // an old refusal must not stay beside a new run
+            setRunOpen(true);
+          }}
           className="h-11 cursor-pointer rounded-lg border border-primary bg-surface px-4 text-[15px] font-semibold text-primary hover:bg-primary-tint"
         >
           Run flagging now
@@ -215,13 +218,15 @@ export function FlagReviewPage() {
         </button>
       </form>
 
+      {flags.data?.borrowerSearchSkipped && (
+        <p className="text-sm text-muted">
+          Too many borrowers have flagged lines to search by name. Showing matches by item or asset
+          tag only.
+        </p>
+      )}
+
       {flags.isError ? (
-        // Too broad is not a failure to retry: the same search would be refused again.
-        flags.error instanceof ApiRequestError && flags.error.code === 'SEARCH_TOO_BROAD' ? (
-          <Alert kind="error">{flags.error.message}</Alert>
-        ) : (
-          <RetryAlert query={flags} onRetried={() => searchRef.current?.focus()} />
-        )
+        <RetryAlert query={flags} onRetried={() => searchRef.current?.focus()} />
       ) : (
         <DataTable
           caption="Flagged lines"
@@ -304,7 +309,11 @@ export function FlagReviewPage() {
           rows={flags.data?.data}
           rowKey={(line) => line.lineId}
           isLoading={flags.isPending}
-          emptyText="No flagged lines. Nothing needs review."
+          emptyText={
+            flags.data?.hasCurrentSemester === false
+              ? 'No current semester is set.'
+              : 'No flagged lines. Nothing needs review.'
+          }
           page={page}
           pageSize={PAGE_SIZE}
           total={flags.data?.total ?? 0}
@@ -316,6 +325,7 @@ export function FlagReviewPage() {
         open={runOpen}
         title="Run flagging now?"
         submitLabel="Run flagging"
+        describedBy="run-flagging-help"
         onSubmit={(event) => {
           event.preventDefault();
           run.mutate();
@@ -323,7 +333,7 @@ export function FlagReviewPage() {
         onCancel={() => setRunOpen(false)}
         isPending={run.isPending}
       >
-        <p className="text-[15px] leading-normal">
+        <p id="run-flagging-help" className="text-[15px] leading-normal">
           This flags every line that is still out and was issued before the last closing time. Lines
           already flagged or overridden are skipped, so running it again changes nothing.
         </p>

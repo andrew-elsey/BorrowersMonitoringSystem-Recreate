@@ -43,7 +43,15 @@ function fakeApi(answer?: (method: string, path: string, body: unknown) => objec
     if (method === 'GET' && path.startsWith('/flags')) {
       return {
         status: 200,
-        body: { data: [LINE], page: 1, pageSize: 25, total: 1, blockThreshold: 5 },
+        body: {
+          data: [LINE],
+          page: 1,
+          pageSize: 25,
+          total: 1,
+          blockThreshold: 5,
+          hasCurrentSemester: true,
+          borrowerSearchSkipped: false,
+        },
       };
     }
     throw new Error(`unexpected ${method} ${path}`);
@@ -86,7 +94,15 @@ test('TC-FLG-24: overriding sends the reason, confirms, and reloads the list', a
     if (overridden)
       return {
         status: 200,
-        body: { data: [], page: 1, pageSize: 25, total: 0, blockThreshold: 5 },
+        body: {
+          data: [],
+          page: 1,
+          pageSize: 25,
+          total: 0,
+          blockThreshold: 5,
+          hasCurrentSemester: true,
+          borrowerSearchSkipped: false,
+        },
       };
   });
   const user = userEvent.setup();
@@ -190,7 +206,18 @@ test('TC-FLG-40: after an override, focus goes to the search field', async () =>
     }
     // The row is gone after the reload, as in real use.
     return overridden
-      ? { status: 200, body: { data: [], page: 1, pageSize: 25, total: 0, blockThreshold: 5 } }
+      ? {
+          status: 200,
+          body: {
+            data: [],
+            page: 1,
+            pageSize: 25,
+            total: 0,
+            blockThreshold: 5,
+            hasCurrentSemester: true,
+            borrowerSearchSkipped: false,
+          },
+        }
       : undefined;
   });
   const user = userEvent.setup();
@@ -221,26 +248,51 @@ test('TC-FLG-40: after a failed load and Retry, focus goes to the search field',
   );
 });
 
-test('TC-FLG-36: a too-broad search shows the message with no Retry button', async () => {
+test('TC-FLG-36: when the name search was skipped, a note says so', async () => {
   fakeApi((method, path) =>
     method === 'GET' && path.includes('q=')
       ? {
-          status: 422,
-          body: apiError(
-            'SEARCH_TOO_BROAD',
-            'Too many borrowers have flagged lines; search by item or asset tag.',
-          ),
+          status: 200,
+          body: {
+            data: [LINE],
+            page: 1,
+            pageSize: 25,
+            total: 1,
+            blockThreshold: 5,
+            hasCurrentSemester: true,
+            borrowerSearchSkipped: true,
+          },
         }
       : undefined,
   );
   const user = userEvent.setup();
   renderApp('/flags');
-  await user.type(await screen.findByLabelText('Borrower or item'), 'Smith');
+  await user.type(await screen.findByLabelText('Borrower or item'), 'Laptop');
   await user.click(screen.getByRole('button', { name: 'Search' }));
   expect(
-    await screen.findByText('Too many borrowers have flagged lines; search by item or asset tag.'),
+    await screen.findByText(
+      'Too many borrowers have flagged lines to search by name. Showing matches by item or asset tag only.',
+    ),
   ).toBeTruthy();
-  expect(screen.queryByRole('button', { name: 'Retry' })).toBeNull();
+  expect(screen.getByRole('row', { name: /Miguel Bautista/ })).toBeTruthy();
+});
+
+test('TC-FLG-34: with no current semester the empty state says so', async () => {
+  fakeApi(() => ({
+    status: 200,
+    body: {
+      data: [],
+      page: 1,
+      pageSize: 25,
+      total: 0,
+      blockThreshold: 5,
+      hasCurrentSemester: false,
+      borrowerSearchSkipped: false,
+    },
+  }));
+  renderApp('/flags');
+  expect(await screen.findByText('No current semester is set.')).toBeTruthy();
+  expect(screen.queryByText('No flagged lines. Nothing needs review.')).toBeNull();
 });
 
 test('TC-FLG-41: Run flagging now asks first, runs, and shows the refusal within a minute', async () => {
@@ -272,10 +324,15 @@ test('TC-FLG-41: Run flagging now asks first, runs, and shows the refusal within
   );
   expect(await screen.findByText('Flagging run finished. 3 lines flagged.')).toBeTruthy();
   await user.click(screen.getByRole('button', { name: 'Run flagging now' }));
-  await user.click(
-    within(await screen.findByRole('dialog')).getByRole('button', { name: 'Run flagging' }),
+  const runDialog = await screen.findByRole('dialog');
+  // The explanation is tied to the dialog for screen readers.
+  expect(document.getElementById(runDialog.getAttribute('aria-describedby')!)!.textContent).toMatch(
+    /flags every line that is still out/,
   );
-  expect(
-    await screen.findByText('Flagging was run less than a minute ago. Try again in 38 seconds.'),
-  ).toBeTruthy();
+  await user.click(within(runDialog).getByRole('button', { name: 'Run flagging' }));
+  const refusal = 'Flagging was run less than a minute ago. Try again in 38 seconds.';
+  expect(await screen.findByText(refusal)).toBeTruthy();
+  // Opening the dialog again clears the old refusal.
+  await user.click(screen.getByRole('button', { name: 'Run flagging now' }));
+  expect(screen.queryByText(refusal)).toBeNull();
 });
