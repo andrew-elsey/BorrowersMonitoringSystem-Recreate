@@ -210,15 +210,18 @@ Paths are shortened: `api/` is `apps/api/tests/`, `web/` is `apps/web/src/pages/
 | TC-FLG-19 | FLG-3 | BR 3, 11, S8 | integration | Fil at 5 strikes checks out | `BORROWER_BLOCKED`; no transaction created | not yet |
 | TC-FLG-20 | FLG-3 | BR 11, CLAUDE.md rule 3 | integration | Change thresholds to 2, 3, 4 | Warning, notice, and block follow the new values | not yet |
 | TC-FLG-21 | FLG-3 | BR 11 | component | Open checkout for borrowers at 3, 4, and 5 strikes | Warning banner, stricter notice banner, blocked message | not yet |
-| TC-FLG-22 | FLG-4 | SPEC 5 | integration | Admin lists flagged lines | Borrower, item, note, and expected return date shown | not yet |
-| TC-FLG-23 | FLG-4 | BR 13, SPEC 7 | integration | Override with a reason of 4 characters, 5 characters, and 501 characters | 5 accepted; 4 and 501 rejected | not yet |
-| TC-FLG-24 | FLG-4 | BR 13 | integration | Override a line before it is returned and another after | Both become `OVERRIDDEN` with `override_by`, `override_at`, reason; audited | not yet |
-| TC-FLG-25 | FLG-4 | S18 | integration | Handler and view-only user call override | 403 | not yet |
+| TC-FLG-22 | FLG-4 | SPEC 5 | integration | Admin lists flagged lines | Borrower, item, note, and expected return date shown | `api/flag-override.test.ts`, `web/pages/FlagReviewPage.test.tsx` |
+| TC-FLG-23 | FLG-4 | BR 13, SPEC 7 | integration | Override with a reason of 4 characters, 5 characters, and 501 characters | 5 accepted; 4 and 501 rejected | `api/flag-override.test.ts` (4, whitespace-only, 501 refused; 5 and 500 accepted), `web/pages/FlagReviewPage.test.tsx` |
+| TC-FLG-24 | FLG-4 | BR 13 | integration | Override a line before it is returned and another after | Both become `OVERRIDDEN` with `override_by`, `override_at`, reason; audited | `api/flag-override.test.ts`, `web/pages/FlagReviewPage.test.tsx` |
+| TC-FLG-25 | FLG-4 | S18 | integration | Handler and view-only user call override | 403 | `api/flag-override.test.ts` (list and override), `web/pages/FlagReviewPage.test.tsx` (not-allowed page) |
 | TC-FLG-26 | FLG-2 | BR 9, ARCH 6 | integration | Fake clock 08:00, start the job, advance 9 hours | Line issued at 10:00 is `FLAGGED`; the next day's closing also fires | `api/flagging.test.ts` |
 | TC-FLG-27 | FLG-2 | BR 9, S22 | integration | Closing 17:00; at 16:00 admin does `PUT /api/settings` with closing 15:00 | Line issued at 10:00 is flagged at once | `api/flagging.test.ts` |
 | TC-FLG-28 | FLG-2 | BR 9, S23 | integration | Lock held at closing, so the run is skipped; release the lock | Retried after 60 s and the line is flagged | `api/flagging.test.ts` |
 | TC-FLG-29 | FLG-2 | BR 9, S11 | integration | Down Friday, started Monday 08:00 | Lines issued Friday and Saturday flagged; a Monday 07:00 line is not | `api/flagging.test.ts` |
 | TC-FLG-30 | FLG-2 | BR 9, S23 | integration | The scheduled run throws | Startup does not throw; retried after 60 s | `api/flagging.test.ts` |
+| TC-FLG-31 | FLG-4 | BR 8, 13, S13 | integration | Override a line that is still out; run the job at the next closing | Stays `OVERRIDDEN`, not flagged again | `api/flag-override.test.ts` |
+| TC-FLG-32 | FLG-4 | BR 13 | integration | Override a line that is `NONE`, already `OVERRIDDEN`, or unknown | 409 `LINE_NOT_FLAGGED`, 404 `NOT_FOUND`; no audit entry | `api/flag-override.test.ts` |
+| TC-FLG-33 | FLG-4 | BR 14 | integration | Two overrides of the same line at once | One 200 and one 409; one audit entry | `api/flag-override.test.ts` |
 
 ## RPT: Dashboard and reports
 

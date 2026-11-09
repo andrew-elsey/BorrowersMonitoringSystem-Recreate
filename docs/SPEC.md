@@ -72,7 +72,7 @@ All domain tables use UUID primary keys and `created_at` / `updated_at` timestam
 | Dashboard | all | Currently unreturned items and flagged borrowers, with notes and expected return dates |
 | Checkout | admin, handler | Borrower lookup, room or lab picker with add-new, item search with quantity, per-line note and expected return date, strike banners |
 | Return | admin, handler | Find open borrowings by borrower, item, or asset tag; return all or part; select condition. Flagged lines are marked; a retired or lost item can still be returned (owner decision 2026-11-10); `GET /api/returns/open` feeds it |
-| Flag review | admin | List of flagged lines; override with a reason |
+| Flag review | admin | List of flagged lines (`FLAGGED` only; an overridden line leaves the list) with borrower, item, note, and expected return date, filtered by returned or still out and by borrower or item text; override with a reason of 5 to 500 characters (`GET /api/flags`, `POST /api/flags/:id/override`) |
 | Inventory and categories | admin | Item and category management |
 | Borrowers | admin | Management, search, Type and Status filters, CSV import |
 | Rooms and labs | admin | Management |
