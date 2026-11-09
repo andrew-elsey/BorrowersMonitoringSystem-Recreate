@@ -93,10 +93,10 @@ test('each page sets its own tab title (TC-FND-31)', async () => {
   await waitFor(() => expect(document.title).toBe('Home · Borrowers Monitoring System'));
   await router.navigate('/checkout');
   await waitFor(() => expect(document.title).toBe('Checkout · Borrowers Monitoring System'));
-  await router.navigate('/checkout/'); // a trailing slash is the same page
-  await waitFor(() => expect(document.title).toBe('Checkout · Borrowers Monitoring System'));
   await router.navigate('/password');
   await waitFor(() => expect(document.title).toBe('Change password · Borrowers Monitoring System'));
+  await router.navigate('/checkout/'); // a trailing slash is the same page (from another title, so the change is real)
+  await waitFor(() => expect(document.title).toBe('Checkout · Borrowers Monitoring System'));
   await router.navigate('/inventory'); // a handler may not open it
   await waitFor(() => expect(document.title).toBe('Not allowed · Borrowers Monitoring System'));
   await router.navigate('/nowhere'); // redirects home
