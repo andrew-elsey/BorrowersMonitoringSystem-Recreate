@@ -305,3 +305,61 @@ test('a view-only user cannot open Return, and it is not in their menu', async (
   expect(await screen.findByRole('heading', { name: "You can't open this page" })).toBeTruthy();
   expect(screen.queryByRole('link', { name: 'Return' })).toBeNull();
 });
+
+test('TC-BRW-47: a reload with changed data does not pull focus away from the search box', async () => {
+  let reloaded = false;
+  fakeApi((method, path) => {
+    if (method === 'POST' && path === '/returns') {
+      return refuse(409, 'RETURN_EXCEEDS_OUTSTANDING', 'Only 1 of Extension cord still out.', {
+        lineId: CORDS.lineId,
+        outstanding: 1,
+      });
+    }
+    // The reload after the refusal shows a changed outstanding count (a new row key).
+    if (reloaded && method === 'GET' && path.startsWith('/returns/open')) {
+      return {
+        status: 200,
+        body: { data: [{ ...CORDS, outstanding: 1 }], page: 1, pageSize: 50, total: 1 },
+      };
+    }
+  });
+  // Hold the reload until the user has moved to the search box.
+  const realFetch = fetch;
+  let release!: () => void;
+  const gate = new Promise<void>((resolve) => (release = resolve));
+  vi.stubGlobal('fetch', async (url: string, init?: RequestInit) => {
+    if (reloaded && String(url).startsWith('/api/returns/open')) await gate;
+    return realFetch(url, init);
+  });
+  const user = userEvent.setup();
+  renderApp('/return');
+  await screen.findByText('Laptop, Dell Latitude 5440');
+  reloaded = true;
+  await user.click(screen.getAllByRole('button', { name: 'Return quantity' })[0]!);
+  await screen.findByText('Return not saved.');
+
+  await user.click(screen.getByLabelText('Search'));
+  release();
+  expect(await screen.findByText('Out: 1 of 5')).toBeTruthy();
+  expect(document.activeElement).toBe(screen.getByLabelText('Search'));
+});
+
+test('TC-BRW-48: a too-broad borrower search shows the API message', async () => {
+  fakeApi((method, path) =>
+    method === 'GET' && path.includes('q=')
+      ? refuse(
+          422,
+          'SEARCH_TOO_BROAD',
+          'Too many borrowers have items out; search by item or asset tag.',
+        )
+      : undefined,
+  );
+  const user = userEvent.setup();
+  renderApp('/return');
+  await screen.findByText('Laptop, Dell Latitude 5440');
+  await user.type(screen.getByLabelText('Search'), 'mi');
+  await user.click(screen.getByRole('button', { name: SEARCH_BUTTON }));
+  expect(
+    await screen.findByText(/Too many borrowers have items out; search by item or asset tag\./),
+  ).toBeTruthy();
+});

@@ -111,14 +111,20 @@ export function ReturnPage() {
   });
 
   // Focus the refused row (FND-7): its quantity, or its Return button for a unit line (the quantity
-  // is disabled), or the search when the reload removed the row. Runs again after the reload.
-  useEffect(() => {
+  // is disabled), or the search when the reload removed the row.
+  function focusRefused() {
     if (!refused) return;
     const focusable = [`qty-${refused.lineId}`, `return-${refused.lineId}`]
       .map((id) => document.getElementById(id) as HTMLInputElement | HTMLButtonElement | null)
       .find((element) => element && !element.disabled);
     (focusable ?? searchRef.current)?.focus();
-  }, [refused, open.data]);
+  }
+  useEffect(focusRefused, [refused]);
+  // After the reload the row may have been rebuilt (its key changed), which drops focus to the
+  // page. Move focus back only then, so it never jumps away from what the user is typing in.
+  useEffect(() => {
+    if (document.activeElement === document.body) focusRefused();
+  }, [open.data]);
   // After a return the Return button may be gone (line complete), so focus goes to the search.
   useEffect(() => {
     if (giveBack.isSuccess) searchRef.current?.focus();
