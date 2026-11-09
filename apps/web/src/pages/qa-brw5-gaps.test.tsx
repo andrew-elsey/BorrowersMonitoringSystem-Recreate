@@ -269,3 +269,43 @@ test('an admin can open Return', async () => {
   expect(await screen.findByRole('heading', { name: 'Return' })).toBeTruthy();
   expect(await screen.findByText('QA Laptop')).toBeTruthy();
 });
+
+test.each([
+  ['some left', CORD_LINE, 'You entered 6 of QA cord, but the amount still out on this line is 5.'],
+  ['nothing left', UNIT_LINE, 'QA Laptop QA-LT-1 on this line is already fully returned.'],
+])(
+  'round 2: the banner says "Nothing was recorded." exactly once (%s); the row message does not',
+  async (_case, line, message) => {
+    fakeApi({ lines: [line] }, () => ({
+      status: 409,
+      body: apiError('RETURN_EXCEEDS_OUTSTANDING', message, {
+        lineId: line.lineId,
+        outstanding: line === UNIT_LINE ? 0 : 5,
+      }),
+    }));
+    const user = userEvent.setup();
+    renderApp('/return');
+    await screen.findByText(line.item.name);
+    await user.click(screen.getByRole('button', { name: /^Return/ }));
+    const top = (await screen.findByText('Return not saved.')).closest('[role=alert]')!;
+    expect(top.textContent!.replace(/\s+/g, ' ').trim()).toBe(
+      `Return not saved. ${message} Nothing was recorded.`,
+    );
+    expect(top.textContent!.match(/Nothing was recorded\./g)).toHaveLength(1);
+    const row = document.getElementById(`qty-${line.lineId}-message`)!;
+    expect(row.textContent).toBe(message);
+  },
+);
+
+test('round 2 (BUG-1): the Search field takes its own full line below sm and shares the row from sm up', async () => {
+  fakeApi({ lines: [UNIT_LINE] });
+  renderApp('/return');
+  await screen.findByText('QA Laptop');
+  const wrapper = screen.getByLabelText('Search').closest('div.basis-full') as HTMLElement | null;
+  expect(wrapper, 'the Search wrapper has basis-full').not.toBeNull();
+  expect(wrapper!.className.split(' ')).toEqual(
+    expect.arrayContaining(['w-full', 'min-w-0', 'basis-full', 'sm:flex-1', 'sm:min-w-64']),
+  );
+  // A bare flex-1 (basis 0%) below sm is what squeezed the field in BUG-1.
+  expect(wrapper!.className.split(' ')).not.toContain('flex-1');
+});

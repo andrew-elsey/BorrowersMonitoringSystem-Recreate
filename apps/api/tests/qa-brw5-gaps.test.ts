@@ -404,3 +404,28 @@ describe('bounds and roles on GET /api/returns/open (SPEC 3, 7)', () => {
     },
   );
 });
+
+describe('RETURN_EXCEEDS_OUTSTANDING wording for asset-tagged items (round 2, BUG-2)', () => {
+  test('a unit item with nothing left says it is already fully returned, with its tag', async () => {
+    const una = await borrower('QA-0520', 'Una Twice');
+    const { line } = await issue(una, { name: 'QA Laptop', assetTag: 'QA-LT-20' });
+    await giveBack(line.id, 1, 'GOOD').expect(201);
+    const res = await giveBack(line.id, 1, 'GOOD').expect(409);
+    expect(res.body.error).toEqual({
+      code: 'RETURN_EXCEEDS_OUTSTANDING',
+      message: 'QA Laptop QA-LT-20 on this line is already fully returned.',
+      details: { lineId: line.id, outstanding: 0 },
+    });
+    expect(await prisma.return.count()).toBe(1);
+  });
+
+  test('more than is out of a unit item names the tag and never says anything was returned', async () => {
+    const val = await borrower('QA-0521', 'Val Over');
+    const { line } = await issue(val, { name: 'QA Laptop', assetTag: 'QA-LT-21' });
+    const res = await giveBack(line.id, 2, 'GOOD').expect(409);
+    expect(res.body.error.message).toBe(
+      'You entered 2 of QA Laptop QA-LT-21, but the amount still out on this line is 1.',
+    );
+    expect(res.body.error.message).not.toMatch(/returned|Nothing was recorded/);
+  });
+});
