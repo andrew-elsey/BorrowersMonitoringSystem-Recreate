@@ -3,10 +3,11 @@ import { beforeAll, beforeEach, expect, test } from 'vitest';
 import { createApp } from '../src/app.ts';
 import { hashPassword } from '../src/lib/password.ts';
 import { prisma } from '../src/lib/prisma.ts';
+import { listOpenLines } from '../src/services/returns.ts';
 import { resetDatabase } from './setup/reset-database.ts';
 
 // BRW-5: GET /api/returns/open, the Return screen's search (SPEC 5, 7; BR 5, 6). Test cases
-// TC-BRW-42, 43, and 46 in TEST_CASES.md.
+// TC-BRW-42, 43, 46, and 48 in TEST_CASES.md.
 
 const PASSWORD = 'correct-horse-battery';
 let hal: ReturnType<typeof request.agent>;
@@ -175,4 +176,22 @@ test('TC-BRW-46: a borrower with an open line is found even when 100+ borrowers 
 
   const res = await open(hal, '?by=borrower&q=alex').expect(200);
   expect(res.body.data.map((row: { lineId: string }) => row.lineId)).toEqual([line.id]);
+});
+
+test('TC-BRW-48: a borrower search over too many borrowers with open lines is refused, never cut off', async () => {
+  await issue(cara, { name: 'Laptop Dell', assetTag: 'LT-1' });
+  await issue(dan, { name: 'Projector', assetTag: 'PJ-1' });
+  const query = { by: 'borrower' as const, q: '2026', page: 1, pageSize: 25 };
+
+  // A cap of 1 stands in for 5,000 so the test needs two borrowers, not 5,001.
+  await expect(listOpenLines(query, 1)).rejects.toMatchObject({
+    status: 422,
+    code: 'SEARCH_TOO_BROAD',
+    message: 'Too many borrowers have items out; search by item or asset tag.',
+  });
+  // At the cap exactly it still works, and searching by item is never affected by it.
+  await expect(listOpenLines(query, 2)).resolves.toMatchObject({ total: 2 });
+  await expect(listOpenLines({ ...query, by: 'item', q: 'pro' }, 1)).resolves.toMatchObject({
+    total: 1,
+  });
 });

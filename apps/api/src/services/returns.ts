@@ -141,12 +141,14 @@ type OpenLineRow = {
 // Open lines for the Return screen (BRW-5, SPEC 5): lines with something still out, found by
 // borrower, item name, or asset tag. Retired and lost items are listed like any other (owner
 // decision 2026-11-10). Read-only, so no audit entry. Bounded: page size at most 100 (SPEC 7).
-export async function listOpenLines({
-  by,
-  q,
-  page,
-  pageSize,
-}: OpenLinesQuery): Promise<OpenLinePage> {
+// Rule 12: the most borrowers with open lines a borrower search will look through. `cap` is a
+// parameter only so a test can use a small number.
+export const OPEN_BORROWER_CAP = 5000;
+
+export async function listOpenLines(
+  { by, q, page, pageSize }: OpenLinesQuery,
+  cap = OPEN_BORROWER_CAP,
+): Promise<OpenLinePage> {
   let search = Prisma.empty;
   if (q !== undefined) {
     // Escaped so % and _ in the text match literally.
@@ -160,7 +162,17 @@ export async function listOpenLines({
       const withOpenLines = await prisma.$queryRaw<{ borrower_id: string }[]>`
         SELECT DISTINCT t.borrower_id FROM transactions t
         JOIN transaction_items ti ON ti.transaction_id = t.id
-        WHERE ti.quantity_borrowed > ti.quantity_returned`;
+        WHERE ti.quantity_borrowed > ti.quantity_returned LIMIT ${cap + 1}`;
+      // Never cut the list silently: a borrower past the cap would look like "nothing is out".
+      if (withOpenLines.length > cap) {
+        throw new ApiError(
+          422,
+          'SEARCH_TOO_BROAD',
+          'Too many borrowers have items out; search by item or asset tag.',
+        );
+      }
+      // shortcut: covers at most 100 borrowers with items out that match the text; upgrade if a
+      // search ever needs more.
       const found = await borrowerService.search(q, 100, {
         ids: withOpenLines.map((row) => row.borrower_id),
       });
