@@ -207,8 +207,7 @@ test('TC-BRW-24: returning more than is outstanding fails; nothing is recorded (
   );
   expect(over.body.error).toMatchObject({
     code: 'RETURN_EXCEEDS_OUTSTANDING',
-    message:
-      'You entered 3 of Extension cord, but the amount still out on this line is 2. Nothing was recorded.',
+    message: 'You entered 3 of Extension cord, but the amount still out on this line is 2.',
     details: { lineId: line.id, outstanding: 2 },
   });
 
@@ -218,6 +217,7 @@ test('TC-BRW-24: returning more than is outstanding fails; nothing is recorded (
   );
   expect(none.body.error).toMatchObject({
     code: 'RETURN_EXCEEDS_OUTSTANDING',
+    message: 'Extension cord on this line is already fully returned.',
     details: { outstanding: 0 },
   });
   expect(await prisma.return.count()).toBe(2);

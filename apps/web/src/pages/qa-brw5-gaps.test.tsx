@@ -216,7 +216,7 @@ test('Find after a refusal clears the row mark and the "not saved" message', asy
     status: 409,
     body: apiError(
       'RETURN_EXCEEDS_OUTSTANDING',
-      'You entered 6 of QA cord, but the amount still out on this line is 5. Nothing was recorded.',
+      'You entered 6 of QA cord, but the amount still out on this line is 5.',
       {
         lineId: CORD_LINE.lineId,
         outstanding: 5,
@@ -244,7 +244,7 @@ test('a refused quantity line whose reload rebuilds the row gets focus back on t
       status: 409,
       body: apiError(
         'RETURN_EXCEEDS_OUTSTANDING',
-        'You entered 5 of QA cord, but the amount still out on this line is 1. Nothing was recorded.',
+        'You entered 5 of QA cord, but the amount still out on this line is 1.',
         {
           lineId: CORD_LINE.lineId,
           outstanding: 1,

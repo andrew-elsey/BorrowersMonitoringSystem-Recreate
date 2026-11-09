@@ -240,8 +240,7 @@ test('TC-BRW-29: a flagged line is clearly marked; an unflagged one is not', asy
 });
 
 test('TC-BRW-44: a refused line is marked and focused; the message says nothing was recorded', async () => {
-  const message =
-    'You entered 3 of Extension cord, but the amount still out on this line is 2. Nothing was recorded.';
+  const message = 'You entered 3 of Extension cord, but the amount still out on this line is 2.';
   fakeApi((method, path) =>
     method === 'POST' && path === '/returns'
       ? refuse(409, 'RETURN_EXCEEDS_OUTSTANDING', message, { lineId: CORDS.lineId, outstanding: 2 })
@@ -257,7 +256,8 @@ test('TC-BRW-44: a refused line is marked and focused; the message says nothing 
 
   const top = (await screen.findByText('Return not saved.')).closest('[role=alert]')!;
   expect(top.textContent).toContain(message);
-  expect(top.textContent).toContain('Nothing was recorded.');
+  // The screen adds it once; the API message does not repeat it.
+  expect(top.textContent!.split('Nothing was recorded.')).toHaveLength(2);
   await waitFor(() => expect(document.activeElement).toBe(quantity));
   expect(quantity.getAttribute('aria-invalid')).toBe('true');
   expect(screen.getByText(message).id).toBe(quantity.getAttribute('aria-describedby')); // on the row too
@@ -316,10 +316,15 @@ test('TC-BRW-47: a reload with changed data does not pull focus away from the se
   let reloaded = false;
   fakeApi((method, path) => {
     if (method === 'POST' && path === '/returns') {
-      return refuse(409, 'RETURN_EXCEEDS_OUTSTANDING', 'Only 1 of Extension cord still out.', {
-        lineId: CORDS.lineId,
-        outstanding: 1,
-      });
+      return refuse(
+        409,
+        'RETURN_EXCEEDS_OUTSTANDING',
+        'You entered 2 of Extension cord, but the amount still out on this line is 1.',
+        {
+          lineId: CORDS.lineId,
+          outstanding: 1,
+        },
+      );
     }
     // The reload after the refusal shows a changed outstanding count (a new row key).
     if (reloaded && method === 'GET' && path.startsWith('/returns/open')) {
