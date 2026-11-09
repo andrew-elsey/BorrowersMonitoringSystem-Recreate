@@ -5,6 +5,7 @@ import { ApiError } from './lib/errors.ts';
 import { getSessionMiddleware } from './lib/session.ts';
 import { requireFetchHeader } from './middleware/auth.ts';
 import { errorHandler } from './middleware/errors.ts';
+import { createFlaggingRouter } from './routes/flagging.ts';
 import { createGlobalRateLimiter } from './middleware/request-rate-limit.ts';
 import { createAuthRouter } from './routes/auth.ts';
 import { createBorrowersRouter } from './routes/borrowers.ts';
@@ -32,6 +33,7 @@ export function createApp() {
   app.use('/api', createItemsRouter());
   app.use('/api', createRoomsRouter());
   app.use('/api', createSettingsRouter());
+  app.use('/api', createFlaggingRouter());
   app.use('/api', createTransactionsRouter());
   // Unknown API paths get the standard error format too (CLAUDE.md rule 10), not Express's HTML page.
   app.use('/api', () => {

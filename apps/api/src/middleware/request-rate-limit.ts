@@ -10,11 +10,16 @@ const GLOBAL_REQUESTS_PER_MINUTE = 600;
 // Search is typed live at the counter, so it gets more room than reports and CSV import (owner decision 2026-11-07).
 const SEARCH_REQUESTS_PER_MINUTE = 60;
 
-function createRequestLimiter(limit: number, skip?: (req: Request) => boolean) {
+function createRequestLimiter(
+  limit: number,
+  skip?: (req: Request) => boolean,
+  keyGenerator?: () => string,
+) {
   return rateLimit({
     windowMs: ONE_MINUTE_MS,
     limit,
     skip,
+    ...(keyGenerator && { keyGenerator }),
     // Also sets Retry-After when the limit is hit.
     standardHeaders: 'draft-8',
     legacyHeaders: false,
@@ -33,4 +38,9 @@ export function createGlobalRateLimiter() {
 // Search: a list request with ?q=. Reports and CSV import get their own 30 a minute limit later.
 export function createSearchRateLimiter() {
   return createRequestLimiter(SEARCH_REQUESTS_PER_MINUTE, (req) => req.query.q === undefined);
+}
+
+// Manual flagging run: once a minute in total (ARCHITECTURE.md 12.5), not per address.
+export function createFlaggingRunRateLimiter() {
+  return createRequestLimiter(1, undefined, () => 'flagging-run');
 }
