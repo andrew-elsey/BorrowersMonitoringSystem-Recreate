@@ -4,10 +4,11 @@ import { createApp } from '../src/app.ts';
 import { hashPassword } from '../src/lib/password.ts';
 import { prisma } from '../src/lib/prisma.ts';
 import { borrowerService } from '../src/services/borrowers.ts';
+import { countStrikes, countStrikesForBorrowers } from '../src/services/strikes.ts';
 import { resetDatabase } from './setup/reset-database.ts';
 
 // FLG-3: strike warnings and blocking (BR 11, 12; S8). Test cases TC-FLG-17 to TC-FLG-20 and
-// TC-FLG-41 to TC-FLG-45 in TEST_CASES.md. Strikes are set directly as FLAGGED lines.
+// TC-FLG-50 to TC-FLG-55, 58, and 59 in TEST_CASES.md. Strikes are set directly as FLAGGED lines.
 
 let hal: ReturnType<typeof request.agent>;
 let vic: ReturnType<typeof request.agent>;
@@ -158,7 +159,7 @@ test('TC-FLG-20 (rule 3): changing the thresholds to 2, 3, 4 moves the warning, 
   expect((await checkout()).body.error.code).toBe('BORROWER_BLOCKED'); // 4 >= 4
 });
 
-test('TC-FLG-41 (S8): a blocked borrower can still return', async () => {
+test('TC-FLG-50 (S8): a blocked borrower can still return', async () => {
   const open = await checkout();
   expect(open.status).toBe(201);
   await addStrikes(5);
@@ -171,7 +172,7 @@ test('TC-FLG-41 (S8): a blocked borrower can still return', async () => {
     .expect(201);
 });
 
-test('TC-FLG-42 (BR 11, S8): an overridden flag takes Fil from 5 strikes to 4 and borrowing works again', async () => {
+test('TC-FLG-51 (BR 11, S8): an overridden flag takes Fil from 5 strikes to 4 and borrowing works again', async () => {
   await addStrikes(5);
   expect((await checkout()).status).toBe(409);
   const flagged = await prisma.transactionItem.findFirstOrThrow({
@@ -184,7 +185,7 @@ test('TC-FLG-42 (BR 11, S8): an overridden flag takes Fil from 5 strikes to 4 an
   expect((await checkout()).status).toBe(201);
 });
 
-test('TC-FLG-43 (BR 12): strikes of another semester do not block; the block uses the semester checkout records', async () => {
+test('TC-FLG-52 (BR 12): strikes of another semester do not block; the block uses the semester checkout records', async () => {
   const other = await prisma.semester.create({
     data: { name: 'S0', startDate: new Date('2026-01-05'), endDate: new Date('2026-05-31') },
   });
@@ -199,20 +200,20 @@ test('TC-FLG-43 (BR 12): strikes of another semester do not block; the block use
   expect(await borrowerService.isEligible(filId, tx, semesterId)).toEqual({ eligible: true });
 });
 
-test('TC-FLG-44: the strikes endpoint is for staff, 404 for an unknown borrower, 400 for a bad id', async () => {
+test('TC-FLG-53: the strikes endpoint is for staff, 404 for an unknown borrower, 400 for a bad id', async () => {
   expect((await strikes(filId, vic)).status).toBe(403);
   expect((await strikes('00000000-0000-4000-8000-000000000000')).body.error.code).toBe('NOT_FOUND');
   expect((await strikes('not-a-uuid')).status).toBe(400);
   expect((await request(createApp()).get(`/api/borrowers/${filId}/strikes`)).status).toBe(401);
 });
 
-test('TC-FLG-45: with no current semester the endpoint gives 0 strikes and no semester name', async () => {
+test('TC-FLG-54: with no current semester the endpoint gives 0 strikes and no semester name', async () => {
   await addStrikes(5);
   await prisma.semester.update({ where: { id: semesterId }, data: { isCurrent: false } });
   expect((await strikes()).body).toMatchObject({ strikes: 0, semesterName: null });
 });
 
-test('TC-FLG-46: isEligible locks the borrower row FOR SHARE, so a deactivation waits for the checkout', async () => {
+test('TC-FLG-55: isEligible locks the borrower row FOR SHARE, so a deactivation waits for the checkout', async () => {
   // The borrower row is locked FOR SHARE inside the checkout transaction, so an update waits.
   await prisma.$transaction(async (tx) => {
     await borrowerService.isEligible(filId, tx, semesterId);
@@ -222,4 +223,54 @@ test('TC-FLG-46: isEligible locks the borrower row FOR SHARE, so a deactivation 
     });
     await expect(update).rejects.toThrow();
   });
+});
+
+test("TC-FLG-58 (BR 10, 11): GET /api/returns/open carries each line's strikes and the thresholds from settings", async () => {
+  const gus = await newBorrower('2026-0002');
+  await addStrikes(3);
+  await prisma.setting.update({ where: { id: 1 }, data: { blockThreshold: 6 } });
+  expect((await checkout()).status).toBe(201); // Fil has a line out, with 3 strikes
+  const item = await newItem();
+  await prisma.transaction.create({
+    data: {
+      borrowerId: gus,
+      locationId,
+      issuedById: halId,
+      semesterId,
+      lines: { create: [{ itemId: item.id, quantityBorrowed: 1 }] },
+    },
+  });
+  const body = (await hal.get('/api/returns/open')).body;
+  expect(body).toMatchObject({ warningThreshold: 3, noticeThreshold: 4, blockThreshold: 6 });
+  const strikesOf = (id: string) =>
+    body.data
+      .filter((line: { borrower: { id: string } }) => line.borrower.id === id)
+      .map((line: { strikes: number }) => line.strikes);
+  expect([...new Set(strikesOf(filId))]).toEqual([3]);
+  expect([...new Set(strikesOf(gus))]).toEqual([0]);
+});
+
+test('TC-FLG-59 (BR 10, 12): the batched count matches countStrikes; with no current semester every line shows 0', async () => {
+  const gus = await newBorrower('2026-0002');
+  await addStrikes(2);
+  await addStrikes(1, gus);
+  const counts = await countStrikesForBorrowers([filId, gus], semesterId);
+  expect(counts.get(filId)).toBe(await countStrikes(filId));
+  expect(counts.get(gus)).toBe(await countStrikes(gus));
+  expect([counts.get(filId), counts.get(gus)]).toEqual([2, 1]);
+
+  const item = await newItem();
+  await prisma.transaction.create({
+    data: {
+      borrowerId: filId,
+      locationId,
+      issuedById: halId,
+      semesterId,
+      lines: { create: [{ itemId: item.id, quantityBorrowed: 1 }] },
+    },
+  });
+  await prisma.semester.update({ where: { id: semesterId }, data: { isCurrent: false } });
+  const lines = (await hal.get('/api/returns/open')).body.data;
+  expect(lines.length).toBeGreaterThan(0);
+  expect(lines.every((line: { strikes: number }) => line.strikes === 0)).toBe(true);
 });
