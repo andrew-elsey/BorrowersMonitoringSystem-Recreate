@@ -13,6 +13,9 @@ import { audit } from '../lib/audit.ts';
 import { ApiError } from '../lib/errors.ts';
 import { prisma } from '../lib/prisma.ts';
 import { borrowerService } from './borrowers.ts';
+import { getCurrentSemester } from './semesters.ts';
+import { getSettings } from './settings.ts';
+import { countStrikesForBorrowers } from './strikes.ts';
 
 // Returns (BRW-4, BR 5 and 6). The route checks the role and passes the signed-in user as the
 // receiving handler (BR 5). There is no borrower check at all: returns are never blocked (BR 11).
@@ -205,6 +208,13 @@ export async function listOpenLines(
       b,
     ]),
   );
+  // FLG-3: one grouped query for the page's borrowers, in the current semester. With no current
+  // semester every count is 0 (BR 10).
+  const semester = await getCurrentSemester();
+  const strikes = semester
+    ? await countStrikesForBorrowers([...borrowers.keys()], semester.id)
+    : new Map<string, number>();
+  const { warningThreshold, noticeThreshold, blockThreshold } = await getSettings();
   const data: OpenLine[] = rows.map((row) => {
     const borrower = borrowers.get(row.borrower_id)!;
     return {
@@ -226,7 +236,8 @@ export async function listOpenLines(
       outstanding: row.quantity_borrowed - row.quantity_returned,
       flagStatus: row.flag_status,
       flaggedAt: row.flagged_at?.toISOString() ?? null,
+      strikes: strikes.get(row.borrower_id) ?? 0,
     };
   });
-  return { data, page, pageSize, total };
+  return { data, page, pageSize, total, warningThreshold, noticeThreshold, blockThreshold };
 }

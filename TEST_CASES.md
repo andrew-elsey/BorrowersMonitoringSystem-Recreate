@@ -161,7 +161,7 @@ Paths are shortened: `api/` is `apps/api/tests/`, `web/` is `apps/web/src/pages/
 | TC-BRW-23 | BRW-4 | BR 6 | integration | Return a flagged line in full | Quantities change; `flag_status` stays `FLAGGED` | `api/returns.test.ts` |
 | TC-BRW-24 | BRW-4 | S15 | integration | Return 3 when 2 are outstanding; return on a line with nothing outstanding | `RETURN_EXCEEDS_OUTSTANDING` both times, with the message "You entered 3 of Extension cord, but the amount still out on this line is 2." (and "Extension cord on this line is already fully returned." when 0 are out) | `api/returns.test.ts` |
 | TC-BRW-25 | BRW-4 | S17 | integration | Return a unit laptop as `DAMAGED`; return a quantity item as `DAMAGED` | Laptop: event and item condition `DAMAGED`, status stays `ACTIVE`; quantity item: condition on the event only | `api/returns.test.ts` |
-| TC-BRW-26 | BRW-4 | BR 11 | integration | Return items for a borrower at 5 strikes | Return works (returns are never blocked) | `api/returns.test.ts` (5 transactions with a `FLAGGED` line, borrower also inactive; re-check once FLG-3 adds blocking) |
+| TC-BRW-26 | BRW-4 | BR 11 | integration | Return items for a borrower at 5 strikes | Return works (returns are never blocked) | `api/returns.test.ts` (5 transactions with a `FLAGGED` line, borrower also inactive), `api/strike-blocking.test.ts` (blocked at 5 strikes, still returns; TC-FLG-50) |
 | TC-BRW-27 | BRW-5 | SPEC 5 | component | Find open borrowings by borrower, by item, and by asset tag | Matching open lines shown | `web/ReturnPage.test.tsx` (the first load lists every open line; the screen also shows borrower, item and tag, room, quantity out, expected date) |
 | TC-BRW-28 | BRW-5 | BR 5 | component | Return all of one line and part of another, choosing condition | Requests sent with the chosen quantities and conditions | `web/ReturnPage.test.tsx` (GOOD is the default; a unit line is fixed at 1; the confirmation says the flag stays; a bad quantity is stopped on the row; the list reloads after a return, and the quantity box restarts from the new outstanding count) |
 | TC-BRW-29 | BRW-5 | BR 6 | component | Show a borrower with a flagged line | The flagged line is clearly marked | `web/ReturnPage.test.tsx` (the Flagged badge has an icon and the word, the row is tinted) |
@@ -205,11 +205,11 @@ Paths are shortened: `api/` is `apps/api/tests/`, `web/` is `apps/web/src/pages/
 | TC-FLG-14 | FLG-2 | ARCH 12.5 | integration | Start a scheduled run and a manual run at the same time | Advisory lock: runs never overlap | `api/flagging.test.ts` |
 | TC-FLG-15 | FLG-2 | SPEC 3, ARCH 12.5 | integration | Admin triggers the job twice within a minute; handler triggers it | Second admin call refused (once per minute); handler gets 403 | `api/flagging.test.ts` |
 | TC-FLG-16 | FLG-2 | BACKLOG FLG-2 | integration | Run the job | Each run is logged | `api/flagging.test.ts` |
-| TC-FLG-17 | FLG-3 | BR 11, S8 | integration | Fil at 3 strikes checks out | Checkout works; the warning is shown | not yet |
-| TC-FLG-18 | FLG-3 | BR 11, S8 | integration | Fil at 4 strikes checks out | Checkout works; the stricter notice is shown | not yet |
-| TC-FLG-19 | FLG-3 | BR 3, 11, S8 | integration | Fil at 5 strikes checks out | `BORROWER_BLOCKED`; no transaction created | not yet |
-| TC-FLG-20 | FLG-3 | BR 11, CLAUDE.md rule 3 | integration | Change thresholds to 2, 3, 4 | Warning, notice, and block follow the new values | not yet |
-| TC-FLG-21 | FLG-3 | BR 11 | component | Open checkout for borrowers at 3, 4, and 5 strikes | Warning banner, stricter notice banner, blocked message | not yet |
+| TC-FLG-17 | FLG-3 | BR 11, S8 | integration | Fil at 3 strikes checks out | Checkout works; the warning is shown | `api/strike-blocking.test.ts` (checkout 201; `GET /api/borrowers/:id/strikes` gives the count and thresholds the banner is built from), `web/pages/strike-banners.test.tsx` |
+| TC-FLG-18 | FLG-3 | BR 11, S8 | integration | Fil at 4 strikes checks out | Checkout works; the stricter notice is shown | `api/strike-blocking.test.ts`, `web/pages/strike-banners.test.tsx` |
+| TC-FLG-19 | FLG-3 | BR 3, 11, S8 | integration | Fil at 5 strikes checks out | `BORROWER_BLOCKED`; no transaction created | `api/strike-blocking.test.ts` (409, nothing created, no `CHECKOUT` audit entry) |
+| TC-FLG-20 | FLG-3 | BR 11, CLAUDE.md rule 3 | integration | Change thresholds to 2, 3, 4 | Warning, notice, and block follow the new values | `api/strike-blocking.test.ts`, `web/pages/strike-banners.test.tsx` |
+| TC-FLG-21 | FLG-3 | BR 11 | component | Open checkout for borrowers at 3, 4, and 5 strikes | Warning banner, stricter notice banner, blocked message | `web/pages/strike-banners.test.tsx` |
 | TC-FLG-22 | FLG-4 | SPEC 5 | integration | Admin lists flagged lines | Borrower, item, note, and expected return date shown | not yet |
 | TC-FLG-23 | FLG-4 | BR 13, SPEC 7 | integration | Override with a reason of 4 characters, 5 characters, and 501 characters | 5 accepted; 4 and 501 rejected | not yet |
 | TC-FLG-24 | FLG-4 | BR 13 | integration | Override a line before it is returned and another after | Both become `OVERRIDDEN` with `override_by`, `override_at`, reason; audited | not yet |
@@ -219,6 +219,16 @@ Paths are shortened: `api/` is `apps/api/tests/`, `web/` is `apps/web/src/pages/
 | TC-FLG-28 | FLG-2 | BR 9, S23 | integration | Lock held at closing, so the run is skipped; release the lock | Retried after 60 s and the line is flagged | `api/flagging.test.ts` |
 | TC-FLG-29 | FLG-2 | BR 9, S11 | integration | Down Friday, started Monday 08:00 | Lines issued Friday and Saturday flagged; a Monday 07:00 line is not | `api/flagging.test.ts` |
 | TC-FLG-30 | FLG-2 | BR 9, S23 | integration | The scheduled run throws | Startup does not throw; retried after 60 s | `api/flagging.test.ts` |
+| TC-FLG-50 | FLG-3 | BR 11, S8 | integration | Fil is blocked at 5 strikes and returns an item he has out | Return works (returns are never blocked) | `api/strike-blocking.test.ts` |
+| TC-FLG-51 | FLG-3 | BR 11, S8 | integration | Fil at 5 strikes; one flag is overridden | 4 strikes; checkout works again | `api/strike-blocking.test.ts` |
+| TC-FLG-52 | FLG-3 | BR 11, 12 | integration | 5 strikes in an earlier semester; `isEligible` given each semester id | The current semester does not block; the semester given is the one counted | `api/strike-blocking.test.ts` |
+| TC-FLG-53 | FLG-3 | SPEC 3, 7 | integration | `GET /api/borrowers/:id/strikes` as viewer, unknown id, bad id, signed out | 403, `NOT_FOUND`, 400, 401 | `api/strike-blocking.test.ts` |
+| TC-FLG-54 | FLG-3 | BR 10, 12 | integration | No current semester; strikes endpoint | 0 strikes, no semester name | `api/strike-blocking.test.ts` |
+| TC-FLG-55 | FLG-3 | CLAUDE.md rule 1, owner decision 2026-11-10 | integration | `isEligible` in a transaction; another transaction deactivates the borrower | The update waits (borrower row locked `FOR SHARE`) | `api/strike-blocking.test.ts` |
+| TC-FLG-56 | FLG-3 | BR 11, SPEC 5 | component | Open Return for a borrower at 5 strikes | Strike badge shown from the open-lines reply (no `/strikes` request); Return button still enabled | `web/pages/strike-banners.test.tsx` |
+| TC-FLG-57 | FLG-3 | BR 11, SPEC 8 | component | The strikes load fails on Checkout | A Retry message shows, not "0 strikes" | `web/pages/strike-banners.test.tsx` |
+| TC-FLG-58 | FLG-3 | BR 10, 11, rule 3 | integration | `GET /api/returns/open` with borrowers at 3 and 0 strikes, block threshold 6 | Each line carries its borrower's strikes; the reply carries the thresholds from settings | `api/strike-blocking.test.ts` |
+| TC-FLG-59 | FLG-3 | BR 10, 12 | integration | Batched strike count against `countStrikes`; no current semester | Same numbers; every open line shows 0 | `api/strike-blocking.test.ts` |
 
 ## RPT: Dashboard and reports
 

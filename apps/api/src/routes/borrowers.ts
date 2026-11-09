@@ -7,9 +7,11 @@ import {
 } from '@bms/shared';
 import { Router } from 'express';
 import { z } from 'zod';
+import { ApiError } from '../lib/errors.ts';
 import { requireRole } from '../middleware/auth.ts';
 import { createSearchRateLimiter } from '../middleware/request-rate-limit.ts';
 import { borrowerService, createBorrower, updateBorrower } from '../services/borrowers.ts';
+import { getStrikeStatus } from '../services/strikes.ts';
 
 // HTTP only: parse, authorize, call the service (ARCHITECTURE.md 4). Rules live in services/borrowers.ts.
 // z.guid, like BorrowerService.findById: any uuid PostgreSQL accepts.
@@ -27,6 +29,19 @@ export function createBorrowersRouter() {
     async (req, res) => {
       const { q, page, pageSize } = borrowerLookupQuerySchema.parse(req.query);
       res.json(await borrowerService.list({ q, page, pageSize }));
+    },
+  );
+
+  // Strikes and thresholds for the Checkout and Return screens (FLG-3, BR 11). One count query.
+  router.get(
+    '/borrowers/:id/strikes',
+    requireRole(...PERMISSIONS.checkoutAndReturn),
+    async (req, res) => {
+      const { id } = idParams.parse(req.params);
+      if (!(await borrowerService.findById(id))) {
+        throw new ApiError(404, 'NOT_FOUND', 'Borrower not found.');
+      }
+      res.json(await getStrikeStatus(id));
     },
   );
 

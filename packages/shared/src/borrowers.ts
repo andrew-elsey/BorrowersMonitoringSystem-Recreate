@@ -60,6 +60,16 @@ export const borrowerListQuerySchema = pageQuerySchema.extend({
 });
 export type BorrowerListQuery = z.infer<typeof borrowerListQuerySchema>;
 
+// GET /api/borrowers/:id/strikes (FLG-3): the borrower's strikes this semester and the thresholds
+// from settings, so Checkout and Return can show the warning, notice, and blocked messages.
+export type StrikeStatus = {
+  strikes: number;
+  warningThreshold: number;
+  noticeThreshold: number;
+  blockThreshold: number;
+  semesterName: string | null;
+};
+
 // GET /api/borrowers/lookup?q=&page=&pageSize= (BRW-3): the checkout borrower search for admins
 // and handlers. q is required; BorrowerService checks it against the search bounds (SPEC.md 7).
 export const borrowerLookupQuerySchema = pageQuerySchema.extend({

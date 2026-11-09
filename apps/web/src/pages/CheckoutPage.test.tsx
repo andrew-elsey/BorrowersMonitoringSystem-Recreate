@@ -109,6 +109,19 @@ function fakeApi(answer?: Answer) {
     if (method === 'GET' && path.startsWith('/borrowers/lookup?q=')) return page([PAOLO, RHEA]);
     if (method === 'GET' && path.startsWith('/rooms')) return page(rooms);
     if (method === 'GET' && path.startsWith('/items?q=')) return page([LAPTOP, OUT, REPAIR, CORD]);
+    // FLG-3: Checkout loads the chosen borrower's strikes.
+    if (method === 'GET' && path.endsWith('/strikes')) {
+      return {
+        status: 200,
+        body: {
+          strikes: 0,
+          warningThreshold: 3,
+          noticeThreshold: 4,
+          blockThreshold: 5,
+          semesterName: null,
+        },
+      };
+    }
     if (method === 'GET' && path === '/closing-time') {
       return { status: 200, body: { closingTime: '17:00' } };
     }
@@ -160,7 +173,9 @@ test('TC-BRW-14: borrower lookup shows name, type, and department; an inactive b
   await user.click(within(results).getByRole('button', { name: 'Choose Paolo Garcia' }));
 
   const chosen = screen.getByRole('group', { name: 'Chosen borrower' });
-  expect(chosen.textContent).toBe('Paolo Garcia2022-15530 · Student · Multimedia Arts');
+  // The strike count (FLG-3) joins the box once it has loaded.
+  await within(chosen).findByText('0 strikes');
+  expect(chosen.textContent).toBe('Paolo Garcia2022-15530 · Student · Multimedia Arts0 strikes');
   expect(screen.queryByRole('list', { name: 'Borrowers found' })).toBeNull();
 
   // BR 3: the API refuses an inactive borrower; the screen says so and does not offer Confirm.

@@ -143,7 +143,10 @@ describe('findById', () => {
     'returns null for the malformed id %j instead of throwing',
     async (id) => {
       expect(await service.findById(id)).toBeNull();
-      expect(await service.isEligible(id)).toEqual({ eligible: false, reason: 'NOT_FOUND' });
+      expect(await service.isEligible(id, prisma)).toEqual({
+        eligible: false,
+        reason: 'NOT_FOUND',
+      });
     },
   );
 });

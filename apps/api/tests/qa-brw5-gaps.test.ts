@@ -41,6 +41,8 @@ const lineIds = (body: { data: { lineId: string }[] }) => body.data.map((line) =
 
 beforeEach(async () => {
   await resetDatabase();
+  // FLG-3: the open lines reply carries the strike thresholds from the settings row.
+  await prisma.setting.create({ data: { id: 1 } });
   const passwordHash = await hashPassword(PASSWORD);
   const users = await prisma.user.createManyAndReturn({
     data: [
