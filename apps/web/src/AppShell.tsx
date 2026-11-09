@@ -11,6 +11,7 @@ const NAV_ITEMS = [
   { to: '/', label: 'Home', roles: PERMISSIONS.viewDashboardAndReports },
   { to: '/checkout', label: 'Checkout', roles: PERMISSIONS.checkoutAndReturn },
   { to: '/return', label: 'Return', roles: PERMISSIONS.checkoutAndReturn },
+  { to: '/flags', label: 'Flag review', roles: PERMISSIONS.overrideFlags },
   { to: '/inventory', label: 'Inventory and categories', roles: PERMISSIONS.manageMasterData },
   { to: '/borrowers', label: 'Borrowers', roles: PERMISSIONS.manageMasterData },
   { to: '/rooms', label: 'Rooms and labs', roles: PERMISSIONS.manageMasterData },
