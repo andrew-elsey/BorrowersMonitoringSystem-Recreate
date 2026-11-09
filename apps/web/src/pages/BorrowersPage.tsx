@@ -226,13 +226,13 @@ export function BorrowersPage() {
           columns={[
             {
               header: 'School ID',
-              cell: (b) => <span className="wrap-anywhere">{b.schoolId}</span>,
+              cell: (b) => <span className="break-words">{b.schoolId}</span>,
             },
-            { header: 'Name', cell: (b) => <strong className="wrap-anywhere">{b.name}</strong> },
+            { header: 'Name', cell: (b) => <strong className="break-words">{b.name}</strong> },
             { header: 'Type', cell: (b) => TYPE_LABELS[b.type] },
             {
               header: 'Department',
-              cell: (b) => <span className="wrap-anywhere">{b.department}</span>,
+              cell: (b) => <span className="break-words">{b.department}</span>,
             },
             { header: 'Status', cell: (b) => <StatusBadge active={b.active} /> },
             { header: 'Actions', cell: (b) => actions(b) },

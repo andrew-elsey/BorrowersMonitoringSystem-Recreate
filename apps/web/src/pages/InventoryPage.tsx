@@ -176,7 +176,7 @@ function CategoriesTab() {
               {
                 header: 'Category',
                 // A long name with no spaces must wrap, or it pushes the buttons out of sight.
-                cell: (category) => <strong className="wrap-anywhere">{category.name}</strong>,
+                cell: (category) => <strong className="break-words">{category.name}</strong>,
               },
               { header: 'Items', cell: (category) => category.itemCount },
               { header: 'Actions', cell: (category) => actions(category) },
