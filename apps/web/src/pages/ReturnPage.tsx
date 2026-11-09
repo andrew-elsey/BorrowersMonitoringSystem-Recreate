@@ -224,7 +224,7 @@ export function ReturnPage() {
             onChange={(event) => setBy(event.target.value)}
           />
         </div>
-        <div className="w-full min-w-0 flex-1 sm:min-w-64">
+        <div className="w-full min-w-0 basis-full sm:flex-1 sm:min-w-64">
           <Field
             ref={searchRef}
             id="open-search"

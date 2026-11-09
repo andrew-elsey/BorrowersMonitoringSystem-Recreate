@@ -240,7 +240,8 @@ test('TC-BRW-29: a flagged line is clearly marked; an unflagged one is not', asy
 });
 
 test('TC-BRW-44: a refused line is marked and focused; the message says nothing was recorded', async () => {
-  const message = 'Only 2 of Extension cord still out, 3 returned.';
+  const message =
+    'You entered 3 of Extension cord, but the amount still out on this line is 2. Nothing was recorded.';
   fakeApi((method, path) =>
     method === 'POST' && path === '/returns'
       ? refuse(409, 'RETURN_EXCEEDS_OUTSTANDING', message, { lineId: CORDS.lineId, outstanding: 2 })
@@ -289,6 +290,11 @@ test('TC-BRW-45: the layout can shrink to the window (jsdom has no layout; width
   const list = screen.getByRole('region', { name: 'Open borrowings' });
   expect(list.className.split(' ')).toEqual(
     expect.arrayContaining(['min-w-0', 'max-w-full', 'w-full']),
+  );
+  // Under 640 px the Search field takes a full line (basis-full); flex-1 alone made it collapse.
+  const searchField = screen.getByLabelText('Search').parentElement!.parentElement!;
+  expect(searchField.className.split(' ')).toEqual(
+    expect.arrayContaining(['basis-full', 'sm:flex-1', 'min-w-0']),
   );
   const findBy = screen.getByLabelText('Find by').parentElement!.parentElement!;
   expect(findBy.className.split(' ')).toEqual(
