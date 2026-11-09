@@ -390,16 +390,28 @@ export function InventoryItems() {
               columns={[
                 {
                   header: 'Name',
-                  cell: (i) => <strong className="wrap-anywhere">{i.name}</strong>,
+                  cell: (i) => <strong className="break-words">{i.name}</strong>,
                 },
                 {
                   header: 'Category',
-                  cell: (i) => <span className="wrap-anywhere">{i.category.name}</span>,
+                  cell: (i) => <span className="break-words">{i.category.name}</span>,
                 },
                 { header: 'Tracking', cell: (i) => TRACKING_LABELS[i.trackingType] },
                 {
                   header: 'Asset tag',
-                  cell: (i) => <span className="wrap-anywhere">{i.assetTag ?? '—'}</span>,
+                  cell: (i) => <span className="break-words">{i.assetTag ?? '—'}</span>,
+                },
+                {
+                  header: 'Available',
+                  // Worded as in the approved mockup. Only ACTIVE items can be issued (BR 1).
+                  cell: (i) =>
+                    i.status !== 'ACTIVE'
+                      ? '—'
+                      : i.trackingType === 'UNIT'
+                        ? i.available > 0
+                          ? 'Available'
+                          : 'Out'
+                        : `${i.available} of ${i.totalQuantity}`,
                 },
                 { header: 'Condition', cell: (i) => CONDITION_LABELS[i.condition] },
                 {

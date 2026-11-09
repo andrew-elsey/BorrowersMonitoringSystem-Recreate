@@ -56,7 +56,18 @@ function fakeApi(answer?: (method: string, path: string, body: unknown) => Reply
     const reply = answer?.(method, path, body);
     if (reply) return reply;
     if (method === 'GET' && path.startsWith('/items')) {
-      return { status: 200, body: { data: [CORD, LAPTOP], page: 1, pageSize: 25, total: 2 } };
+      return {
+        status: 200,
+        body: {
+          data: [
+            { ...CORD, available: 8 },
+            { ...LAPTOP, available: 0 },
+          ],
+          page: 1,
+          pageSize: 25,
+          total: 2,
+        },
+      };
     }
     throw new Error(`unexpected ${method} ${path}`);
   });
@@ -80,15 +91,24 @@ test('Items is the first tab and lists items as in the mockup', async () => {
     within(table)
       .getAllByRole('columnheader')
       .map((cell) => cell.textContent),
-  ).toEqual(['Name', 'Category', 'Tracking', 'Asset tag', 'Condition', 'Status', 'Actions']);
+  ).toEqual([
+    'Name',
+    'Category',
+    'Tracking',
+    'Asset tag',
+    'Available',
+    'Condition',
+    'Status',
+    'Actions',
+  ]);
   expect(
     await within(table).findByRole('row', {
-      name: /Laptop, Dell Latitude 5440 Computers Unit LT-0009 Damaged Under repair/,
+      name: /Laptop, Dell Latitude 5440 Computers Unit LT-0009 — Damaged Under repair/,
     }),
   ).toBeTruthy();
   expect(
     within(table).getByRole('row', {
-      name: /Extension cord, 5 m Cables and power Quantity — Good Active/,
+      name: /Extension cord, 5 m Cables and power Quantity — 8 of 20 Good Active/,
     }),
   ).toBeTruthy();
 
