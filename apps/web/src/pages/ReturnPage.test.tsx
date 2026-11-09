@@ -144,9 +144,17 @@ test('no match shows a message', async () => {
 });
 
 test('TC-BRW-28: return all of one line and part of another, choosing the condition', async () => {
-  const fetchMock = fakeApi((method, path, body) =>
-    method === 'POST' && path === '/returns' ? recorded(body) : undefined,
-  );
+  // The list the fake API answers with; it shrinks as returns are recorded (the reload).
+  const cords = { ...CORDS, outstanding: 4 };
+  const current = [LAPTOP, cords];
+  const fetchMock = fakeApi((method, path, body) => {
+    if (method !== 'POST' || path !== '/returns') return undefined;
+    const { lineId, quantity } = (body as { lines: { lineId: string; quantity: number }[] })
+      .lines[0]!;
+    if (lineId === LAPTOP.lineId) current.splice(0, 1);
+    else current[current.length - 1] = { ...cords, outstanding: cords.outstanding - quantity };
+    return recorded(body);
+  }, current);
   const user = userEvent.setup();
   renderApp('/return');
   await screen.findByText('Laptop, Dell Latitude 5440');
@@ -169,6 +177,8 @@ test('TC-BRW-28: return all of one line and part of another, choosing the condit
   expect(status).toContain('received from Miguel Bautista at 14:32 (condition: damaged)');
   expect(status).toContain('The flag on this line stays');
   await waitFor(() => expect(document.activeElement).toBe(screen.getByLabelText('Search')));
+  // The list reloads: the returned line is gone.
+  await waitFor(() => expect(screen.queryByText('Laptop, Dell Latitude 5440')).toBeNull());
 
   // A quantity line: part of what is out, as Fair.
   const quantity = screen.getByLabelText('Quantity to return for Extension cord, 5 m');
@@ -180,6 +190,41 @@ test('TC-BRW-28: return all of one line and part of another, choosing the condit
   expect(sent(fetchMock)[1]).toEqual({
     lines: [{ lineId: CORDS.lineId, quantity: 1, condition: 'FAIR' }],
   });
+  // After the reload the line shows what is left, and the quantity box starts again from it.
+  expect(await screen.findByText('Out: 3 of 5')).toBeTruthy();
+  expect(
+    (screen.getByLabelText('Quantity to return for Extension cord, 5 m') as HTMLInputElement).value,
+  ).toBe('3');
+});
+
+test('TC-BRW-47: a refused unit line focuses its Return button; a line that left the list focuses the search', async () => {
+  let gone = false;
+  fakeApi((method, path) => {
+    if (method === 'POST' && path === '/returns') {
+      return refuse(409, 'RETURN_EXCEEDS_OUTSTANDING', 'Nothing of Laptop is still out.', {
+        lineId: LAPTOP.lineId,
+        outstanding: 0,
+      });
+    }
+    // After the refusal the reload no longer has the line (someone else returned it).
+    if (gone && method === 'GET' && path.startsWith('/returns/open')) {
+      return { status: 200, body: { data: [CORDS], page: 1, pageSize: 50, total: 1 } };
+    }
+  });
+  const user = userEvent.setup();
+  renderApp('/return');
+  await screen.findByText('Laptop, Dell Latitude 5440');
+  await user.click(screen.getByRole('button', { name: 'Return' }));
+  await screen.findByText('Return not saved.');
+  // The quantity box of a unit line is disabled, so focus goes to its Return button.
+  await waitFor(() =>
+    expect(document.activeElement).toBe(screen.getByRole('button', { name: 'Return' })),
+  );
+
+  gone = true;
+  await user.click(screen.getByRole('button', { name: 'Return' }));
+  await waitFor(() => expect(screen.queryByText('Laptop, Dell Latitude 5440')).toBeNull());
+  await waitFor(() => expect(document.activeElement).toBe(screen.getByLabelText('Search')));
 });
 
 test('TC-BRW-29: a flagged line is clearly marked; an unflagged one is not', async () => {

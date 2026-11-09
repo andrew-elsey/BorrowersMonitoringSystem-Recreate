@@ -28,6 +28,7 @@ import { Field, SelectField, showApiFieldErrors } from '../components/Field';
 import { useMessageArea, useNotify } from '../components/Notifications';
 import { RetryAlert } from '../components/RetryAlert';
 import { StatusBadge } from '../components/StatusBadge';
+import { TIMEZONE } from '../timezone';
 
 // Checkout (SPEC.md 5, admins and handlers, BRW-3). Steps 1 to 3 fill the form, the Summary panel
 // confirms it. Every rule (BR 1 to 4, 7) is enforced by POST /api/transactions; the screen only
@@ -38,8 +39,6 @@ const EMPTY: FormValues = { borrowerId: '', locationId: '', lines: [] };
 const RESULTS = 10;
 // Wait for a pause in typing, so a name is one search request, not one per letter.
 const SEARCH_DELAY_MS = 300;
-// ARCHITECTURE.md 6: "today" and times are in the app timezone, as on the Rooms screen.
-const TIMEZONE = (import.meta.env.APP_TIMEZONE as string | undefined) || 'Asia/Manila';
 const todayInAppZone = () => new Intl.DateTimeFormat('en-CA', { timeZone: TIMEZONE }).format();
 const issueTime = new Intl.DateTimeFormat('en-GB', {
   hour: '2-digit',

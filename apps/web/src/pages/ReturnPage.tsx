@@ -17,6 +17,7 @@ import { Field, SelectField } from '../components/Field';
 import { FlagIcon } from '../components/icons';
 import { useMessageArea } from '../components/Notifications';
 import { RetryAlert } from '../components/RetryAlert';
+import { TIMEZONE } from '../timezone';
 
 // Return (SPEC.md 5, admins and handlers, BRW-5). Finds open lines and returns all or part of one
 // line at a time. Every rule (BR 5, 6) is enforced by POST /api/returns; the screen shows the
@@ -24,7 +25,6 @@ import { RetryAlert } from '../components/RetryAlert';
 
 // shortcut: one page of 50 lines and no pager; a note under the list says to narrow the search.
 const PAGE_SIZE = 50;
-const TIMEZONE = (import.meta.env.APP_TIMEZONE as string | undefined) || 'Asia/Manila';
 const dateTime = new Intl.DateTimeFormat('en-GB', {
   day: 'numeric',
   month: 'short',
@@ -110,10 +110,15 @@ export function ReturnPage() {
     },
   });
 
-  // Focus the refused row's quantity (FND-7). An effect, so the row has rendered first.
+  // Focus the refused row (FND-7): its quantity, or its Return button for a unit line (the quantity
+  // is disabled), or the search when the reload removed the row. Runs again after the reload.
   useEffect(() => {
-    if (refused) document.getElementById(`qty-${refused.lineId}`)?.focus();
-  }, [refused]);
+    if (!refused) return;
+    const focusable = [`qty-${refused.lineId}`, `return-${refused.lineId}`]
+      .map((id) => document.getElementById(id) as HTMLInputElement | HTMLButtonElement | null)
+      .find((element) => element && !element.disabled);
+    (focusable ?? searchRef.current)?.focus();
+  }, [refused, open.data]);
   // After a return the Return button may be gone (line complete), so focus goes to the search.
   useEffect(() => {
     if (giveBack.isSuccess) searchRef.current?.focus();
@@ -265,7 +270,8 @@ export function ReturnPage() {
               </div>
               {group.map((line) => (
                 <LineRow
-                  key={line.lineId}
+                  // The outstanding count in the key resets the quantity box after a partial return.
+                  key={`${line.lineId}-${line.outstanding}`}
                   line={line}
                   busy={giveBack.isPending}
                   error={refused?.lineId === line.lineId ? refused.message : undefined}
@@ -379,6 +385,7 @@ function LineRow({
         </select>
         <button
           type="button"
+          id={`return-${line.lineId}`}
           disabled={busy}
           onClick={() => onReturn({ line, quantity: unit ? 1 : Number(quantity), condition })}
           className={primaryButtonClass}

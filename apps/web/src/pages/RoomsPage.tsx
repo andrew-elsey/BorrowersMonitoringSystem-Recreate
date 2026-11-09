@@ -11,6 +11,7 @@ import { FormDialog } from '../components/FormDialog';
 import { useNotify } from '../components/Notifications';
 import { RetryAlert } from '../components/RetryAlert';
 import { StatusBadge } from '../components/StatusBadge';
+import { TIMEZONE } from '../timezone';
 
 // Rooms and labs (SPEC.md 5, admin only, MD-3). Add with the top form, rename in a dialog from the
 // row, deactivate or reactivate from the row. Only a room no transaction uses can be deleted
@@ -20,13 +21,11 @@ type RoomReply = { room: Room };
 const PAGE_SIZE = 25;
 const ROOMS_KEY = ['rooms'];
 
-// ARCHITECTURE.md 6: dates show in the app timezone, not the browser's. APP_TIMEZONE is read at
-// build time (vite.config.ts envPrefix), with the same default as the api.
 const addedDate = new Intl.DateTimeFormat('en-GB', {
   day: 'numeric',
   month: 'short',
   year: 'numeric',
-  timeZone: (import.meta.env.APP_TIMEZONE as string | undefined) || 'Asia/Manila',
+  timeZone: TIMEZONE,
 });
 
 const isNotFound = (error: unknown) =>
