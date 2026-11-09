@@ -6,10 +6,11 @@ import { BoxIcon } from './components/icons';
 import { NotificationProvider } from './components/Notifications';
 
 // The menu, in SPEC.md 5 order. Each item lists the roles that may open it (SPEC.md 3), and an item
-// is added only when its screen is built: Return and the rest join in their own tickets.
+// is added only when its screen is built: the rest join in their own tickets.
 const NAV_ITEMS = [
   { to: '/', label: 'Home', roles: PERMISSIONS.viewDashboardAndReports },
   { to: '/checkout', label: 'Checkout', roles: PERMISSIONS.checkoutAndReturn },
+  { to: '/return', label: 'Return', roles: PERMISSIONS.checkoutAndReturn },
   { to: '/inventory', label: 'Inventory and categories', roles: PERMISSIONS.manageMasterData },
   { to: '/borrowers', label: 'Borrowers', roles: PERMISSIONS.manageMasterData },
   { to: '/rooms', label: 'Rooms and labs', roles: PERMISSIONS.manageMasterData },
