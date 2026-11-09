@@ -15,11 +15,11 @@ Document references: `BR` = `BUSINESS_RULES.md`, `ARCH` = `ARCHITECTURE.md`, `SP
 | 1 | Foundation and sign-in: running Docker environment, schema, seed data, role-based login with protected hashing, sign-in screens and app shell, UTC timestamp fix, login limiter memory fix | FND-1, FND-2, FND-3, FND-4, AUTH-1, AUTH-2, AUTH-4, FND-6, AUTH-5 | 26 |
 | 2 | Shared components and master data: shared form and table components, admins manage items, rooms, borrowers, semesters, settings, API field error focus fix | FND-5, MD-1, MD-2, MD-3, MD-4, MD-5, MD-7, DOC-1, FND-7 | 23 |
 | 3 | Checkout: handlers can check items out; return API works; rate limits and request limits in place; web bundle split | BRW-1, BRW-2, BRW-3, BRW-4, SEC-1, HRD-6 | 22 |
-| 4 | Returns and flagging: full return flow, end-of-day flagging, strikes, blocking, override | BRW-5, FLG-1, FLG-2, FLG-3, FLG-4 | 19 |
+| 4 | Returns and flagging: full return flow, end-of-day flagging, strikes, blocking, override | BRW-5, FLG-1, FLG-2, FLG-3, FLG-4, REG-1 | 21 |
 | 5 | Dashboard, reports, admin tools | BRW-6, RPT-1, RPT-2, RPT-3, RPT-4, AUTH-3, MD-6 | 20 |
 | 6 | Hardening, abuse testing, and release | HRD-1, HRD-2, HRD-3, HRD-4, HRD-5, SEC-2 | 20 |
 
-Total: 130 points. Sprints 1 (26), 2 (23), and 3 (22) are over the working capacity of about 20; that is accepted for now and will be revisited once Sprint 1 shows the real velocity.
+Total: 132 points. Sprints 1 (26), 2 (23), and 3 (22) are over the working capacity of about 20; that is accepted for now and will be revisited once Sprint 1 shows the real velocity.
 
 ## Epic FND: Foundation
 
@@ -126,6 +126,11 @@ Acceptance: BR 11; checkout shows a warning at the warning threshold and a stric
 
 **FLG-4 · Flag review and override** (5 pts, Sprint 4). Depends on: FLG-1.
 Acceptance: BR 13; admin list of flagged lines shows borrower, item, note, and expected return date; override requires a reason of at least 5 characters (SPEC 7); overriding works before or after return; overridden lines stop counting; audited; handlers and view-only users get 403; scenarios S4 and S7 pass.
+
+## Regression follow-ups
+
+**REG-1 · Regression follow-ups** (2 pts, Sprint 4, bug/follow-up from manual regression round 2, 2026-11-07).
+Acceptance: the Items table has an Available column as in the approved mockup; each route has its own tab title, page name first; after an expired session the sign-in page says "Your session has expired. Please sign in again." (not after Sign out or on a first visit); table cells break words only when too long, with no sideways page scroll at 1000, 400, or 320 px; TEST_CASES.md paths match the legend and real test files; `npm test` prints no MaxListenersExceededWarning.
 
 ## Epic RPT: Dashboard and reports
 
