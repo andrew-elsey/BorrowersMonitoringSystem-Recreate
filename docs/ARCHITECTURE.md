@@ -16,7 +16,7 @@ The browser only talks to nginx, so the app and API share one origin. There is n
 
 - **Node.js**: current LTS release (24.x at the time of writing). Pin the exact version in `.nvmrc` and the Dockerfiles.
 - **TypeScript**: `strict: true` in every package.
-- **Backend**: Express 5, Zod (request validation), Prisma (ORM and migrations), pino (logging), helmet, express-rate-limit, node-cron (scheduler), Luxon (all timezone-aware date logic), argon2 (password hashing), multer (CSV upload with size limits), csv-parse (CSV parsing).
+- **Backend**: Express 5, Zod (request validation), Prisma (ORM and migrations), pino (logging), helmet, express-rate-limit, Luxon (all timezone-aware date logic), argon2 (password hashing), multer (CSV upload with size limits), csv-parse (CSV parsing).
 - **Database**: PostgreSQL, current stable major version, pinned in `docker-compose.yml`.
 - **Frontend**: React, Vite, React Router, TanStack Query (server state), React Hook Form with Zod resolvers, Tailwind CSS.
 - **Testing**: Vitest, Supertest (API), React Testing Library with user-event and jsdom (components, added in AUTH-4), Playwright (end-to-end flow in HRD-2).
@@ -117,7 +117,7 @@ Adding a dependency outside this list needs the owner's approval.
 - **How UTC storage is guaranteed (FND-6):** every database connection the api opens sets its session time zone to UTC (`options: '-c TimeZone=UTC'` on the adapter in `apps/api/src/lib/prisma.ts`). This is required, not cosmetic: `@prisma/adapter-pg` sends `Date` values as UTC digits without an offset and reads `timestamptz` values as if they were UTC. Under any other session time zone, such as the db container's `Asia/Manila`, every write is stored shifted and every read is shifted back, so the API looks right while the stored instants and anything computed in SQL (`now()`, reports) are wrong. The containers keep `TZ=Asia/Manila`; only the api's connections use UTC. `apps/api/tests/timestamps.test.ts` checks stored instants with `extract(epoch ...)`, which the adapter cannot shift. `DATABASE_URL` must not contain an `options` parameter, because pg would let it replace this setting without any error; `prisma.ts` refuses to start if it does. Never open a database connection without this setting, and never compare against SQL `now()` from a connection that lacks it.
 - The frontend formats everything in `Asia/Manila`.
 - Business logic uses Luxon with the configured zone: closing time (`HH:mm` local), "today", and semester boundaries. Semester start and end are dates (no time) interpreted in `Asia/Manila`. Never compute business days with naive `Date` arithmetic.
-- The scheduler (`node-cron`) runs with the `timezone` option set to `APP_TIMEZONE`. Because the closing time is a setting, the job reads it each time it schedules, and re-schedules when settings change.
+- The flagging scheduler (FLG-2) is a single `setTimeout` to the next closing time, computed with Luxon in `APP_TIMEZONE` (no `node-cron`: one daily timer needs no cron library). The job reads the closing time each time it schedules, and `PUT /api/settings` runs it right away and re-schedules it. A failed or skipped run is retried every 60 s (`FLAGGING_RETRY_MS`).
 - Test the flagging logic with an injected clock so tests do not depend on real time.
 
 ## 7. API conventions
@@ -159,7 +159,7 @@ Adding a dependency outside this list needs the owner's approval.
 
 ## 9. Scheduled job
 
-`jobs/flagging.ts` implements Rule 8 and Rule 9. It runs at the configured closing time, exposes `runFlagging(now)` for the admin-only manual trigger, and runs once at API startup to catch up. It must be idempotent, take a PostgreSQL advisory lock so runs never overlap (section 12.5), and log how many lines it flagged.
+`jobs/flagging.ts` implements Rule 8 and Rule 9. It runs at the configured closing time, exposes `runFlagging(now, actorId)` for the admin-only manual trigger (`POST /api/flagging/run`, once a minute), and runs once at API startup to catch up. A run that finds the advisory lock taken is skipped and reports `skipped: true`. Each flagged line writes a `LINE_FLAGGED` audit entry (actor null for scheduled runs). It must be idempotent, take a PostgreSQL advisory lock so runs never overlap (section 12.5), and log how many lines it flagged.
 
 ## 10. Docker
 

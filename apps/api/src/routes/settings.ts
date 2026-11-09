@@ -8,6 +8,7 @@ import {
   setCurrentSemester,
   updateSemester,
 } from '../services/semesters.ts';
+import { rescheduleFlagging } from '../jobs/flagging.ts';
 import { getSettings, updateSettings } from '../services/settings.ts';
 
 // HTTP only: parse, authorize, call the service (ARCHITECTURE.md 4). Rules live in
@@ -37,7 +38,9 @@ export function createSettingsRouter() {
 
   router.put('/settings', async (req, res) => {
     const input = settingsSchema.parse(req.body);
-    res.json({ settings: await updateSettings(req.session.userId!, input) });
+    const settings = await updateSettings(req.session.userId!, input);
+    await rescheduleFlagging();
+    res.json({ settings });
   });
 
   router.get('/semesters', async (req, res) => {

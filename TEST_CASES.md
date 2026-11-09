@@ -183,17 +183,17 @@ Paths are shortened: `api/` is `apps/api/tests/`, `web/` is `apps/web/src/pages/
 | TC-FLG-03 | FLG-1 | BR 10, S6 | integration | Eva has two transactions the same day, both flagged | 2 strikes | `api/strikes.test.ts` |
 | TC-FLG-04 | FLG-1 | BR 10, 13, S7 | integration | A transaction has two flagged lines; override one, then the other | 1 strike after the first override; 0 after the second | `api/strikes.test.ts` |
 | TC-FLG-05 | FLG-1 | BR 12, S9 | integration | Gio has 4 strikes in semester 1; admin sets semester 2 current, then semester 1 again | 0 strikes in semester 2; semester 1 history still shows the flags; back to 4 strikes when semester 1 is current again | `api/strikes.test.ts` |
-| TC-FLG-06 | FLG-2 | BR 8, S1 | integration | Ana borrows at 10:00 and returns at 15:00; job runs at 17:00 | Nothing flagged; 0 strikes | not yet |
-| TC-FLG-07 | FLG-2 | BR 8, S2 | integration | Ben borrows a laptop at 10:00 and keeps it; job runs at 17:00 | Line `FLAGGED` with `flagged_at` set; audited | not yet |
-| TC-FLG-08 | FLG-2 | BR 8, S3 | integration | Cara has 2 of 5 cords outstanding at 17:00; returns the 2 next morning | Line flagged at 17:00; stays `FLAGGED` after the return; 1 strike | not yet |
-| TC-FLG-09 | FLG-2 | BR 8, S10 | integration | Hana borrows at 17:30 | Not flagged tonight; flagged at tomorrow's 17:00 if still out | not yet |
-| TC-FLG-10 | FLG-2 | BR 9, S11 | integration | API stopped 16:30 to 18:00, started at 18:00 | Catch-up flags lines issued before 17:00; a line issued at 18:10 is not flagged | not yet |
-| TC-FLG-11 | FLG-2 | BR 8, S12 | integration | Run the job twice at 17:00 | Second run changes nothing | not yet |
-| TC-FLG-12 | FLG-2 | BR 8, S13 | integration | A flagged line is overridden while the item is still out; next closing passes | Not flagged again | not yet |
-| TC-FLG-13 | FLG-2 | ARCH 6, CLAUDE.md rule 3 | integration | With an injected clock, change closing time in settings | Job runs at the new time in `Asia/Manila` | not yet |
-| TC-FLG-14 | FLG-2 | ARCH 12.5 | integration | Start a scheduled run and a manual run at the same time | Advisory lock: runs never overlap | not yet |
-| TC-FLG-15 | FLG-2 | SPEC 3, ARCH 12.5 | integration | Admin triggers the job twice within a minute; handler triggers it | Second admin call refused (once per minute); handler gets 403 | not yet |
-| TC-FLG-16 | FLG-2 | BACKLOG FLG-2 | integration | Run the job | Each run is logged | not yet |
+| TC-FLG-06 | FLG-2 | BR 8, S1 | integration | Ana borrows at 10:00 and returns at 15:00; job runs at 17:00 | Nothing flagged; 0 strikes | `api/flagging.test.ts` |
+| TC-FLG-07 | FLG-2 | BR 8, S2 | integration | Ben borrows a laptop at 10:00 and keeps it; job runs at 17:00 | Line `FLAGGED` with `flagged_at` set; audited | `api/flagging.test.ts` |
+| TC-FLG-08 | FLG-2 | BR 8, S3 | integration | Cara has 2 of 5 cords outstanding at 17:00; returns the 2 next morning | Line flagged at 17:00; stays `FLAGGED` after the return; 1 strike | `api/flagging.test.ts` |
+| TC-FLG-09 | FLG-2 | BR 8, S10 | integration | Hana borrows at 17:30 | Not flagged tonight; flagged at tomorrow's 17:00 if still out | `api/flagging.test.ts` |
+| TC-FLG-10 | FLG-2 | BR 9, S11 | integration | API stopped 16:30 to 18:00, started at 18:00 | Catch-up flags lines issued before 17:00; a line issued at 18:10 is not flagged | `api/flagging.test.ts` |
+| TC-FLG-11 | FLG-2 | BR 8, S12 | integration | Run the job twice at 17:00 | Second run changes nothing | `api/flagging.test.ts` |
+| TC-FLG-12 | FLG-2 | BR 8, S13 | integration | A flagged line is overridden while the item is still out; next closing passes | Not flagged again | `api/flagging.test.ts` |
+| TC-FLG-13 | FLG-2 | ARCH 6, CLAUDE.md rule 3 | integration | With an injected clock, change closing time in settings | Job runs at the new time in `Asia/Manila` | `api/flagging.test.ts` |
+| TC-FLG-14 | FLG-2 | ARCH 12.5 | integration | Start a scheduled run and a manual run at the same time | Advisory lock: runs never overlap | `api/flagging.test.ts` |
+| TC-FLG-15 | FLG-2 | SPEC 3, ARCH 12.5 | integration | Admin triggers the job twice within a minute; handler triggers it | Second admin call refused (once per minute); handler gets 403 | `api/flagging.test.ts` |
+| TC-FLG-16 | FLG-2 | BACKLOG FLG-2 | integration | Run the job | Each run is logged | `api/flagging.test.ts` |
 | TC-FLG-17 | FLG-3 | BR 11, S8 | integration | Fil at 3 strikes checks out | Checkout works; the warning is shown | not yet |
 | TC-FLG-18 | FLG-3 | BR 11, S8 | integration | Fil at 4 strikes checks out | Checkout works; the stricter notice is shown | not yet |
 | TC-FLG-19 | FLG-3 | BR 3, 11, S8 | integration | Fil at 5 strikes checks out | `BORROWER_BLOCKED`; no transaction created | not yet |
@@ -203,6 +203,11 @@ Paths are shortened: `api/` is `apps/api/tests/`, `web/` is `apps/web/src/pages/
 | TC-FLG-23 | FLG-4 | BR 13, SPEC 7 | integration | Override with a reason of 4 characters, 5 characters, and 501 characters | 5 accepted; 4 and 501 rejected | not yet |
 | TC-FLG-24 | FLG-4 | BR 13 | integration | Override a line before it is returned and another after | Both become `OVERRIDDEN` with `override_by`, `override_at`, reason; audited | not yet |
 | TC-FLG-25 | FLG-4 | S18 | integration | Handler and view-only user call override | 403 | not yet |
+| TC-FLG-26 | FLG-2 | BR 9, ARCH 6 | integration | Fake clock 08:00, start the job, advance 9 hours | Line issued at 10:00 is `FLAGGED`; the next day's closing also fires | `api/flagging.test.ts` |
+| TC-FLG-27 | FLG-2 | BR 9, S22 | integration | Closing 17:00; at 16:00 admin does `PUT /api/settings` with closing 15:00 | Line issued at 10:00 is flagged at once | `api/flagging.test.ts` |
+| TC-FLG-28 | FLG-2 | BR 9, S23 | integration | Lock held at closing, so the run is skipped; release the lock | Retried after 60 s and the line is flagged | `api/flagging.test.ts` |
+| TC-FLG-29 | FLG-2 | BR 9, S11 | integration | Down Friday, started Monday 08:00 | Lines issued Friday and Saturday flagged; a Monday 07:00 line is not | `api/flagging.test.ts` |
+| TC-FLG-30 | FLG-2 | BR 9, S23 | integration | The scheduled run throws | Startup does not throw; retried after 60 s | `api/flagging.test.ts` |
 
 ## RPT: Dashboard and reports
 
@@ -257,7 +262,7 @@ Paths are shortened: `api/` is `apps/api/tests/`, `web/` is `apps/web/src/pages/
 | ID | Ticket | Rule | Level | Steps | Expected | Automated by |
 |---|---|---|---|---|---|---|
 | TC-DOC-01 | DOC-1 | CLAUDE.md | manual | Check that every ticket ID in `docs/BACKLOG.md` appears in this file | All present | manual |
-| TC-DOC-02 | DOC-1 | BR 1 to 16, S1 to S21 | manual | Check the coverage table | Every rule and scenario lists at least one case | manual |
+| TC-DOC-02 | DOC-1 | BR 1 to 16, S1 to S23 | manual | Check the coverage table | Every rule and scenario lists at least one case | manual |
 | TC-DOC-03 | DOC-1 | CLAUDE.md | manual | Run every test file named in "Automated by" (`npm test`) | All pass | manual |
 
 ## Coverage: business rules and scenarios
@@ -301,3 +306,5 @@ Paths are shortened: `api/` is `apps/api/tests/`, `web/` is `apps/web/src/pages/
 | S19 Retiring versus deleting | TC-MD-07 |
 | S20 Login flood | TC-AUTH-10, TC-SEC-11 |
 | S21 Oversized input | TC-MD-19, TC-BRW-12, TC-RPT-04, TC-SEC-02, 09, 13 |
+| S22 Closing time moved earlier | TC-FLG-27 |
+| S23 Failed or skipped run | TC-FLG-28, 30 |
