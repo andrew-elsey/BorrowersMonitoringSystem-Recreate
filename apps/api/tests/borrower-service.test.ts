@@ -62,8 +62,8 @@ class InMemoryBorrowerService implements BorrowerService {
       .sort((a, b) => a.name.localeCompare(b.name));
   }
 
-  // The double has no strikes: the transaction is ignored, as it has no database.
-  async isEligible(id: string, _tx?: unknown) {
+  // The double has no strikes and ignores the transaction (it has no database).
+  async isEligible(id: string) {
     const borrower = await this.findById(id);
     if (!borrower) return { eligible: false, reason: 'NOT_FOUND' };
     if (!borrower.active) return { eligible: false, reason: 'BORROWER_INACTIVE' };
