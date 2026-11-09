@@ -15,7 +15,7 @@ export function useStrikes(borrowerId: string | undefined) {
   });
 }
 
-export function strikeLevel(s: StrikeStatus): StrikeLevel {
+export function strikeLevel(s: Omit<StrikeStatus, 'semesterName'>): StrikeLevel {
   if (s.strikes >= s.blockThreshold) return 'blocked';
   if (s.strikes >= s.noticeThreshold) return 'notice';
   if (s.strikes >= s.warningThreshold) return 'warning';
@@ -34,10 +34,9 @@ const BADGE_CLASS = {
 } as const;
 
 // The badge on the Return screen: "Warning: 3 strikes", or just "2 strikes" below the warning.
-// Text first, so colour is never the only signal (ARCHITECTURE.md 14).
-export function StrikeBadge({ borrowerId }: { borrowerId: string }) {
-  const { data } = useStrikes(borrowerId);
-  if (!data) return null;
+// Text first, so colour is never the only signal (ARCHITECTURE.md 14). The data comes with
+// GET /api/returns/open, so the screen makes no request per borrower.
+export function StrikeBadge({ data }: { data: Omit<StrikeStatus, 'semesterName'> }) {
   const level = strikeLevel(data);
   const text =
     level === 'none' ? strikeCount(data.strikes) : `${LABELS[level]}: ${strikeCount(data.strikes)}`;

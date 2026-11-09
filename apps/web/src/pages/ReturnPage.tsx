@@ -271,7 +271,7 @@ export function ReturnPage() {
                 <strong className="text-ink">
                   {group[0]!.borrower.name} {group[0]!.borrower.schoolId}
                 </strong>
-                <StrikeBadge borrowerId={group[0]!.borrower.id} />
+                <StrikeBadge data={{ ...open.data!, strikes: group[0]!.strikes }} />
                 <span>{dateTime.format(new Date(group[0]!.issuedAt))}</span>
                 <span>Room: {group[0]!.location}</span>
                 <span>Issued by {group[0]!.issuedBy}</span>

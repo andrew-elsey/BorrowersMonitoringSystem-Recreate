@@ -281,7 +281,8 @@ export function CheckoutPage() {
   const dueNow = dueDay(new Date(), closingTime);
   // BR 3: an inactive borrower cannot borrow. The API refuses it too (BORROWER_INACTIVE).
   // BR 11: so is a blocked one (BORROWER_BLOCKED). The API enforces both; the screen mirrors them.
-  const strikes = useStrikes(borrower?.id).data;
+  const strikeQuery = useStrikes(borrower?.id);
+  const strikes = strikeQuery.data;
   const level = strikes ? strikeLevel(strikes) : 'none';
   const locked = borrower !== null && (!borrower.active || level === 'blocked');
   const onLines = new Set(values.lines.map((line) => line.itemId));
@@ -412,7 +413,9 @@ export function CheckoutPage() {
                 block={strikes.blockThreshold}
               />
             )}
-            {locked && (
+            {/* A failed load must not look like 0 strikes; the API still enforces the block. */}
+            {borrower && strikeQuery.isError && <RetryAlert query={strikeQuery} />}
+            {borrower && !borrower.active && (
               <Alert kind="error">
                 <strong>Inactive borrower.</strong> {borrower.name}&apos;s record is inactive, so
                 this borrower cannot borrow. An admin can reactivate the record in Borrowers.
@@ -722,7 +725,7 @@ const thClass =
   'border-b border-divider px-3 py-2.5 text-left text-sm font-semibold whitespace-nowrap text-muted';
 const tdClass = 'border-b border-divider px-3 py-2.5 align-top text-[15px]';
 
-// BR 11 wording from the approved mockup, with the first name where it has he or she (no gender on
+// BR 11 wording from the approved mockup, with the full name where it has he or she (no gender on
 // the borrower record).
 function StrikeBanner(props: {
   level: 'warning' | 'notice' | 'blocked';
@@ -731,7 +734,7 @@ function StrikeBanner(props: {
   block: number;
 }) {
   const { level, strikes, block } = props;
-  const first = props.name.split(' ')[0];
+  const first = props.name;
   const head = `${strikeCount(strikes)}.`;
   if (level === 'warning') {
     return (
