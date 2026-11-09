@@ -138,6 +138,12 @@ test('after an expired session, a wrong password shows only the login error (TC-
   await user.click(screen.getByRole('button', { name: 'Sign in' }));
   await screen.findByText('Wrong.');
   expect(screen.queryByText(EXPIRED)).toBeNull();
+  // A second attempt still waiting for its reply must not bring the message back.
+  vi.stubGlobal('fetch', () => new Promise(() => {}));
+  await user.type(screen.getByLabelText('Password'), 'c'); // cleared after the failure
+  await user.click(screen.getByRole('button', { name: 'Sign in' }));
+  await waitFor(() => expect(screen.queryByText('Wrong.')).toBeNull());
+  expect(screen.queryByText(EXPIRED)).toBeNull();
 });
 
 test('selects are capped at their box width, so a long category name cannot widen the page (TC-MD-35)', async () => {

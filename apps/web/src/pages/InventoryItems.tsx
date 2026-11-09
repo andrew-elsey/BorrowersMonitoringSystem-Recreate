@@ -359,7 +359,7 @@ export function InventoryItems() {
                 onChange={filterChanged(setStatusFilter)}
               />
             </div>
-            <div className="flex-[0_1_160px]">
+            <div className="flex-[0_1_180px]">
               <SelectField
                 id="tracking-filter"
                 label="Tracking"
