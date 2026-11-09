@@ -28,9 +28,10 @@ export function AppShell() {
   const role = user!.role;
   // The tab title names the page. An unknown path redirects home, so it never reaches here.
   const { pathname } = useLocation();
-  const navItem = NAV_ITEMS.find((item) => item.to === pathname);
+  const path = pathname.replace(/\/+$/, '') || '/'; // /checkout/ is the same page as /checkout
+  const navItem = NAV_ITEMS.find((item) => item.to === path);
   const page =
-    pathname === '/password'
+    path === '/password'
       ? 'Change password'
       : navItem && !(navItem.roles as readonly string[]).includes(role)
         ? 'Not allowed'

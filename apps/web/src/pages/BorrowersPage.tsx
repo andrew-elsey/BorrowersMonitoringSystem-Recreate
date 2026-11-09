@@ -12,7 +12,7 @@ import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tansta
 import { useEffect, useRef, useState } from 'react';
 import { useForm, type UseFormReturn } from 'react-hook-form';
 import { ApiRequestError, apiFetch } from '../api';
-import { DataTable } from '../components/DataTable';
+import { cellTextClass, DataTable } from '../components/DataTable';
 import { Field, SelectField, showApiFieldErrors } from '../components/Field';
 import { FormDialog } from '../components/FormDialog';
 import { useNotify } from '../components/Notifications';
@@ -226,13 +226,13 @@ export function BorrowersPage() {
           columns={[
             {
               header: 'School ID',
-              cell: (b) => <span className="break-words">{b.schoolId}</span>,
+              cell: (b) => <span className={cellTextClass}>{b.schoolId}</span>,
             },
-            { header: 'Name', cell: (b) => <strong className="break-words">{b.name}</strong> },
+            { header: 'Name', cell: (b) => <strong className={cellTextClass}>{b.name}</strong> },
             { header: 'Type', cell: (b) => TYPE_LABELS[b.type] },
             {
               header: 'Department',
-              cell: (b) => <span className="break-words">{b.department}</span>,
+              cell: (b) => <span className={cellTextClass}>{b.department}</span>,
             },
             { header: 'Status', cell: (b) => <StatusBadge active={b.active} /> },
             { header: 'Actions', cell: (b) => actions(b) },

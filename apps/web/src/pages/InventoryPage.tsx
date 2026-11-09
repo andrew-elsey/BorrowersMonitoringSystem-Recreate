@@ -6,7 +6,7 @@ import { useForm } from 'react-hook-form';
 import { Link, useSearchParams } from 'react-router';
 import { ApiRequestError, apiFetch } from '../api';
 import { ConfirmDialog } from '../components/ConfirmDialog';
-import { DataTable } from '../components/DataTable';
+import { cellTextClass, DataTable } from '../components/DataTable';
 import { Field, showApiFieldErrors } from '../components/Field';
 import { FormDialog } from '../components/FormDialog';
 import { useNotify } from '../components/Notifications';
@@ -175,8 +175,8 @@ function CategoriesTab() {
             columns={[
               {
                 header: 'Category',
-                // A long name with no spaces must wrap, or it pushes the buttons out of sight.
-                cell: (category) => <strong className="break-words">{category.name}</strong>,
+                // cellTextClass: a long name with no spaces wraps inside the cell, not out of sight.
+                cell: (category) => <strong className={cellTextClass}>{category.name}</strong>,
               },
               { header: 'Items', cell: (category) => category.itemCount },
               { header: 'Actions', cell: (category) => actions(category) },

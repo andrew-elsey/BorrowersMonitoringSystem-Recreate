@@ -18,7 +18,7 @@ import { useForm, type UseFormReturn } from 'react-hook-form';
 import { ApiRequestError, apiFetch } from '../api';
 import { Alert } from '../components/Alert';
 import { ConfirmDialog } from '../components/ConfirmDialog';
-import { DataTable } from '../components/DataTable';
+import { cellTextClass, DataTable } from '../components/DataTable';
 import { secondaryButtonClass } from '../components/Dialog';
 import { Field, SelectField, showApiFieldErrors, TextAreaField } from '../components/Field';
 import { FormDialog } from '../components/FormDialog';
@@ -390,16 +390,16 @@ export function InventoryItems() {
               columns={[
                 {
                   header: 'Name',
-                  cell: (i) => <strong className="break-words">{i.name}</strong>,
+                  cell: (i) => <strong className={cellTextClass}>{i.name}</strong>,
                 },
                 {
                   header: 'Category',
-                  cell: (i) => <span className="break-words">{i.category.name}</span>,
+                  cell: (i) => <span className={cellTextClass}>{i.category.name}</span>,
                 },
                 { header: 'Tracking', cell: (i) => TRACKING_LABELS[i.trackingType] },
                 {
                   header: 'Asset tag',
-                  cell: (i) => <span className="break-words">{i.assetTag ?? '—'}</span>,
+                  cell: (i) => <span className={cellTextClass}>{i.assetTag ?? '—'}</span>,
                 },
                 {
                   header: 'Available',

@@ -76,6 +76,7 @@ test('table names break only inside a too-long word, and the table scrolls insid
   renderApp('/inventory');
   const name = await screen.findByText('Extension cord');
   expect(name.className).toContain('break-words');
+  expect(name.className).toContain('max-w-64'); // browsers ignore break-words alone in a table
   expect(name.className).not.toContain('wrap-anywhere');
   expect(screen.getByRole('table', { name: 'Items' }).parentElement!.className).toContain(
     'overflow-x-auto',
@@ -91,6 +92,8 @@ test('each page sets its own tab title (TC-FND-31)', async () => {
   const router = renderApp('/');
   await waitFor(() => expect(document.title).toBe('Home · Borrowers Monitoring System'));
   await router.navigate('/checkout');
+  await waitFor(() => expect(document.title).toBe('Checkout · Borrowers Monitoring System'));
+  await router.navigate('/checkout/'); // a trailing slash is the same page
   await waitFor(() => expect(document.title).toBe('Checkout · Borrowers Monitoring System'));
   await router.navigate('/password');
   await waitFor(() => expect(document.title).toBe('Change password · Borrowers Monitoring System'));

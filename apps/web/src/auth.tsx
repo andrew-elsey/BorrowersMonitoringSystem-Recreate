@@ -36,6 +36,7 @@ export function createQueryClient(): QueryClient {
   function signOutOn401(error: Error) {
     if (error instanceof ApiRequestError && error.status === 401) {
       // A 401 while nobody is signed in (first visit, wrong password) is not an expiry.
+      // Set before me is cleared: clearing me is what re-renders the login page.
       if (queryClient.getQueryData(ME_KEY)) queryClient.setQueryData(EXPIRED_KEY, true);
       queryClient.setQueryData(ME_KEY, null);
     }
@@ -83,6 +84,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const value: AuthValue = {
     user: me.data,
     signedOutOnPurpose,
+    // Read here, so the flag must already be set when me is cleared (see signOutOn401).
     sessionExpired: queryClient.getQueryData(EXPIRED_KEY) === true,
     signIn: (user) => {
       setSignedOutOnPurpose(false);

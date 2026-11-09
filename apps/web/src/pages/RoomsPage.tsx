@@ -5,7 +5,7 @@ import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { ApiRequestError, apiFetch } from '../api';
 import { ConfirmDialog } from '../components/ConfirmDialog';
-import { DataTable } from '../components/DataTable';
+import { cellTextClass, DataTable } from '../components/DataTable';
 import { Field, showApiFieldErrors } from '../components/Field';
 import { FormDialog } from '../components/FormDialog';
 import { useNotify } from '../components/Notifications';
@@ -170,8 +170,8 @@ export function RoomsPage() {
             columns={[
               {
                 header: 'Name',
-                // A long name with no spaces must wrap, or it pushes the buttons out of sight.
-                cell: (room) => <strong className="break-words">{room.name}</strong>,
+                // cellTextClass: a long name with no spaces wraps inside the cell, not out of sight.
+                cell: (room) => <strong className={cellTextClass}>{room.name}</strong>,
               },
               { header: 'Added by', cell: (room) => room.createdBy.name },
               { header: 'Added', cell: (room) => addedDate.format(new Date(room.createdAt)) },
