@@ -214,10 +214,14 @@ test('when more lines match than one page holds, the list says how many are show
 test('Find after a refusal clears the row mark and the "not saved" message', async () => {
   fakeApi({ lines: [CORD_LINE] }, () => ({
     status: 409,
-    body: apiError('RETURN_EXCEEDS_OUTSTANDING', 'Only 5 of QA cord still out, 6 returned.', {
-      lineId: CORD_LINE.lineId,
-      outstanding: 5,
-    }),
+    body: apiError(
+      'RETURN_EXCEEDS_OUTSTANDING',
+      'You entered 6 of QA cord, but the amount still out on this line is 5. Nothing was recorded.',
+      {
+        lineId: CORD_LINE.lineId,
+        outstanding: 5,
+      },
+    ),
   }));
   const user = userEvent.setup();
   renderApp('/return');
@@ -238,10 +242,14 @@ test('a refused quantity line whose reload rebuilds the row gets focus back on t
     state.lines = [{ ...CORD_LINE, outstanding: 1 }];
     return {
       status: 409,
-      body: apiError('RETURN_EXCEEDS_OUTSTANDING', 'Only 1 of QA cord still out, 5 returned.', {
-        lineId: CORD_LINE.lineId,
-        outstanding: 1,
-      }),
+      body: apiError(
+        'RETURN_EXCEEDS_OUTSTANDING',
+        'You entered 5 of QA cord, but the amount still out on this line is 1. Nothing was recorded.',
+        {
+          lineId: CORD_LINE.lineId,
+          outstanding: 1,
+        },
+      ),
     };
   });
   const user = userEvent.setup();

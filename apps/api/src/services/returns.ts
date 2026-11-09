@@ -56,7 +56,8 @@ export async function recordReturn(
         throw new ApiError(
           409,
           'RETURN_EXCEEDS_OUTSTANDING',
-          `Only ${outstanding} of ${label(line)} still out, ${quantity} returned.`,
+          // Worded as in the approved mockup, without pluralising the item name.
+          `You entered ${quantity} of ${label(line)}, but the amount still out on this line is ${outstanding}. Nothing was recorded.`,
           { lineId, outstanding },
         );
       }
