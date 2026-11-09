@@ -55,7 +55,7 @@ export function LoginPage() {
           onSubmit={form.handleSubmit((input) => login.mutate(input))}
           className="flex flex-col gap-5 rounded-xl border border-divider bg-surface p-7"
         >
-          {sessionExpired && (
+          {sessionExpired && !login.isError && (
             <Alert kind="wait">Your session has expired. Please sign in again.</Alert>
           )}
           {login.isError && (

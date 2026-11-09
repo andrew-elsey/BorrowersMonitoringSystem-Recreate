@@ -123,6 +123,31 @@ test('a 401 on a signed-in session shows the expiry message on the login page (T
   expect(await screen.findByText(EXPIRED)).toBeTruthy();
 });
 
+test('after an expired session, a wrong password shows only the login error (TC-AUTH-37)', async () => {
+  let signedIn = true;
+  mockApi((_m, path) => {
+    if (path === '/auth/me') return signedIn ? signedInAs(HANDLER) : signedOut;
+    signedIn = false;
+    return { status: 401, body: apiError('INVALID_CREDENTIALS', 'Wrong.') };
+  });
+  renderApp('/checkout');
+  await screen.findByText(EXPIRED);
+  const user = userEvent.setup();
+  await user.type(screen.getByLabelText('Username'), 'a');
+  await user.type(screen.getByLabelText('Password'), 'b');
+  await user.click(screen.getByRole('button', { name: 'Sign in' }));
+  await screen.findByText('Wrong.');
+  expect(screen.queryByText(EXPIRED)).toBeNull();
+});
+
+test('selects are capped at their box width, so a long category name cannot widen the page (TC-MD-35)', async () => {
+  adminApi();
+  renderApp('/inventory');
+  const select = await screen.findByLabelText('Category');
+  expect(select.className).toContain('max-w-full');
+  expect(select.className).toContain('w-full');
+});
+
 test('Sign out does not show the expiry message (TC-AUTH-37)', async () => {
   mockApi((method, path) => {
     if (path === '/auth/me') return signedInAs(HANDLER);
