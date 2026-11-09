@@ -1,0 +1,48 @@
+import { z } from 'zod';
+import { searchTextField } from './borrowers.ts';
+import { CONTROL_CHARACTER, pageQuerySchema } from './categories.ts';
+
+// Flag review and override (FLG-4, BR 13). Limits from SPEC.md 7.
+export const OVERRIDE_REASON_MIN = 5;
+export const OVERRIDE_REASON_MAX = 500;
+
+// BR 13: a reason of 5 to 500 characters. Line breaks are allowed (the dialog uses a textarea).
+export const overrideSchema = z.object({
+  reason: z
+    .string()
+    .trim()
+    .min(OVERRIDE_REASON_MIN, `Enter a reason of at least ${OVERRIDE_REASON_MIN} characters.`)
+    .max(OVERRIDE_REASON_MAX, `Too long: at most ${OVERRIDE_REASON_MAX} characters.`)
+    .refine(
+      (value) => !CONTROL_CHARACTER.test(value.replace(/[\r\n\t]/g, ' ')),
+      'Remove the control characters.',
+    ),
+});
+export type OverrideInput = z.infer<typeof overrideSchema>;
+
+// GET /api/flags?returned=&q=&page=&pageSize=: FLAGGED lines only (an overridden line leaves the list).
+export const FLAG_RETURNED_FILTERS = ['all', 'out', 'returned'] as const;
+export const flagListQuerySchema = pageQuerySchema.extend({
+  returned: z.enum(FLAG_RETURNED_FILTERS).default('all'),
+  q: searchTextField.optional(),
+});
+export type FlagListQuery = z.infer<typeof flagListQuerySchema>;
+
+export type FlaggedLine = {
+  lineId: string;
+  transactionId: string;
+  borrower: { id: string; schoolId: string; name: string };
+  item: { id: string; name: string; assetTag: string | null };
+  issuedAt: string;
+  flaggedAt: string;
+  quantityBorrowed: number;
+  outstanding: number; // 0 means fully returned
+  note: string | null;
+  expectedReturnDate: string | null;
+};
+export type FlaggedLinePage = {
+  data: FlaggedLine[];
+  page: number;
+  pageSize: number;
+  total: number;
+};

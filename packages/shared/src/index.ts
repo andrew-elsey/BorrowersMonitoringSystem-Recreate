@@ -8,3 +8,4 @@ export * from './items.ts';
 export * from './rooms.ts';
 export * from './settings.ts';
 export * from './transactions.ts';
+export * from './flags.ts';
