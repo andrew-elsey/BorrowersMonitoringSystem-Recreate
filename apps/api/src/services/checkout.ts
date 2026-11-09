@@ -9,8 +9,8 @@ import { borrowerService } from './borrowers.ts';
 import { requireCurrentSemester } from './semesters.ts';
 
 // Checkout (BRW-2, BR 1 to 4). The route checks the role and passes the signed-in user as the
-// issuing handler (BR 2). The strike-based block (BORROWER_BLOCKED, BR 11) comes in FLG-3, through
-// borrowerService.isEligible.
+// issuing handler (BR 2). The borrower is checked inside the transaction through
+// borrowerService.isEligible: inactive (BR 3) or at the strike block threshold (BR 11).
 
 type LockedItem = {
   id: string;
@@ -75,27 +75,29 @@ function lineError(item: LockedItem, quantity: number, available: number): ApiEr
   return null;
 }
 
-// BR 3: the message for each reason isEligible can give. FLG-3 adds BORROWER_BLOCKED here.
+// BR 3, 11: the message for each reason isEligible can give.
 const REFUSAL_MESSAGES: Record<string, string> = {
   BORROWER_INACTIVE: 'This borrower is inactive and cannot borrow.',
+  BORROWER_BLOCKED:
+    'This borrower is blocked from borrowing this semester because of too many strikes. An admin can override a flag to unblock them.',
 };
 
 export async function checkout(issuedById: string, input: CheckoutInput): Promise<Checkout> {
   checkExpectedReturnDates(input.lines);
-  // BR 3: inactive (and, from FLG-3, blocked) borrowers cannot borrow.
-  const eligibility = await borrowerService.isEligible(input.borrowerId);
-  if (!eligibility.eligible) {
-    const { reason } = eligibility;
-    if (reason === 'NOT_FOUND') throw new ApiError(404, 'NOT_FOUND', 'Borrower not found.');
-    // A refusal without a reason is a BorrowerService bug, so it is a 500, not a guessed code.
-    if (!reason) throw new Error('BorrowerService.isEligible refused without a reason.');
-    throw new ApiError(409, reason, REFUSAL_MESSAGES[reason] ?? 'This borrower cannot borrow.');
-  }
-
   // BR 4: everything below commits together or not at all.
   return prisma.$transaction(async (tx) => {
     // BR 2: no current semester, no checkout.
     const semester = await requireCurrentSemester(tx);
+    // BR 3, 11: inactive or blocked borrowers cannot borrow. Inside the transaction, with the
+    // semester recorded below, so the check and the new transaction agree.
+    const eligibility = await borrowerService.isEligible(input.borrowerId, tx, semester.id);
+    if (!eligibility.eligible) {
+      const { reason } = eligibility;
+      if (reason === 'NOT_FOUND') throw new ApiError(404, 'NOT_FOUND', 'Borrower not found.');
+      // A refusal without a reason is a BorrowerService bug, so it is a 500, not a guessed code.
+      if (!reason) throw new Error('BorrowerService.isEligible refused without a reason.');
+      throw new ApiError(409, reason, REFUSAL_MESSAGES[reason] ?? 'This borrower cannot borrow.');
+    }
     // FOR SHARE: an admin deleting or deactivating this room at the same moment waits for the
     // checkout (a delete then gets HAS_HISTORY, BR 15), and a checkout never uses a room that
     // was just deactivated.

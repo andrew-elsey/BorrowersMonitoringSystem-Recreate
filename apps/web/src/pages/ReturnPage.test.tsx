@@ -26,6 +26,7 @@ const LAPTOP: OpenLine = {
   outstanding: 1,
   flagStatus: 'FLAGGED',
   flaggedAt: '2026-11-02T09:00:00.000Z',
+  strikes: 0,
 };
 const CORDS: OpenLine = {
   ...LAPTOP,

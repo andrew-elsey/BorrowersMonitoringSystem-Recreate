@@ -134,5 +134,16 @@ export type OpenLine = {
   outstanding: number;
   flagStatus: FlagStatus;
   flaggedAt: string | null;
+  // The borrower's strikes this semester (BR 10), for the Return screen's badge (FLG-3).
+  strikes: number;
 };
-export type OpenLinePage = { data: OpenLine[]; page: number; pageSize: number; total: number };
+// The thresholds come from settings once per reply (CLAUDE.md rule 3).
+export type OpenLinePage = {
+  data: OpenLine[];
+  page: number;
+  pageSize: number;
+  total: number;
+  warningThreshold: number;
+  noticeThreshold: number;
+  blockThreshold: number;
+};

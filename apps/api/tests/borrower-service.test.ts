@@ -62,6 +62,7 @@ class InMemoryBorrowerService implements BorrowerService {
       .sort((a, b) => a.name.localeCompare(b.name));
   }
 
+  // The double has no strikes and ignores the transaction (it has no database).
   async isEligible(id: string) {
     const borrower = await this.findById(id);
     if (!borrower) return { eligible: false, reason: 'NOT_FOUND' };
@@ -73,7 +74,7 @@ class InMemoryBorrowerService implements BorrowerService {
 // A stand-in caller, written only against the interface, as checkout will be (BRW-2).
 async function describeForCheckout(service: BorrowerService, id: string) {
   const borrower = await service.findById(id);
-  const { eligible, reason } = await service.isEligible(id);
+  const { eligible, reason } = await service.isEligible(id, prisma);
   return { name: borrower?.name, eligible, reason };
 }
 
@@ -81,6 +82,8 @@ let ids: Record<string, string>;
 
 beforeEach(async () => {
   await resetDatabase();
+  // FLG-3: checkout reads the strike thresholds from the settings row.
+  await prisma.setting.create({ data: { id: 1 } });
   const rows = await prisma.borrower.createManyAndReturn({ data: [...BORROWERS] });
   ids = Object.fromEntries(rows.map((row) => [row.schoolId, row.id]));
 });
@@ -178,12 +181,12 @@ describe.each(implementations)('%s', (_name, makeService) => {
 
   test('isEligible: rule 3, inactive borrowers cannot borrow', async () => {
     const service = makeService();
-    expect(await service.isEligible(ids['2026-0001']!)).toEqual({ eligible: true });
-    expect(await service.isEligible(ids['2026-0003']!)).toEqual({
+    expect(await service.isEligible(ids['2026-0001']!, prisma)).toEqual({ eligible: true });
+    expect(await service.isEligible(ids['2026-0003']!, prisma)).toEqual({
       eligible: false,
       reason: 'BORROWER_INACTIVE',
     });
-    expect(await service.isEligible('00000000-0000-4000-8000-000000000000')).toEqual({
+    expect(await service.isEligible('00000000-0000-4000-8000-000000000000', prisma)).toEqual({
       eligible: false,
       reason: 'NOT_FOUND',
     });

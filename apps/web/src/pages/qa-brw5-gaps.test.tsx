@@ -28,6 +28,7 @@ const UNIT_LINE: OpenLine = {
   outstanding: 1,
   flagStatus: 'NONE',
   flaggedAt: null,
+  strikes: 0,
 };
 const CORD_LINE: OpenLine = {
   ...UNIT_LINE,

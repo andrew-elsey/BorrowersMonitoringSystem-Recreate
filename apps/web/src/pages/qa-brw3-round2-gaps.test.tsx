@@ -85,6 +85,19 @@ function fakeApi(checkout: () => Reply = () => saved(), closingTime = '17:00') {
     if (method === 'GET' && path.startsWith('/borrowers/lookup?')) return page([BORROWER]);
     if (method === 'GET' && path.startsWith('/rooms')) return page([ROOM]);
     if (method === 'GET' && path.startsWith('/items?')) return page([CORD, ADAPTER]);
+    // FLG-3: Checkout loads the chosen borrower's strikes.
+    if (method === 'GET' && path.endsWith('/strikes')) {
+      return {
+        status: 200,
+        body: {
+          strikes: 0,
+          warningThreshold: 3,
+          noticeThreshold: 4,
+          blockThreshold: 5,
+          semesterName: null,
+        },
+      };
+    }
     if (method === 'GET' && path === '/closing-time') return { status: 200, body: { closingTime } };
     if (method === 'POST' && path === '/transactions') return checkout();
     throw new Error(`unexpected ${method} ${path}`);

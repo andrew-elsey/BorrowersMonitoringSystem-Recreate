@@ -20,6 +20,8 @@ beforeAll(async () => {
 
 beforeEach(async () => {
   await resetDatabase();
+  // FLG-3: checkout reads the strike thresholds from the settings row.
+  await prisma.setting.create({ data: { id: 1 } });
   const users = await prisma.user.createManyAndReturn({
     data: [
       { name: 'Ana Admin', username: 'ana', passwordHash, role: 'ADMIN' },
@@ -135,13 +137,13 @@ test('TC-MD-17: a deactivated borrower cannot be selected at checkout; reactivat
   // Checkout looks borrowers up through BorrowerService (BRW-2, BRW-3): the row comes back marked
   // inactive so the screen can disable it, and isEligible refuses it.
   expect(await borrowerService.search('Carlo')).toMatchObject([{ id, active: false }]);
-  expect(await borrowerService.isEligible(id)).toEqual({
+  expect(await borrowerService.isEligible(id, prisma)).toEqual({
     eligible: false,
     reason: 'BORROWER_INACTIVE',
   });
 
   await patch(admin, id, { active: true }).expect(200);
-  expect(await borrowerService.isEligible(id)).toEqual({ eligible: true });
+  expect(await borrowerService.isEligible(id, prisma)).toEqual({ eligible: true });
   expect(await auditFor(id)).toMatchObject([
     { action: 'BORROWER_CREATED' },
     { action: 'BORROWER_UPDATED', before: { active: true }, after: { active: false } },
