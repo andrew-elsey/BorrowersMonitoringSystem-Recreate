@@ -205,7 +205,7 @@ Paths are shortened: `api/` is `apps/api/tests/`, `web/` is `apps/web/src/pages/
 | TC-FLG-25 | FLG-4 | S18 | integration | Handler and view-only user call override | 403 | not yet |
 | TC-FLG-26 | FLG-2 | BR 9, ARCH 6 | integration | Fake clock 08:00, start the job, advance 9 hours | Line issued at 10:00 is `FLAGGED`; the next day's closing also fires | `api/flagging.test.ts` |
 | TC-FLG-27 | FLG-2 | BR 9, S22 | integration | Closing 17:00; at 16:00 admin does `PUT /api/settings` with closing 15:00 | Line issued at 10:00 is flagged at once | `api/flagging.test.ts` |
-| TC-FLG-28 | FLG-2 | BR 9, S23 | integration | Lock held at closing, so the run is skipped; release the lock | Retried after 60 s and the line is flagged; the next day's closing also fires | `api/flagging.test.ts` |
+| TC-FLG-28 | FLG-2 | BR 9, S23 | integration | Lock held at closing, so the run is skipped; release the lock | Retried after 60 s and the line is flagged | `api/flagging.test.ts` |
 | TC-FLG-29 | FLG-2 | BR 9, S11 | integration | Down Friday, started Monday 08:00 | Lines issued Friday and Saturday flagged; a Monday 07:00 line is not | `api/flagging.test.ts` |
 | TC-FLG-30 | FLG-2 | BR 9, S23 | integration | The scheduled run throws | Startup does not throw; retried after 60 s | `api/flagging.test.ts` |
 

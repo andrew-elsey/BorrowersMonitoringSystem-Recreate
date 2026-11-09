@@ -118,6 +118,7 @@ Notation: "Day 1" is a normal working day with closing time 17:00 and a current 
 **S20. Login flood.** An attacker sends hundreds of login attempts for the admin's username from one machine. Once the limit is reached, that machine gets `RATE_LIMITED` responses and no more password hashing is done for it. The admin signs in normally from another machine. When the throttle window passes, the attacker's machine can try again.
 
 **S21. Oversized input.** A request body over 100 KB, a CSV over 2 MB or 5,000 rows, a checkout with 51 lines, or a report range over 366 days is rejected (`PAYLOAD_TOO_LARGE` or `VALIDATION_ERROR`) before any business logic runs.
+
 **S22. Closing time moved earlier.** Closing is 17:00. At 16:00 an admin changes it to 15:00. The job runs right away and flags every open line issued before 15:00.
 
 **S23. Failed or skipped run.** At 17:00 the scheduled run fails (or another run holds the lock). About a minute later it tries again, and keeps retrying every minute until a run succeeds. Then it waits for the next closing.
