@@ -21,3 +21,22 @@ export function countStrikes(
     },
   });
 }
+
+// FLG-4: strikes for many borrowers in one grouped query (the Flag review list), with the same
+// meaning as countStrikes (BR 10, 12) for the given semester. Borrowers with none are not in the map.
+export async function countStrikesForBorrowers(
+  borrowerIds: string[],
+  semesterId: string,
+  db: Prisma.TransactionClient = prisma,
+): Promise<Map<string, number>> {
+  const groups = await db.transaction.groupBy({
+    by: ['borrowerId'],
+    where: {
+      borrowerId: { in: borrowerIds },
+      semesterId,
+      lines: { some: { flagStatus: 'FLAGGED' } },
+    },
+    _count: { _all: true },
+  });
+  return new Map(groups.map((group) => [group.borrowerId, group._count._all]));
+}

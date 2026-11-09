@@ -37,6 +37,7 @@ export type FlaggedLine = {
   flaggedAt: string;
   quantityBorrowed: number;
   outstanding: number; // 0 means fully returned
+  strikes: number; // the borrower's strikes this semester (BR 10)
   note: string | null;
   expectedReturnDate: string | null;
 };
@@ -45,4 +46,13 @@ export type FlaggedLinePage = {
   page: number;
   pageSize: number;
   total: number;
+  blockThreshold: number; // strikes at or over this are blocked (BR 11)
+};
+
+// The 200 reply of POST /api/flags/:id/override. strikes is the borrower's count afterwards.
+export type OverrideResult = {
+  lineId: string;
+  flagStatus: 'OVERRIDDEN';
+  overrideAt: string;
+  strikes: number;
 };

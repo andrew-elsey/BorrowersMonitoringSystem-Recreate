@@ -4,7 +4,8 @@ import { createApp } from '../src/app.ts';
 import { runFlagging } from '../src/jobs/flagging.ts';
 import { hashPassword } from '../src/lib/password.ts';
 import { prisma } from '../src/lib/prisma.ts';
-import { countStrikes } from '../src/services/strikes.ts';
+import { listFlaggedLines } from '../src/services/flags.ts';
+import { countStrikes, countStrikesForBorrowers } from '../src/services/strikes.ts';
 import { resetDatabase } from './setup/reset-database.ts';
 
 // FLG-4: flag review and override (BR 13, S4, S7, S18). Test cases TC-FLG-22 to TC-FLG-25 and
@@ -68,13 +69,14 @@ beforeEach(async () => {
 async function transaction(
   lines: { item: number; flag?: 'NONE' | 'FLAGGED' | 'OVERRIDDEN'; returned?: boolean }[],
   extra: { note?: string; expectedReturnDate?: Date } = {},
+  who: { borrower?: string; semester?: string } = {},
 ) {
   const created = await prisma.transaction.create({
     data: {
-      borrowerId,
+      borrowerId: who.borrower ?? borrowerId,
       locationId,
       issuedById: adminId,
-      semesterId,
+      semesterId: who.semester ?? semesterId,
       issuedAt: new Date('2026-09-01T10:00:00+08:00'),
       lines: {
         create: lines.map(({ item, flag = 'FLAGGED', returned = false }) => ({
@@ -105,10 +107,12 @@ const override = (agent: request.Agent, id: string, reason: unknown) =>
   agent.post(`/api/flags/${id}/override`).set('X-Requested-With', 'fetch').send({ reason });
 
 test('TC-FLG-22 (SPEC 5): the list shows borrower, item, note, and expected return date, FLAGGED only', async () => {
-  const [flagged] = await transaction([{ item: 0 }, { item: 1, flag: 'OVERRIDDEN' }], {
-    note: 'Back tomorrow',
-    expectedReturnDate: new Date('2026-09-02'),
-  });
+  const flagged = (
+    await transaction([{ item: 0 }, { item: 1, flag: 'OVERRIDDEN' }], {
+      note: 'Back tomorrow',
+      expectedReturnDate: new Date('2026-09-02'),
+    })
+  ).find((line) => line.flagStatus === 'FLAGGED')!;
   const admin = await login('ana');
   const res = await admin.get('/api/flags').expect(200);
   expect(res.body.total).toBe(1);
@@ -138,7 +142,7 @@ test('TC-FLG-22: the Returned filter and the search narrow the list', async () =
 });
 
 test('TC-FLG-23 (BR 13, SPEC 7): a reason must be 5 to 500 characters', async () => {
-  const [a, b, c, d] = await transaction([{ item: 0 }, { item: 0 }, { item: 0 }, { item: 0 }]);
+  const [a, b, c] = await transaction([{ item: 0 }, { item: 0 }, { item: 0 }]);
   const admin = await login('ana');
   for (const reason of ['abcd', '  ab  ', 'a'.repeat(501), undefined]) {
     const res = await override(admin, a!.id, reason);
@@ -150,7 +154,6 @@ test('TC-FLG-23 (BR 13, SPEC 7): a reason must be 5 to 500 characters', async ()
   expect(
     (await prisma.transactionItem.findUniqueOrThrow({ where: { id: a!.id } })).flagStatus,
   ).toBe('FLAGGED');
-  void d;
 });
 
 test('TC-FLG-24 (BR 13, 14, S4): overriding works before and after the return, and is audited', async () => {
@@ -231,4 +234,81 @@ test('TC-FLG-25 (S18): handlers and view-only users get 403 on the list and the 
   expect(
     (await prisma.transactionItem.findUniqueOrThrow({ where: { id: line!.id } })).flagStatus,
   ).toBe('FLAGGED');
+});
+
+test('TC-FLG-34 (owner decision, BR 10, 12): only the current semester is listed', async () => {
+  const old = await prisma.semester.create({
+    data: { name: 'S0', startDate: new Date('2026-01-05'), endDate: new Date('2026-05-31') },
+  });
+  await transaction([{ item: 0 }], {}, { semester: old.id });
+  const [current] = await transaction([{ item: 1 }]);
+  const admin = await login('ana');
+  const res = await admin.get('/api/flags').expect(200);
+  expect(res.body.data.map((line: { lineId: string }) => line.lineId)).toEqual([current!.id]);
+  // The old flag is kept (rule 7), and with no current semester nothing is listed.
+  await prisma.semester.updateMany({ data: { isCurrent: false } });
+  const none = await admin.get('/api/flags').expect(200);
+  expect(none.body).toMatchObject({ data: [], total: 0 });
+  expect(await prisma.transactionItem.count({ where: { flagStatus: 'FLAGGED' } })).toBe(2);
+});
+
+test('TC-FLG-35 (rule 12): a borrower search is not cut off by 100 other name matches', async () => {
+  // 101 borrowers match "Smith" and sort before the flagged one, who has the last name.
+  await prisma.borrower.createMany({
+    data: Array.from({ length: 101 }, (_, n) => ({
+      schoolId: `S-${n}`,
+      name: `Smith A${String(n).padStart(3, '0')}`,
+      type: 'STUDENT' as const,
+      department: 'IT',
+    })),
+  });
+  const last = await prisma.borrower.create({
+    data: { schoolId: 'S-LAST', name: 'Smith Zzz', type: 'STUDENT', department: 'IT' },
+  });
+  const [line] = await transaction([{ item: 0 }], {}, { borrower: last.id });
+  const admin = await login('ana');
+  const res = await admin.get('/api/flags?q=Smith').expect(200);
+  expect(res.body.data.map((row: { lineId: string }) => row.lineId)).toEqual([line!.id]);
+});
+
+test('TC-FLG-36 (rule 12): over the borrower cap a search is refused, never cut short', async () => {
+  await transaction([{ item: 0 }]);
+  const other = await prisma.borrower.create({
+    data: { schoolId: '2026-0002', name: 'Other', type: 'STUDENT', department: 'IT' },
+  });
+  await transaction([{ item: 1 }], {}, { borrower: other.id });
+  const query = { returned: 'all' as const, q: 'Cruz', page: 1, pageSize: 25 };
+  await expect(listFlaggedLines(query, 1)).rejects.toMatchObject({
+    status: 422,
+    code: 'SEARCH_TOO_BROAD',
+    message: 'Too many borrowers have flagged lines; search by item or asset tag.',
+  });
+  expect((await listFlaggedLines(query, 2)).total).toBe(1); // exactly at the cap still works
+});
+
+test('TC-FLG-37 (BR 10, 11): the list shows strikes and the block threshold; the override reports the new count', async () => {
+  const [a, b] = await transaction([{ item: 0 }, { item: 1 }]);
+  const [c] = await transaction([{ item: 0 }]);
+  const admin = await login('ana');
+  const list = await admin.get('/api/flags').expect(200);
+  expect(list.body.blockThreshold).toBe(5);
+  expect(list.body.data.every((line: { strikes: number }) => line.strikes === 2)).toBe(true);
+  // One of the first transaction's two lines: that transaction still counts (S7).
+  expect((await override(admin, a!.id, 'first one').expect(200)).body.line.strikes).toBe(2);
+  expect((await override(admin, b!.id, 'second one').expect(200)).body.line.strikes).toBe(1);
+  expect((await override(admin, c!.id, 'third one').expect(200)).body.line.strikes).toBe(0);
+});
+
+test('TC-FLG-38: the batched strike count matches countStrikes', async () => {
+  const other = await prisma.borrower.create({
+    data: { schoolId: '2026-0002', name: 'Other', type: 'STUDENT', department: 'IT' },
+  });
+  await transaction([{ item: 0 }, { item: 1 }]);
+  await transaction([{ item: 0 }]);
+  await transaction([{ item: 0, flag: 'OVERRIDDEN' }]);
+  await transaction([{ item: 1 }], {}, { borrower: other.id });
+  const counts = await countStrikesForBorrowers([borrowerId, other.id], semesterId);
+  expect(counts.get(borrowerId)).toBe(await countStrikes(borrowerId));
+  expect(counts.get(other.id)).toBe(await countStrikes(other.id));
+  expect([counts.get(borrowerId), counts.get(other.id)]).toEqual([2, 1]);
 });
