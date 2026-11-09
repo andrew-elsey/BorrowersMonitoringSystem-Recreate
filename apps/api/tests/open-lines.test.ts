@@ -6,7 +6,7 @@ import { prisma } from '../src/lib/prisma.ts';
 import { resetDatabase } from './setup/reset-database.ts';
 
 // BRW-5: GET /api/returns/open, the Return screen's search (SPEC 5, 7; BR 5, 6). Test cases
-// TC-BRW-42 and TC-BRW-43 in TEST_CASES.md.
+// TC-BRW-42, 43, and 46 in TEST_CASES.md.
 
 const PASSWORD = 'correct-horse-battery';
 let hal: ReturnType<typeof request.agent>;
@@ -157,4 +157,22 @@ test('TC-BRW-43: admin and handler may search; viewer 403, signed out 401; bad b
   }
   // A NUL would make PostgreSQL fail; it is refused as input.
   await open(hal, '?by=item&q=ab%00').expect(400);
+});
+
+test('TC-BRW-46: a borrower with an open line is found even when 100+ borrowers match and they sort last', async () => {
+  await prisma.borrower.createMany({
+    data: Array.from({ length: 105 }, (_, i) => ({
+      schoolId: `2026-9${String(i).padStart(3, '0')}`,
+      name: `Alex ${String(i).padStart(3, '0')}`,
+      type: 'STUDENT' as const,
+      department: 'IT',
+    })),
+  });
+  const last = await prisma.borrower.create({
+    data: { schoolId: '2026-8000', name: 'Alex Zulu', type: 'STUDENT', department: 'IT' },
+  });
+  const line = await issue(last.id, { name: 'Laptop Dell', assetTag: 'LT-77' });
+
+  const res = await open(hal, '?by=borrower&q=alex').expect(200);
+  expect(res.body.data.map((row: { lineId: string }) => row.lineId)).toEqual([line.id]);
 });

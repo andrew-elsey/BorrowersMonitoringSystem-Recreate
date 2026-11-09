@@ -181,6 +181,7 @@ Paths are shortened: `api/` is `apps/api/tests/`, `web/` is `apps/web/src/pages/
 | TC-BRW-43 | BRW-5 | SPEC 3, 7 | integration | `GET /api/returns/open` as handler, viewer, and signed out; 1-character and 101-character `q`, `pageSize=101`, `page=0`, an unknown `by`, a NUL in `q` | Handler: 200; viewer: 403; signed out: 401; bad input: `VALIDATION_ERROR` | `api/open-lines.test.ts` |
 | TC-BRW-44 | BRW-5 | BR 5, FND-7 | component | Return 3 cords when 2 are out (409 `RETURN_EXCEEDS_OUTSTANDING` with `details.lineId`); a `fields.lines` schema error | The row is marked (`aria-invalid`, message) and focused; the top message says "Return not saved" and "Nothing was recorded"; a schema error shows at the top | `web/ReturnPage.test.tsx` (also: a view-only user cannot open Return) |
 | TC-BRW-45 | BRW-5 | SPEC 8 | manual | Open Return with open lines, a 100-character item name and a long note at 1280, 1000, 400, and 320 px wide | No sideways scroll on the page; rows wrap | manual (`web/ReturnPage.test.tsx` checks only the shrink classes) |
+| TC-BRW-46 | BRW-5 | SPEC 7, BR 5 | integration | 105 borrowers match "alex"; the one with an open line sorts last by name | `by=borrower&q=alex` finds that line (the search is limited to borrowers with open lines, not cut at 100) | `api/open-lines.test.ts` |
 
 ## FLG: Flagging and strikes
 

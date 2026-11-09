@@ -155,8 +155,15 @@ export async function listOpenLines({
     else if (by === 'assetTag') search = Prisma.sql`AND i.asset_tag ILIKE ${like}`;
     else {
       // Rule 1: borrowers are found through BorrowerService, never joined here.
-      // shortcut: a text that matches more than 100 borrowers only finds the first 100; narrow the text.
-      const found = await borrowerService.search(q, 100);
+      // Search only among borrowers that have open lines, so a match is never cut off by the
+      // 100-result limit. Few borrowers have things out at once (everything is due the same day).
+      const withOpenLines = await prisma.$queryRaw<{ borrower_id: string }[]>`
+        SELECT DISTINCT t.borrower_id FROM transactions t
+        JOIN transaction_items ti ON ti.transaction_id = t.id
+        WHERE ti.quantity_borrowed > ti.quantity_returned`;
+      const found = await borrowerService.search(q, 100, {
+        ids: withOpenLines.map((row) => row.borrower_id),
+      });
       search = Prisma.sql`AND t.borrower_id = ANY(${found.map((b) => b.id)}::uuid[])`;
     }
   }

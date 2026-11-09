@@ -34,10 +34,13 @@ class InMemoryBorrowerService implements BorrowerService {
     return this.borrowers.filter((borrower) => ids.includes(borrower.id));
   }
 
-  async search(query: string, limit = 25) {
+  async search(query: string, limit = 25, options: { ids?: string[] } = {}) {
     const text = query.trim();
     checkSearchBounds(text, limit);
-    return this.matching(text).slice(0, limit);
+    const { ids } = options;
+    return this.matching(text)
+      .filter((borrower) => !ids || ids.includes(borrower.id))
+      .slice(0, limit);
   }
 
   async list({ q, type, active, page, pageSize }: BorrowerListQuery) {

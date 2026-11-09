@@ -23,7 +23,8 @@ export function createTransactionsRouter() {
   });
 
   // The Return screen's search (BRW-5). Not under the search rate limit, like the checkout borrower
-  // lookup (owner decision 2026-11-07): staff type it live; the global limit and nginx still apply.
+  // lookup: bounded, staff-only, and cheap, and it runs only when Find is pressed. The global limit
+  // and nginx still apply.
   router.get('/returns/open', requireRole(...PERMISSIONS.checkoutAndReturn), async (req, res) => {
     res.json(await listOpenLines(openLinesQuerySchema.parse(req.query)));
   });

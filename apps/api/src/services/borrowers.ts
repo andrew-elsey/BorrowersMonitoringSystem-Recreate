@@ -26,7 +26,8 @@ export interface BorrowerService {
   // Several at once; ids that do not exist are left out. For screens that list other records.
   findByIds(ids: string[]): Promise<Borrower[]>;
   // Matches name or school ID. `query` is 2 to 100 characters, `limit` 1 to 100 (SPEC.md 7).
-  search(query: string, limit?: number): Promise<Borrower[]>;
+  // `ids` (optional) limits the search to those borrowers, so callers can search among a known set.
+  search(query: string, limit?: number, options?: { ids?: string[] }): Promise<Borrower[]>;
   // One page for the Borrowers screen: everyone, or those matching `q` (same bounds as search),
   // narrowed to one `type` and to active or inactive borrowers when those are given.
   list(params: BorrowerListQuery): Promise<BorrowerPage>;
@@ -45,6 +46,9 @@ const borrowerFields = {
   department: true,
   active: true,
 } as const;
+
+// PostgreSQL rejects a malformed uuid, so ids that cannot exist are dropped.
+const validIds = (ids: string[]) => ids.filter((id) => z.guid().safeParse(id).success);
 
 const byName: Prisma.BorrowerOrderByWithRelationInput[] = [{ name: 'asc' }, { schoolId: 'asc' }];
 
@@ -87,18 +91,26 @@ export class LocalBorrowerService implements BorrowerService {
   }
 
   async findByIds(ids: string[]): Promise<Borrower[]> {
-    const valid = ids.filter((id) => z.guid().safeParse(id).success);
-    return prisma.borrower.findMany({ where: { id: { in: valid } }, select: borrowerFields });
+    return prisma.borrower.findMany({
+      where: { id: { in: validIds(ids) } },
+      select: borrowerFields,
+    });
   }
 
   // async, so a bounds error rejects the promise instead of throwing.
   // Includes inactive borrowers (active: false) so admins can find them; checkout refuses them
   // through isEligible (rule 3).
-  async search(query: string, limit = SEARCH_DEFAULT_LIMIT): Promise<Borrower[]> {
+  async search(
+    query: string,
+    limit = SEARCH_DEFAULT_LIMIT,
+    options: { ids?: string[] } = {},
+  ): Promise<Borrower[]> {
     const text = query.trim();
     checkSearchBounds(text, limit);
     return prisma.borrower.findMany({
-      where: matching(text),
+      where: options.ids
+        ? { ...matching(text), id: { in: validIds(options.ids) } }
+        : matching(text),
       select: borrowerFields,
       orderBy: byName,
       take: limit,
