@@ -1,6 +1,7 @@
 import { loginSchema, type LoginInput } from '@bms/shared';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useMutation } from '@tanstack/react-query';
+import { useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { Navigate, useLocation } from 'react-router';
 import { apiFetch, ApiRequestError, errorText } from '../api';
@@ -10,7 +11,7 @@ import { Field } from '../components/Field';
 import { BoxIcon } from '../components/icons';
 
 export function LoginPage() {
-  const { user, signIn } = useAuth();
+  const { user, signIn, sessionExpired } = useAuth();
   const location = useLocation();
   const form = useForm<LoginInput>({
     resolver: zodResolver(loginSchema),
@@ -25,6 +26,10 @@ export function LoginPage() {
       form.setFocus('password');
     },
   });
+
+  useEffect(() => {
+    document.title = 'Sign in · Borrowers Monitoring System';
+  }, []);
 
   // Back to the page the user first asked for (set by RequireSignIn), or home.
   if (user)
@@ -50,6 +55,9 @@ export function LoginPage() {
           onSubmit={form.handleSubmit((input) => login.mutate(input))}
           className="flex flex-col gap-5 rounded-xl border border-divider bg-surface p-7"
         >
+          {sessionExpired && (
+            <Alert kind="wait">Your session has expired. Please sign in again.</Alert>
+          )}
           {login.isError && (
             <Alert kind={isWait ? 'wait' : 'error'}>{errorText(login.error)}</Alert>
           )}
