@@ -13,15 +13,20 @@ import { getSettings } from './settings.ts';
 // switching semesters resets the count and switching back brings it back. With no current
 // semester no transaction is in it, so the count is 0. Checkout passes the semester it records
 // (`semesterId`), so the block and the new transaction always use the same one (BR 11, 12).
-export function countStrikes(
+export async function countStrikes(
   borrowerId: string,
   db: Prisma.TransactionClient = prisma,
   semesterId?: string,
 ): Promise<number> {
+  if (semesterId) {
+    // One strike query for a known semester: the same one the Flag review and Return lists use.
+    const counts = await countStrikesForBorrowers([borrowerId], semesterId, db);
+    return counts.get(borrowerId) ?? 0;
+  }
   return db.transaction.count({
     where: {
       borrowerId,
-      ...(semesterId ? { semesterId } : { semester: { isCurrent: true } }),
+      semester: { isCurrent: true },
       lines: { some: { flagStatus: 'FLAGGED' } },
     },
   });

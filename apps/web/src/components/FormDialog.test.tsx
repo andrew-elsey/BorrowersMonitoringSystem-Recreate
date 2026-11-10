@@ -27,6 +27,25 @@ function renderDialog(isPending = false) {
   return { onSubmit, onCancel };
 }
 
+test('describedBy points the dialog at its explanation; without it there is no description', () => {
+  render(
+    <FormDialog
+      open
+      title="Run"
+      submitLabel="Go"
+      onSubmit={vi.fn()}
+      onCancel={vi.fn()}
+      describedBy="help"
+    >
+      <p id="help">What this does.</p>
+    </FormDialog>,
+  );
+  expect(screen.getByRole('dialog', { name: 'Run' }).getAttribute('aria-describedby')).toBe('help');
+  cleanup();
+  renderDialog();
+  expect(screen.getByRole('dialog').hasAttribute('aria-describedby')).toBe(false);
+});
+
 test('opens as a labeled dialog with the first field focused; Enter in the field saves', async () => {
   const user = userEvent.setup();
   const { onSubmit } = renderDialog();

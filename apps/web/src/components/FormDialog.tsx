@@ -14,6 +14,8 @@ type FormDialogProps = {
   onSubmit: FormEventHandler<HTMLFormElement>; // usually form.handleSubmit(...)
   onCancel: () => void;
   isPending?: boolean; // disables the buttons while the request runs, so it is sent once
+  describedBy?: string; // id of the text that explains the dialog, read by screen readers
+  danger?: boolean; // red submit button, as ConfirmDialog has, for an action that is hard to undo
 };
 
 export function FormDialog(props: FormDialogProps) {
@@ -23,6 +25,7 @@ export function FormDialog(props: FormDialogProps) {
       title={props.title}
       onCancel={props.onCancel}
       isPending={props.isPending}
+      describedBy={props.describedBy}
     >
       <form noValidate onSubmit={props.onSubmit} className="flex flex-col gap-4">
         {props.children}
@@ -38,7 +41,7 @@ export function FormDialog(props: FormDialogProps) {
           <button
             type="submit"
             disabled={props.isPending}
-            className="h-11 cursor-pointer rounded-lg bg-primary px-5 text-base font-semibold text-white transition-colors duration-150 hover:bg-primary-hover disabled:cursor-wait disabled:opacity-80"
+            className={`h-11 cursor-pointer rounded-lg px-5 text-base font-semibold text-white transition-colors duration-150 disabled:cursor-wait disabled:opacity-80 ${props.danger ? 'bg-danger hover:opacity-90' : 'bg-primary hover:bg-primary-hover'}`}
           >
             {props.submitLabel}
           </button>
