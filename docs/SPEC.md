@@ -35,7 +35,7 @@ A web-based Inventory and Borrowing System for a college department. It tracks e
 
 All domain tables use UUID primary keys and `created_at` / `updated_at` timestamps (UTC). Enum values are uppercase strings.
 
-**users**: name, username (unique), password_hash, role (`ADMIN`, `HANDLER`, `VIEWER`), active.
+**users**: name, username (unique, case-insensitive; stored as typed; sign-in matches it exactly), password_hash, role (`ADMIN`, `HANDLER`, `VIEWER`), active.
 
 **borrowers**: school_id (unique, case-insensitive; stored as typed), name, type (`STUDENT`, `FACULTY`, `EMPLOYEE`), department, active.
 
