@@ -11,6 +11,7 @@ import { createGlobalRateLimiter } from './middleware/request-rate-limit.ts';
 import { createAuthRouter } from './routes/auth.ts';
 import { createBorrowersRouter } from './routes/borrowers.ts';
 import { createCategoriesRouter } from './routes/categories.ts';
+import { createDashboardRouter } from './routes/dashboard.ts';
 import { createItemsRouter } from './routes/items.ts';
 import { createRoomsRouter } from './routes/rooms.ts';
 import { createSettingsRouter } from './routes/settings.ts';
@@ -37,6 +38,7 @@ export function createApp() {
   app.use('/api', createFlaggingRouter());
   app.use('/api', createFlagsRouter());
   app.use('/api', createTransactionsRouter());
+  app.use('/api', createDashboardRouter());
   // Unknown API paths get the standard error format too (CLAUDE.md rule 10), not Express's HTML page.
   app.use('/api', () => {
     throw new ApiError(404, 'NOT_FOUND', 'Not found.');

@@ -86,9 +86,9 @@ test('a notification raised just before navigating to another signed-in page is 
 
   await user.type(screen.getByLabelText('New category'), 'Projectors');
   await user.click(screen.getByRole('button', { name: 'Add category' }));
-  await user.click(screen.getByRole('link', { name: 'Home' }));
+  await user.click(screen.getByRole('link', { name: 'Dashboard' }));
 
-  expect(await screen.findByRole('heading', { name: 'Home' })).toBeTruthy();
+  expect(await screen.findByRole('heading', { name: 'Dashboard' })).toBeTruthy();
   expect(within(screen.getByRole('main')).getByRole('status').textContent).toContain('Projectors');
 });
 

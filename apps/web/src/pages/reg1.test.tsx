@@ -90,7 +90,7 @@ test('each page sets its own tab title (TC-FND-31)', async () => {
       : { status: 200, body: { data: [], page: 1, pageSize: 25, total: 0 } },
   );
   const router = renderApp('/');
-  await waitFor(() => expect(document.title).toBe('Home · Borrowers Monitoring System'));
+  await waitFor(() => expect(document.title).toBe('Dashboard · Borrowers Monitoring System'));
   await router.navigate('/checkout');
   await waitFor(() => expect(document.title).toBe('Checkout · Borrowers Monitoring System'));
   await router.navigate('/password');
@@ -100,7 +100,7 @@ test('each page sets its own tab title (TC-FND-31)', async () => {
   await router.navigate('/inventory'); // a handler may not open it
   await waitFor(() => expect(document.title).toBe('Not allowed · Borrowers Monitoring System'));
   await router.navigate('/nowhere'); // redirects home
-  await waitFor(() => expect(document.title).toBe('Home · Borrowers Monitoring System'));
+  await waitFor(() => expect(document.title).toBe('Dashboard · Borrowers Monitoring System'));
 });
 
 test('the sign-in page has its own tab title (TC-FND-31)', async () => {

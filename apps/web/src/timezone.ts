@@ -4,4 +4,4 @@ export const TIMEZONE = (import.meta.env.APP_TIMEZONE as string | undefined) || 
 
 // Today as YYYY-MM-DD in the app timezone, for a date picker's min. The API checks again (BR 7).
 export const todayInAppZone = () =>
-  new Intl.DateTimeFormat('en-CA', { timeZone: TIMEZONE }).format();
+  new Intl.DateTimeFormat('en-CA', { timeZone: TIMEZONE }).format(new Date());

@@ -25,13 +25,13 @@ test('a signed-out user is sent to login, signs in, and sees home with their nam
 
   await signIn('jdelacruz', 'correct-horse-battery');
 
-  expect(await screen.findByRole('heading', { name: 'Home' })).toBeTruthy();
+  expect(await screen.findByRole('heading', { name: 'Dashboard' })).toBeTruthy();
   expect(router.state.location.pathname).toBe('/');
   expect(screen.getByText('Handler', { selector: 'span' })).toBeTruthy();
   // AUTH-4: only built screens are in the menu, and only the ones this role may use.
   const menu = screen.getByRole('navigation', { name: 'Main' });
   expect([...menu.querySelectorAll('a')].map((link) => link.textContent)).toEqual([
-    'Home',
+    'Dashboard',
     'Checkout',
     'Return',
   ]);
@@ -108,7 +108,7 @@ test('a reload keeps the user signed in: the user comes from GET /api/auth/me', 
   mockApi(() => signedInAs(HANDLER));
   renderApp('/');
 
-  expect(await screen.findByRole('heading', { name: 'Home' })).toBeTruthy();
+  expect(await screen.findByRole('heading', { name: 'Dashboard' })).toBeTruthy();
   expect(screen.getAllByText('Juan dela Cruz').length).toBeGreaterThan(0);
 });
 
@@ -147,7 +147,7 @@ test('after a deliberate sign out, the next sign-in lands on home, not the last 
   await userEvent.click(await screen.findByRole('button', { name: 'Sign out' }));
   await signIn('jdelacruz', 'a-brand-new-password');
 
-  expect(await screen.findByRole('heading', { name: 'Home' })).toBeTruthy();
+  expect(await screen.findByRole('heading', { name: 'Dashboard' })).toBeTruthy();
   expect(router.state.location.pathname).toBe('/');
 });
 
