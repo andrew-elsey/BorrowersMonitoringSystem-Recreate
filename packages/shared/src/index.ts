@@ -10,3 +10,4 @@ export * from './settings.ts';
 export * from './transactions.ts';
 export * from './flags.ts';
 export * from './dashboard.ts';
+export * from './history.ts';

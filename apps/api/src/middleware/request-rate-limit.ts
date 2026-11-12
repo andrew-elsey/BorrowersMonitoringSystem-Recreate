@@ -10,7 +10,7 @@ const GLOBAL_REQUESTS_PER_MINUTE = 600;
 // Search is typed live at the counter, so it gets more room than reports and CSV import (owner decision 2026-11-07).
 const SEARCH_REQUESTS_PER_MINUTE = 60;
 
-function createRequestLimiter(
+export function createRequestLimiter(
   limit: number,
   skip?: (req: Request) => boolean,
   keyGenerator?: () => string,
@@ -35,7 +35,7 @@ export function createGlobalRateLimiter() {
   return createRequestLimiter(GLOBAL_REQUESTS_PER_MINUTE);
 }
 
-// Search: a list request with ?q=. Reports and CSV import get their own 30 a minute limit later.
+// Search: a list request with ?q=. Reports (routes/history.ts) and CSV import build their own 30 a minute limit with createRequestLimiter.
 export function createSearchRateLimiter() {
   return createRequestLimiter(SEARCH_REQUESTS_PER_MINUTE, (req) => req.query.q === undefined);
 }

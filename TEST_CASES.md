@@ -247,9 +247,9 @@ Paths are shortened: `api/` is `apps/api/tests/`, `web/` is `apps/web/src/pages/
 |---|---|---|---|---|---|---|
 | TC-RPT-01 | RPT-1 | SPEC 5 | integration | Load the dashboard with open, flagged, and returned lines | Only unreturned lines and borrowers with strikes in the current semester, with notes and expected return dates | `api/dashboard.test.ts` (returned lines left out; overridden and older-semester strikes not counted; most strikes first; paged; no current semester empty), `web/DashboardPage.test.tsx` (strike levels and the due or flagged text) |
 | TC-RPT-02 | RPT-1 | S18 | integration | Admin, handler, and view-only load the dashboard | All allowed | `api/dashboard.test.ts` (also signed out 401; page size 101 and page 0 `VALIDATION_ERROR`), `web/DashboardPage.test.tsx` (view-only) |
-| TC-RPT-03 | RPT-2 | BR section 4 | integration | History for a borrower over a date range | Room, issuing and receiving handlers, return details, flag status; paginated | not yet |
-| TC-RPT-04 | RPT-2 | SPEC 7, S21 | integration | Request ranges of 366 and 367 days | 366 accepted; 367 `VALIDATION_ERROR` | not yet |
-| TC-RPT-05 | RPT-3 | BR section 4 | integration | History for an item by item and by asset tag | Same detail as RPT-2; paginated | not yet |
+| TC-RPT-03 | RPT-2 | BR section 4 | integration | History for a borrower over a date range | Room, issuing and receiving handlers, return details, flag status; paginated | `api/history.test.ts`, `web/pages/ReportsPage.test.tsx` |
+| TC-RPT-04 | RPT-2 | SPEC 7, S21 | integration | Request ranges of 366 and 367 days | 366 accepted; 367 `VALIDATION_ERROR` | `api/history.test.ts`, `web/pages/ReportsPage.test.tsx` |
+| TC-RPT-05 | RPT-3 | BR section 4 | integration | History for an item by item and by asset tag | Same detail as RPT-2; paginated | `api/history.test.ts`, `web/pages/ReportsPage.test.tsx` |
 | TC-RPT-06 | RPT-4 | BR section 4 | integration | Usage summary for a period | Most borrowed items with counts by category and by room; range capped at 366 days | not yet |
 | TC-RPT-07 | RPT-1 to RPT-4 | S18 | integration | View-only user loads the dashboard and all four reports | All allowed | dashboard part: `api/dashboard.test.ts`; the four reports: not yet (RPT-2 to RPT-4) |
 

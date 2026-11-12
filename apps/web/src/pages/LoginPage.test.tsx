@@ -34,6 +34,7 @@ test('a signed-out user is sent to login, signs in, and sees home with their nam
     'Dashboard',
     'Checkout',
     'Return',
+    'Reports',
   ]);
   const [, init] = fetchMock.mock.calls.find(([url]) => url === '/api/auth/login')!;
   expect(JSON.parse(init!.body as string)).toEqual({

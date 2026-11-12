@@ -30,6 +30,9 @@ const RoomsPage = lazy(() => import('./pages/RoomsPage').then((m) => ({ default:
 const SettingsPage = lazy(() =>
   import('./pages/SettingsPage').then((m) => ({ default: m.SettingsPage })),
 );
+const ReportsPage = lazy(() =>
+  import('./pages/ReportsPage').then((m) => ({ default: m.ReportsPage })),
+);
 const ChangePasswordPage = lazy(() =>
   import('./pages/ChangePasswordPage').then((m) => ({ default: m.ChangePasswordPage })),
 );
@@ -131,6 +134,14 @@ export const routes: RouteObject[] = [
             pageName="Settings and semesters"
           >
             <SettingsPage />
+          </RequireRole>
+        ),
+      },
+      {
+        path: 'reports',
+        element: (
+          <RequireRole roles={PERMISSIONS.viewDashboardAndReports} pageName="Reports">
+            <ReportsPage />
           </RequireRole>
         ),
       },
