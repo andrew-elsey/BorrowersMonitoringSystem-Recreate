@@ -39,7 +39,7 @@ export function createUsersRouter() {
   router.put('/users/:id/password', async (req, res) => {
     const { id } = idParams.parse(req.params);
     const { password } = resetPasswordSchema.parse(req.body);
-    await resetUserPassword(req.session.userId!, id, password);
+    await resetUserPassword(req.session.userId!, req.sessionID, id, password);
     res.status(204).end();
   });
 

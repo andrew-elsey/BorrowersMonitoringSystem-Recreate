@@ -1,9 +1,9 @@
 import type { User, UserInput, UserPage, UserUpdate } from '@bms/shared';
-import type { Prisma } from '../generated/prisma/client.ts';
 import { audit } from '../lib/audit.ts';
 import { ApiError, isPrismaError } from '../lib/errors.ts';
 import { hashPassword } from '../lib/password.ts';
 import { prisma } from '../lib/prisma.ts';
+import { signOutUser } from '../lib/session.ts';
 
 // User management (AUTH-3, SPEC.md 3: admins only; the route checks the role). Users are
 // deactivated, never deleted (BR 15), so there is no delete. The password hash is never returned
@@ -14,14 +14,8 @@ const userFields = { id: true, name: true, username: true, role: true, active: t
 const notFound = () => new ApiError(404, 'NOT_FOUND', 'User not found.');
 
 function duplicateUsername(username: string): ApiError {
-  const message = `The username "${username}" is already taken.`;
+  const message = `The username "${username}" is already taken. Usernames are compared without regard to case.`;
   return new ApiError(409, 'DUPLICATE_VALUE', message, { fields: { username: [message] } });
-}
-
-// Signs the user out everywhere: their session rows are deleted, so their next request is 401.
-// Sessions store the user id inside the JSON `data` column (lib/session.ts).
-async function signOutEverywhere(tx: Prisma.TransactionClient, userId: string): Promise<void> {
-  await tx.$executeRaw`DELETE FROM session WHERE data::jsonb ->> 'userId' = ${userId}`;
 }
 
 export async function listUsers(page: number, pageSize: number): Promise<UserPage> {
@@ -83,15 +77,24 @@ export async function updateUser(actorId: string, id: string, changes: UserUpdat
       const changedKeys = (Object.keys(changes) as (keyof UserUpdate)[]).filter(
         (key) => changes[key] !== before[key],
       );
-      // Nothing differs: nothing is written or audited.
+      // Nothing differs: nothing is written or audited. Sending your own unchanged role is fine.
       if (changedKeys.length === 0) return before;
+      // Owner decision 2026-11-12: an admin cannot change their own role, so the last admin can
+      // never demote themselves and leave nobody to manage users.
+      if (id === actorId && changedKeys.includes('role')) {
+        throw new ApiError(
+          409,
+          'CANNOT_CHANGE_OWN_ROLE',
+          'You cannot change your own role. Ask another admin to do it.',
+        );
+      }
       const pick = (source: UserUpdate) =>
         Object.fromEntries(changedKeys.map((key) => [key, source[key]]));
       const user = await tx.user.update({ where: { id }, data: pick(changes), select: userFields });
       // Deactivation takes effect at once (ARCHITECTURE.md 5). A role change too: the role is
       // kept in the session, so the user signs in again to get the new one.
       if (changedKeys.includes('active') || changedKeys.includes('role')) {
-        await signOutEverywhere(tx, id);
+        await signOutUser(tx, id);
       }
       // Rule 14: the changed fields, before and after.
       await audit(tx, {
@@ -110,9 +113,12 @@ export async function updateUser(actorId: string, id: string, changes: UserUpdat
   }
 }
 
-// An admin sets a new password for another user, who is told it in person.
+// An admin sets a new password for a user, who is told it in person. The user is signed out
+// everywhere (owner decision 2026-11-12). `actorSessionId` is kept, so an admin resetting their
+// own password stays signed in on this screen; it never matches another user's sessions.
 export async function resetUserPassword(
   actorId: string,
+  actorSessionId: string,
   id: string,
   password: string,
 ): Promise<void> {
@@ -121,6 +127,7 @@ export async function resetUserPassword(
     const user = await tx.user.findUnique({ where: { id }, select: { username: true } });
     if (!user) throw notFound();
     await tx.user.update({ where: { id }, data: { passwordHash } });
+    await signOutUser(tx, id, actorSessionId);
     // Rule 14. The same action the command-line reset writes; the actor tells them apart.
     await audit(tx, {
       actorId,

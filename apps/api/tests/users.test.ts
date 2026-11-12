@@ -1,11 +1,14 @@
+import { readFileSync } from 'node:fs';
 import request from 'supertest';
 import { beforeAll, beforeEach, expect, test } from 'vitest';
+import { resetPassword } from '../scripts/admin-reset-password.ts';
 import { createApp } from '../src/app.ts';
 import { hashPassword } from '../src/lib/password.ts';
 import { prisma } from '../src/lib/prisma.ts';
 import { resetDatabase } from './setup/reset-database.ts';
 
-// AUTH-3: user management. Test cases TC-AUTH-19 to TC-AUTH-22 in TEST_CASES.md.
+// AUTH-3: user management. Test cases TC-AUTH-19 to TC-AUTH-22 and TC-AUTH-38 to TC-AUTH-40 in
+// TEST_CASES.md.
 
 const PASSWORD = 'correct-horse-battery';
 let passwordHash: string;
@@ -243,4 +246,99 @@ test('ARCH 5: deactivating a user or changing their role signs them out at once'
   await patch(admin, vicId, { name: 'Victor Viewer' }).expect(200);
   await vic.get('/api/items').expect(200);
   await admin.get('/api/users').expect(200);
+});
+
+test('TC-AUTH-38: a password reset signs the user out everywhere; changing your own keeps only this session', async () => {
+  // Reset by an admin: both of the handler's sessions end.
+  const handlerA = await signIn('hal');
+  const handlerB = await signIn('hal');
+  await reset(admin, handlerId, { password: 'reset-by-admin-1' }).expect(204);
+  expect((await handlerA.get('/api/rooms')).status).toBe(401);
+  expect((await handlerB.get('/api/rooms')).status).toBe(401);
+
+  // Reset from the command line (ARCHITECTURE.md 12.4) does the same.
+  const handlerC = await signIn('hal', 'reset-by-admin-1');
+  await resetPassword('hal', 'reset-from-cli-2');
+  expect((await handlerC.get('/api/rooms')).status).toBe(401);
+
+  // Changing your own password keeps the session that made the change and ends the others.
+  const here = await signIn('hal', 'reset-from-cli-2');
+  const elsewhere = await signIn('hal', 'reset-from-cli-2');
+  await here
+    .put('/api/auth/password')
+    .set('X-Requested-With', 'fetch')
+    .send({ currentPassword: 'reset-from-cli-2', newPassword: 'changed-myself-3' })
+    .expect(204);
+  await here.get('/api/rooms').expect(200);
+  expect((await elsewhere.get('/api/rooms')).status).toBe(401);
+
+  // An admin resetting their own password on the Users screen stays signed in there only.
+  const adminElsewhere = await signIn('ana');
+  await reset(admin, adminId, { password: 'admin-own-reset-4' }).expect(204);
+  await admin.get('/api/users').expect(200);
+  expect((await adminElsewhere.get('/api/users')).status).toBe(401);
+  // Other users' sessions are untouched by any of this.
+  const vic = await signIn('vic');
+  await reset(admin, handlerId, { password: 'reset-by-admin-5' }).expect(204);
+  await vic.get('/api/items').expect(200);
+});
+
+test('TC-AUTH-39: an admin cannot change their own role', async () => {
+  const refused = await patch(admin, adminId, { role: 'HANDLER' }).expect(409);
+  expect(refused.body.error.code).toBe('CANNOT_CHANGE_OWN_ROLE');
+  const alsoRefused = await patch(admin, adminId, { name: 'Ana A.', role: 'VIEWER' }).expect(409);
+  expect(alsoRefused.body.error.code).toBe('CANNOT_CHANGE_OWN_ROLE');
+  const stored = await prisma.user.findUniqueOrThrow({ where: { id: adminId } });
+  expect([stored.role, stored.name]).toEqual(['ADMIN', 'Ana Admin']);
+  expect(await auditFor(adminId)).toEqual([]);
+  // Sending your unchanged role is fine, and another admin's role can be changed.
+  await patch(admin, adminId, { name: 'Ana A.', role: 'ADMIN' }).expect(200);
+  await admin.get('/api/users').expect(200);
+  const second = await post(admin, { ...NEW_USER, username: 'admin2', role: 'ADMIN' }).expect(201);
+  await patch(admin, second.body.user.id, { role: 'VIEWER' }).expect(200);
+});
+
+test('TC-AUTH-40: usernames are unique ignoring case; sign-in stays exact', async () => {
+  const replies = [
+    await post(admin, { ...NEW_USER, username: 'HAL' }),
+    await patch(admin, adminId, { username: 'Vic' }),
+  ];
+  for (const reply of replies) {
+    expect(reply.status).toBe(409);
+    expect(reply.body.error.code).toBe('DUPLICATE_VALUE');
+    expect(reply.body.error.details.fields.username[0]).toMatch(/without regard to case/);
+  }
+  // A user may change only the case of their own username; it is stored as typed.
+  const renamed = await patch(admin, handlerId, { username: 'Hal' }).expect(200);
+  expect(renamed.body.user.username).toBe('Hal');
+  // Sign-in matches exactly as typed.
+  expect((await login('hal', PASSWORD)).status).toBe(401);
+  await signIn('Hal');
+});
+
+test('TC-AUTH-40: the migration stops, naming the accounts, if usernames already differ only in case', async () => {
+  const sql = readFileSync(
+    new URL(
+      '../prisma/migrations/20261112120000_users_username_case_insensitive/migration.sql',
+      import.meta.url,
+    ),
+    'utf8',
+  );
+  const guard = sql.slice(sql.indexOf('DO $$'), sql.indexOf('END $$;') + 'END $$;'.length);
+  // Without clashes the guard passes.
+  await prisma.$executeRawUnsafe(guard);
+  // With a clash (index dropped for the test, inside a transaction that rolls back) it refuses.
+  await expect(
+    prisma.$transaction(async (tx) => {
+      await tx.$executeRawUnsafe('DROP INDEX users_username_lower_key');
+      await tx.user.create({
+        data: { name: 'Other', username: 'ANA', passwordHash, role: 'VIEWER' },
+      });
+      await tx.$executeRawUnsafe(guard);
+    }),
+  ).rejects.toThrow(/differ only in letter case must be renamed first: (ana, ANA|ANA, ana)/);
+  expect(await prisma.user.count({ where: { username: 'ANA' } })).toBe(0);
+  // The rollback kept the index.
+  const clash = await post(admin, { ...NEW_USER, username: 'ANA' });
+  expect(clash.body.error.code).toBe('DUPLICATE_VALUE');
 });

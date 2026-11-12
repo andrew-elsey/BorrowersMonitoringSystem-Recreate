@@ -4,6 +4,7 @@ import { audit } from '../lib/audit.ts';
 import { ApiError } from '../lib/errors.ts';
 import { hashPassword, verifyPassword } from '../lib/password.ts';
 import { prisma } from '../lib/prisma.ts';
+import { signOutUser } from '../lib/session.ts';
 
 export type SignedInUser = { id: string; name: string; username: string; role: Role };
 
@@ -43,9 +44,11 @@ export async function getSignedInUser(userId: string): Promise<SignedInUser | nu
   return { id: user.id, name: user.name, username: user.username, role: user.role };
 }
 
-// shortcut: the user's other sessions stay signed in after a password change; sign them out when AUTH-3 adds session revocation.
+// Signs the user out of their other sessions (owner decision 2026-11-12, AUTH-3). The session
+// making the change, `currentSessionId`, stays signed in.
 export async function changePassword(
   userId: string,
+  currentSessionId: string,
   currentPassword: string,
   newPassword: string,
 ): Promise<void> {
@@ -61,6 +64,7 @@ export async function changePassword(
   const passwordHash = await hashPassword(newPassword);
   await prisma.$transaction(async (tx) => {
     await tx.user.update({ where: { id: userId }, data: { passwordHash } });
+    await signOutUser(tx, userId, currentSessionId);
     // Rule 14. The hash is never written to the audit log.
     await audit(tx, {
       actorId: userId,

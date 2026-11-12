@@ -1,6 +1,7 @@
 import { audit } from '../src/lib/audit.ts';
 import { prisma } from '../src/lib/prisma.ts';
 import { checkPasswordPolicy, hashPassword } from '../src/lib/password.ts';
+import { signOutUser } from '../src/lib/session.ts';
 
 // Emergency password reset (ARCHITECTURE.md 12.4). Run inside the api container:
 //   docker compose exec api npm run admin:reset-password -- <username>
@@ -18,6 +19,7 @@ export async function resetPassword(username: string, newPassword: string): Prom
   const passwordHash = await hashPassword(newPassword);
   await prisma.$transaction(async (tx) => {
     await tx.user.update({ where: { id: user.id }, data: { passwordHash } });
+    await signOutUser(tx, user.id); // a reset signs the user out everywhere (AUTH-3)
     // Rule 14. A null actor: this runs from the command line, not as a signed-in user. The hash is never logged.
     await audit(tx, {
       actorId: null,

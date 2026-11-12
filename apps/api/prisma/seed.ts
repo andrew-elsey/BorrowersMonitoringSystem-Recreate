@@ -94,7 +94,9 @@ function readAdminCredentials(options: SeedOptions) {
 
 async function seedAdmin(username: string, password: string) {
   // An existing user is left alone, so re-running the seed never resets a changed password.
-  const existing = await prisma.user.findUnique({ where: { username }, select: { id: true } });
+  // Matched ignoring case, like the unique index, so "Admin" in the database is not created again.
+  const [existing] = await prisma.$queryRaw<{ id: string }[]>`
+    SELECT id FROM users WHERE lower(username) = lower(${username})`;
   if (existing) return { id: existing.id, created: 0 };
 
   // Hash before opening the transaction, so no database connection waits on argon2.
