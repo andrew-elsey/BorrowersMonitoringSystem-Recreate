@@ -22,14 +22,6 @@ export async function updateLineNote(
   lineId: string,
   { note, expectedReturnDate }: LineNoteInput,
 ): Promise<LineNote> {
-  // BR 7: the expected return date is today or later in the app timezone. YYYY-MM-DD sorts by date.
-  const today = DateTime.now().setZone(config.timezone).toISODate()!;
-  if (expectedReturnDate && expectedReturnDate < today) {
-    const message = 'Choose today or a later date.';
-    throw new ApiError(400, 'VALIDATION_ERROR', message, {
-      fields: { expectedReturnDate: [message] },
-    });
-  }
   return prisma.$transaction(async (tx) => {
     // Lock the line so a return at the same moment cannot close it between the check and the
     // update, and the audit's "before" is the value really replaced (ARCHITECTURE.md 8).
@@ -43,10 +35,19 @@ export async function updateLineNote(
         409,
         'LINE_NOT_OPEN',
         'This line is fully returned, so its note can no longer be changed.',
-        {
-          lineId,
-        },
+        { lineId },
       );
+    }
+    // BR 7: a date that is set or changed must be today or later in the app timezone. The stored
+    // date may be kept as it is even once it has passed, and clearing is always allowed (owner
+    // decision 2026-11-12). YYYY-MM-DD strings sort in date order.
+    const today = DateTime.now().setZone(config.timezone).toISODate()!;
+    const changed = expectedReturnDate !== toDateString(line.expected_return_date);
+    if (expectedReturnDate && changed && expectedReturnDate < today) {
+      const message = 'Choose today or a later date.';
+      throw new ApiError(400, 'VALIDATION_ERROR', message, {
+        fields: { expectedReturnDate: [message] },
+      });
     }
     const updated = await tx.transactionItem.update({
       where: { id: lineId },
