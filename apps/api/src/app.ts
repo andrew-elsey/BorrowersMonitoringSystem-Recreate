@@ -15,6 +15,7 @@ import { createItemsRouter } from './routes/items.ts';
 import { createRoomsRouter } from './routes/rooms.ts';
 import { createSettingsRouter } from './routes/settings.ts';
 import { createTransactionsRouter } from './routes/transactions.ts';
+import { createUsersRouter } from './routes/users.ts';
 import { healthRouter } from './routes/health.ts';
 
 export function createApp() {
@@ -37,6 +38,7 @@ export function createApp() {
   app.use('/api', createFlaggingRouter());
   app.use('/api', createFlagsRouter());
   app.use('/api', createTransactionsRouter());
+  app.use('/api', createUsersRouter());
   // Unknown API paths get the standard error format too (CLAUDE.md rule 10), not Express's HTML page.
   app.use('/api', () => {
     throw new ApiError(404, 'NOT_FOUND', 'Not found.');
