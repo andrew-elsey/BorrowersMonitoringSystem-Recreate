@@ -145,7 +145,8 @@ export function UsersPage() {
 
   function startEditing(user: User) {
     const { name, username, role } = user;
-    editForm.reset({ name, username, role });
+    // Your own role is not part of the form, so it is never sent.
+    editForm.reset(user.id === me.id ? { name, username } : { name, username, role });
     setToEdit(user);
   }
 
@@ -244,7 +245,11 @@ export function UsersPage() {
         onCancel={() => setToEdit(null)}
         isPending={edit.isPending}
       >
-        <UserFields form={editForm} idPrefix="edit" />
+        <UserFields
+          form={editForm}
+          idPrefix="edit"
+          ownRole={toEdit?.id === me.id ? toEdit.role : undefined}
+        />
       </FormDialog>
 
       <FormDialog
@@ -308,10 +313,12 @@ function UserFields({
   form,
   idPrefix,
   autoFocus,
+  ownRole,
 }: {
   form: UseFormReturn<UserInput> | UseFormReturn<UserUpdate>;
   idPrefix: string;
   autoFocus?: boolean;
+  ownRole?: Role; // set when admins edit themselves: the role is shown but cannot be changed
 }) {
   // Both forms have these three fields, so either can be treated as the edit form here.
   const { register, formState } = form as UseFormReturn<UserUpdate>;
@@ -332,13 +339,26 @@ function UserFields({
         error={errors.username?.message}
         {...register('username')}
       />
-      <SelectField
-        id={`${idPrefix}-role`}
-        label="Role"
-        options={ROLE_OPTIONS}
-        error={errors.role?.message}
-        {...register('role')}
-      />
+      {ownRole ? (
+        // Not registered, so the edit sends no role. The server refuses a change anyway
+        // (CANNOT_CHANGE_OWN_ROLE, owner decision 2026-11-12).
+        <SelectField
+          id={`${idPrefix}-role`}
+          label="Role"
+          options={ROLE_OPTIONS}
+          value={ownRole}
+          disabled
+          hint="You cannot change your own role. Ask another admin to do it."
+        />
+      ) : (
+        <SelectField
+          id={`${idPrefix}-role`}
+          label="Role"
+          options={ROLE_OPTIONS}
+          error={errors.role?.message}
+          {...register('role')}
+        />
+      )}
     </>
   );
 }

@@ -164,6 +164,35 @@ test('TC-AUTH-19: Edit opens a dialog filled from the row; saving sends only nam
   ]);
 });
 
+test('TC-AUTH-39: editing your own row shows your role locked and never sends it', async () => {
+  const fetchMock = fakeApi((method, _path, body) =>
+    method === 'PATCH'
+      ? { status: 200, body: { user: { ...TERESA, ...(body as object) } } }
+      : undefined,
+  );
+  const user = userEvent.setup();
+  renderApp('/users');
+  await user.click(await screen.findByRole('button', { name: 'Edit Ma. Teresa Lim' }));
+  const dialog = screen.getByRole('dialog', { name: 'Edit Ma. Teresa Lim' });
+  const role = within(dialog).getByLabelText('Role') as HTMLSelectElement;
+  expect(role.disabled).toBe(true);
+  expect(role.value).toBe('ADMIN');
+  expect(
+    within(dialog).getByText('You cannot change your own role. Ask another admin to do it.'),
+  ).toBeTruthy();
+  await user.clear(within(dialog).getByLabelText('Full name'));
+  await user.type(within(dialog).getByLabelText('Full name'), 'Teresa Lim');
+  await user.click(within(dialog).getByRole('button', { name: 'Save changes' }));
+  expect(await screen.findByText('Changes to Teresa Lim saved.')).toBeTruthy();
+  expect(requests(fetchMock, 'PATCH')).toEqual([
+    ['/api/users/u0', { name: 'Teresa Lim', username: 'tlim' }],
+  ]);
+  // Someone else's role can still be chosen.
+  await user.click(screen.getByRole('button', { name: 'Edit Juan dela Cruz' }));
+  const other = screen.getByRole('dialog', { name: 'Edit Juan dela Cruz' });
+  expect((within(other).getByLabelText('Role') as HTMLSelectElement).disabled).toBe(false);
+});
+
 test('TC-AUTH-19: Reset password sends the new password and says to tell the user', async () => {
   const fetchMock = fakeApi((method) => (method === 'PUT' ? { status: 204 } : undefined));
   const user = userEvent.setup();
