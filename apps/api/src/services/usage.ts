@@ -20,16 +20,15 @@ function periodBounds(from: string, to: string) {
   };
 }
 
-export async function getUsageSummary({ from, to, categoryId }: UsageQuery): Promise<UsageSummary> {
+export async function getUsageSummary({ from, to }: UsageQuery): Promise<UsageSummary> {
   const { start, end } = periodBounds(from, to);
-  const category = categoryId ? Prisma.sql`AND i.category_id = ${categoryId}::uuid` : Prisma.empty;
   const lines = Prisma.sql`
     FROM transaction_items ti
     JOIN transactions t ON t.id = ti.transaction_id
     JOIN items i ON i.id = ti.item_id
     JOIN categories c ON c.id = i.category_id
     JOIN locations l ON l.id = t.location_id
-    WHERE t.issued_at >= ${start} AND t.issued_at < ${end} ${category}`;
+    WHERE t.issued_at >= ${start} AND t.issued_at < ${end}`;
   // Most first; ties by name, then id, so the order never changes between requests.
   const top = (name: Prisma.Sql, id: Prisma.Sql) =>
     Prisma.sql`GROUP BY ${id} ORDER BY times DESC, ${name}, ${id} LIMIT ${USAGE_TOP_ROWS}`;

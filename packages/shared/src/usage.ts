@@ -13,12 +13,11 @@ export function rangeDays(from: string, to: string): number {
   return (Date.parse(to) - Date.parse(from)) / DAY_MS + 1;
 }
 
-// GET /api/reports/usage?from=&to=&categoryId=: dates are calendar days in the app timezone.
+// GET /api/reports/usage?from=&to=: dates are calendar days in the app timezone.
 export const usageQuerySchema = z
   .object({
     from: z.iso.date('Enter a start date.'),
     to: z.iso.date('Enter an end date.'),
-    categoryId: z.guid().toLowerCase().optional(),
   })
   // YYYY-MM-DD strings sort in date order.
   .refine((query) => query.to >= query.from, {

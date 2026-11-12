@@ -135,21 +135,9 @@ test('TC-RPT-06: most borrowed items with counts by category and by room for the
   });
 });
 
-test('TC-RPT-06: a category narrows every list, and an empty period gives empty lists', async () => {
+test('TC-RPT-06: a period with no checkouts gives empty lists', async () => {
   await borrow('2026-11-01T03:00:00.000Z', 'CL-201', [items.Cord, items.Laptop]);
-  const agent = await login('ana');
-
-  const res = await usage(
-    agent,
-    `from=2026-11-01&to=2026-11-01&categoryId=${categories.Computers}`,
-  ).expect(200);
-  expect(res.body.items.map((row: { name: string }) => row.name)).toEqual(['Laptop']);
-  expect(res.body.categories).toEqual([
-    { id: categories.Computers, name: 'Computers', timesBorrowed: 1 },
-  ]);
-  expect(res.body.rooms).toEqual([{ id: rooms['CL-201'], name: 'CL-201', timesBorrowed: 1 }]);
-
-  const empty = await usage(agent, 'from=2026-12-01&to=2026-12-31').expect(200);
+  const empty = await usage(await login('ana'), 'from=2026-12-01&to=2026-12-31').expect(200);
   expect(empty.body).toMatchObject({ items: [], categories: [], rooms: [] });
 });
 
@@ -189,7 +177,7 @@ test('TC-RPT-06: the range is capped at 366 days, and the end cannot be before t
     'to=2026-11-01',
     'from=2026-11-01',
     'from=nope&to=2026-11-01',
-    'from=2026-11-01&to=2026-11-01&categoryId=x',
+    'from=2026-02-30&to=2026-03-01',
   ]) {
     expect((await usage(agent, query)).body.error.code).toBe('VALIDATION_ERROR');
   }
