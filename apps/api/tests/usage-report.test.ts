@@ -178,6 +178,8 @@ test('TC-RPT-06: the range is capped at 366 days, and the end cannot be before t
     'from=2026-11-01',
     'from=nope&to=2026-11-01',
     'from=2026-02-30&to=2026-03-01',
+    // PostgreSQL has no year 0: refused as invalid, not a 500 (found in the Sprint 5 review).
+    'from=0000-01-01&to=0000-12-31',
   ]) {
     expect((await usage(agent, query)).body.error.code).toBe('VALIDATION_ERROR');
   }

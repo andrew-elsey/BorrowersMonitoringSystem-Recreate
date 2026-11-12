@@ -13,21 +13,34 @@ export function rangeDays(from: string, to: string): number {
   return (Date.parse(to) - Date.parse(from)) / DAY_MS + 1;
 }
 
-// GET /api/reports/usage?from=&to=: dates are calendar days in the app timezone.
-export const usageQuerySchema = z
-  .object({
-    from: z.iso.date('Enter a start date.'),
-    to: z.iso.date('Enter an end date.'),
-  })
-  // YYYY-MM-DD strings sort in date order.
-  .refine((query) => query.to >= query.from, {
-    path: ['to'],
-    message: 'The end date cannot be before the start date.',
-  })
-  .refine((query) => rangeDays(query.from, query.to) <= REPORT_MAX_RANGE_DAYS, {
-    path: ['to'],
-    message: `The date range can be at most ${REPORT_MAX_RANGE_DAYS} days.`,
-  });
+// ?from=&to= of every report (RPT-2 to RPT-4): calendar days in the app timezone, both ends
+// included, at most 366 days (SPEC.md 7). Each report schema adds these fields, then applies
+// refineReportRange.
+export const reportRangeFields = {
+  from: z.iso
+    .date('Enter a start date.')
+    // PostgreSQL has no year 0, so 0000-01-01 could not be compared.
+    .refine((date) => date >= '0001-01-01', 'Enter a real date.'),
+  to: z.iso.date('Enter an end date.'),
+};
+
+export function refineReportRange<T extends z.ZodType<{ from: string; to: string }>>(schema: T) {
+  return (
+    schema
+      // YYYY-MM-DD strings sort in date order.
+      .refine((query) => query.to >= query.from, {
+        path: ['to'],
+        message: 'The end date cannot be before the start date.',
+      })
+      .refine((query) => rangeDays(query.from, query.to) <= REPORT_MAX_RANGE_DAYS, {
+        path: ['to'],
+        message: `The date range can be at most ${REPORT_MAX_RANGE_DAYS} days.`,
+      })
+  );
+}
+
+// GET /api/reports/usage?from=&to=
+export const usageQuerySchema = refineReportRange(z.object(reportRangeFields));
 export type UsageQuery = z.infer<typeof usageQuerySchema>;
 
 // One bar: how many times something was borrowed (one checkout line is one time).
