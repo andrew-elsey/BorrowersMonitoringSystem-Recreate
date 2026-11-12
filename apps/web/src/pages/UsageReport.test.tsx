@@ -47,9 +47,15 @@ const usageRequests = (fetchMock: ReturnType<typeof mockApi>) =>
 
 const text = (element: HTMLElement) => element.textContent;
 
+// Usage summary is the third tab of Reports, after the two history reports.
+async function openUsageTab() {
+  renderApp('/reports');
+  await userEvent.click(await screen.findByRole('tab', { name: 'Usage summary' }));
+}
+
 test('TC-RPT-07: a view-only user opens Reports and sees the last 30 days as bar charts and tables', async () => {
   const fetchMock = fakeApi();
-  renderApp('/reports');
+  await openUsageTab();
 
   const items = await screen.findByRole('region', { name: 'Most borrowed items' });
   expect(screen.getByRole('link', { name: 'Reports' }).getAttribute('aria-current')).toBe('page');
@@ -69,7 +75,7 @@ test('TC-RPT-07: a view-only user opens Reports and sees the last 30 days as bar
 test('a range over 366 days is refused in the form with its length, and no request is sent', async () => {
   const fetchMock = fakeApi();
   const user = userEvent.setup();
-  renderApp('/reports');
+  await openUsageTab();
   await screen.findByRole('region', { name: 'Most borrowed items' });
 
   const from = screen.getByLabelText('From');
@@ -95,6 +101,6 @@ test('a range over 366 days is refused in the form with its length, and no reque
 
 test('a period with nothing borrowed says so', async () => {
   fakeApi({ ...SUMMARY, items: [], categories: [], rooms: [] });
-  renderApp('/reports');
+  await openUsageTab();
   await screen.findByText('Nothing was borrowed from 14 Oct 2026 – 12 Nov 2026.');
 });

@@ -204,3 +204,21 @@ test('TC-SEC-05: the usage summary is limited to 30 a minute per client address'
   expect(limited.body.error.code).toBe('RATE_LIMITED');
   expect((await get('10.0.4.2')).status).toBe(200);
 });
+
+test('TC-SEC-05: every report shares one 30 a minute count per client address (owner decision 2026-11-12)', async () => {
+  const agent = await login('ana');
+  for (let i = 0; i < 30; i++) {
+    const res = await usage(agent, 'from=2026-11-01&to=2026-11-01').set(
+      'X-Forwarded-For',
+      '10.0.4.3',
+    );
+    expect(res.status).toBe(200);
+  }
+  // A history report from the same address is the 31st report request of the minute.
+  const history = await agent
+    .get(`/api/reports/items/${items.Cord}/history?from=2026-11-01&to=2026-11-01`)
+    .set('X-Requested-With', 'fetch')
+    .set('X-Forwarded-For', '10.0.4.3');
+  expect(history.status).toBe(429);
+  expect(history.body.error.code).toBe('RATE_LIMITED');
+});
