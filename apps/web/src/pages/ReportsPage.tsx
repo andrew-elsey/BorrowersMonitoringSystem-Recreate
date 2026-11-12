@@ -1,10 +1,11 @@
 import { type ReactNode, useState } from 'react';
-import { BorrowerHistoryTab } from './reports/BorrowerHistoryTab';
+import { BorrowerHistoryTab, ItemHistoryTab } from './reports/HistoryTabs';
 
 // Reports (SPEC.md 5, every role). One tab per report, as in the approved mockup. Each report
 // lives in its own file under pages/reports.
 const TABS: { label: string; panel: () => ReactNode }[] = [
   { label: 'History per borrower', panel: () => <BorrowerHistoryTab /> },
+  { label: 'History per item', panel: () => <ItemHistoryTab /> },
 ];
 
 export function ReportsPage() {

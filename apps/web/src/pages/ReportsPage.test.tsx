@@ -1,4 +1,4 @@
-import type { Borrower, HistoryLine } from '@bms/shared';
+import type { Borrower, HistoryLine, ItemPage } from '@bms/shared';
 import { cleanup, fireEvent, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, expect, test, vi } from 'vitest';
@@ -51,12 +51,26 @@ const LINE: HistoryLine = {
   note: null,
   expectedReturnDate: null,
 };
+const LAPTOP: ItemPage['data'][number] = {
+  id: 'i9',
+  name: 'Laptop',
+  category: { id: 'c1', name: 'Computers' },
+  description: null,
+  trackingType: 'UNIT',
+  assetTag: 'LT-0012',
+  totalQuantity: 1,
+  condition: 'GOOD',
+  status: 'ACTIVE',
+  available: 0,
+};
 
 function fakeApi(borrowers: Borrower[]) {
   return mockApi((method, path) => {
     if (path === '/auth/me') return signedInAs(VIEWER);
     if (path.startsWith('/reports/borrowers?')) return page(borrowers);
     if (path.startsWith('/reports/borrowers/b1/history?')) return page([LINE]);
+    if (path.startsWith('/items?')) return page([LAPTOP]);
+    if (path.startsWith('/reports/items/i9/history?')) return page([{ ...LINE, item: LAPTOP }]);
     throw new Error(`unexpected ${method} ${path}`);
   });
 }
@@ -115,4 +129,28 @@ test('RPT-2: no match says so', async () => {
   renderApp('/reports');
   await fillForm('Nobody', '2026-10-01', '2026-10-31');
   expect((await screen.findByRole('status')).textContent).toContain('No borrower matches');
+});
+
+test('TC-RPT-05, TC-RPT-07: a view-only user finds an item by asset tag and sees who borrowed it', async () => {
+  const fetchMock = fakeApi([]);
+  const user = userEvent.setup();
+  renderApp('/reports');
+  await user.click(await screen.findByRole('tab', { name: 'History per item' }));
+  expect(screen.getByRole('tab', { name: 'History per item' }).getAttribute('aria-selected')).toBe(
+    'true',
+  );
+  await user.type(screen.getByLabelText('Item or asset tag'), 'LT-0012');
+  fireEvent.change(screen.getByLabelText('From'), { target: { value: '2026-10-01' } });
+  fireEvent.change(screen.getByLabelText('To'), { target: { value: '2026-10-31' } });
+  await user.click(screen.getByRole('button', { name: 'Show report' }));
+  expect(await screen.findByRole('heading', { name: /Laptop/ })).toBeTruthy();
+  const row = await screen.findByRole('row', { name: /Miguel Bautista/ });
+  for (const text of ['2026-0001', 'FA-305', 'Flagged']) expect(row.textContent).toContain(text);
+  const urls = fetchMock.mock.calls.map(([url]) => url);
+  expect(urls).toContain('/api/items?q=LT-0012&page=1&pageSize=10');
+  expect(
+    urls.some((url) =>
+      url.startsWith('/api/reports/items/i9/history?from=2026-10-01&to=2026-10-31'),
+    ),
+  ).toBe(true);
 });
