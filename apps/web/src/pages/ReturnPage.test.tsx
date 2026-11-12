@@ -445,3 +445,35 @@ test('TC-BRW-31: a refused date shows on its field; a closed line closes the dia
   expect(await screen.findByText(closedMessage)).toBeTruthy();
   expect(screen.queryByRole('button', { name: 'Save note' })).toBeNull();
 });
+
+test('TC-BRW-31 (BR 7, owner decision 2026-11-12): a stored date that has passed can be kept while the note changes', async () => {
+  // 12 Nov 2026 in Manila; the laptop's stored date, 3 Nov, has passed.
+  vi.useFakeTimers({ toFake: ['Date'] });
+  vi.setSystemTime(new Date('2026-11-12T02:00:00.000Z'));
+  try {
+    const fetchMock = fakeApi((method, path, body) =>
+      method === 'PATCH'
+        ? { status: 200, body: { line: { lineId: path, ...(body as object) } } }
+        : undefined,
+    );
+    const user = userEvent.setup();
+    renderApp('/return');
+    await user.click(await editNoteButton(LAPTOP_NAME));
+    const date = screen.getByLabelText('Expected return date');
+    // The picker's lower bound is the stored date, so keeping it is not marked invalid.
+    expect(date.getAttribute('min')).toBe('2026-11-03');
+    await user.type(screen.getByLabelText('Note'), ' Still out.');
+    await user.click(screen.getByRole('button', { name: 'Save note' }));
+    await screen.findByText(`Note saved for ${LAPTOP_NAME}.`);
+    expect(patched(fetchMock)[0]![1]).toEqual({
+      note: 'Says he will return it tomorrow morning. Still out.',
+      expectedReturnDate: '2026-11-03',
+    });
+
+    // A line with no stored date: the bound is today.
+    await user.click(await editNoteButton('Extension cord, 5 m'));
+    expect(screen.getByLabelText('Expected return date').getAttribute('min')).toBe('2026-11-12');
+  } finally {
+    vi.useRealTimers();
+  }
+});

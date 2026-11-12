@@ -68,6 +68,12 @@ type Giving = { line: OpenLine; quantity: number; condition: ReturnCondition };
 type Refused = { lineId: string; message: string };
 // The note dialog's fields (BRW-6). An empty date means none; it is sent as null.
 type NoteValues = { note: string; expectedReturnDate: string };
+// Today, or the line's stored date when that has already passed, so keeping it is not marked invalid.
+const minExpectedDate = (line: OpenLine | null) => {
+  const today = todayInAppZone();
+  const stored = line?.expectedReturnDate;
+  return stored && stored < today ? stored : today;
+};
 const itemLabel = (line: OpenLine) =>
   line.item.assetTag ? `${line.item.name} ${line.item.assetTag}` : line.item.name;
 
@@ -355,8 +361,9 @@ export function ReturnPage() {
           id="line-expected"
           type="date"
           label="Expected return date"
-          // A hint only: the API refuses a date before today (BR 7).
-          min={todayInAppZone()}
+          // A hint only: the API refuses a new date before today, but a stored date that has
+          // passed may be kept as it is (BR 7, owner decision 2026-11-12).
+          min={minExpectedDate(toEdit)}
           hint="Optional. Leave empty if the borrower did not say."
           error={noteForm.formState.errors.expectedReturnDate?.message}
           {...noteForm.register('expectedReturnDate')}

@@ -202,6 +202,41 @@ test('TC-BRW-31 (SPEC 7, BR 7): a 501-character note, a past date, a closed line
   expect(await noteAudits(closed)).toEqual([]);
 });
 
+test('TC-BRW-31 (BR 7, owner decision 2026-11-12): a stored date that has passed may be kept unchanged or cleared, not changed to another past date', async () => {
+  const hal = await signIn('hal');
+  const id = await line();
+  await prisma.transactionItem.update({
+    where: { id },
+    data: { note: 'old', expectedReturnDate: new Date('2020-01-01T00:00:00Z') },
+  });
+
+  // Only the note changes; the passed date is sent back as it is.
+  const kept = await patch(hal, id, { note: 'still out', expectedReturnDate: '2020-01-01' }).expect(
+    200,
+  );
+  expect(kept.body.line).toEqual({
+    lineId: id,
+    note: 'still out',
+    expectedReturnDate: '2020-01-01',
+  });
+
+  // Changing it to another past date is refused, and nothing is saved.
+  const moved = await patch(hal, id, { note: 'x', expectedReturnDate: '2020-01-02' }).expect(400);
+  expect(moved.body.error.details.fields.expectedReturnDate).toEqual([
+    'Choose today or a later date.',
+  ]);
+  expect((await prisma.transactionItem.findUniqueOrThrow({ where: { id } })).note).toBe(
+    'still out',
+  );
+
+  // Clearing is always allowed.
+  await patch(hal, id, { note: 'still out', expectedReturnDate: null }).expect(200);
+  expect((await noteAudits(id)).map((entry) => entry.after)).toEqual([
+    { note: 'still out', expectedReturnDate: '2020-01-01' },
+    { note: 'still out', expectedReturnDate: null },
+  ]);
+});
+
 test("TC-BRW-32 (BR 7, S4): a note with tomorrow's date does not prevent the flag or the strike", async () => {
   // 1 Sep 2026, 10:00 Manila: James borrows 5 extension cables.
   vi.useFakeTimers({ toFake: ['Date'] });
