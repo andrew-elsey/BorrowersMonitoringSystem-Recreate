@@ -18,9 +18,11 @@ import { FormDialog } from '../components/FormDialog';
 import { useNotify } from '../components/Notifications';
 import { RetryAlert } from '../components/RetryAlert';
 import { StatusBadge } from '../components/StatusBadge';
+import { useBorrowerImport } from './BorrowerImport';
 
 // Borrowers (SPEC.md 5, admin only). Add with the top form, edit in a dialog from the row,
-// deactivate or reactivate from the row; borrowers are never deleted (BR 15). The server enforces
+// deactivate or reactivate from the row, import many with Import CSV (MD-6); borrowers are never
+// deleted (BR 15). The server enforces
 // every rule (CLAUDE.md rule 2), such as unique school IDs.
 
 type BorrowerReply = { borrower: Borrower };
@@ -92,6 +94,7 @@ export function BorrowersPage() {
     placeholderData: keepPreviousData,
   });
   const refresh = () => queryClient.invalidateQueries({ queryKey: BORROWERS_KEY });
+  const csvImport = useBorrowerImport(refresh);
 
   const addForm = useForm<BorrowerInput>({
     resolver: zodResolver(borrowerSchema),
@@ -155,7 +158,11 @@ export function BorrowersPage() {
 
   return (
     <>
-      <h1 className="text-[28px] leading-tight font-bold">Borrowers</h1>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <h1 className="text-[28px] leading-tight font-bold">Borrowers</h1>
+        {csvImport.button}
+      </div>
+      {csvImport.panel}
 
       <form
         noValidate
