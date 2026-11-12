@@ -72,10 +72,10 @@ Paths are shortened: `api/` is `apps/api/tests/`, `web/` is `apps/web/src/pages/
 | TC-AUTH-16 | AUTH-2 | SPEC 3 | unit | Compare `PERMISSIONS` with the table in SPEC 3 | They match | `api/roles.test.ts` |
 | TC-AUTH-17 | AUTH-2 | SPEC 3, S18 | integration | Call every protected capability as Admin, Handler, and View-only | Allowed per SPEC 3; otherwise 403 `FORBIDDEN` | `api/roles.test.ts` |
 | TC-AUTH-18 | AUTH-2 | SPEC 3 | integration | Call a protected endpoint signed out | 401 `UNAUTHENTICATED`, not 403 | `api/roles.test.ts` |
-| TC-AUTH-19 | AUTH-3 | BR 14 | integration | Admin creates, edits, deactivates a user, and resets a password | Each works and is audited | not yet |
-| TC-AUTH-20 | AUTH-3 | BR 15 | integration | Admin tries to remove a user who has transactions | The user can only be deactivated; the record and its history stay | not yet |
-| TC-AUTH-21 | AUTH-3 | BACKLOG AUTH-3 | integration | Admin deactivates their own account | Refused | not yet |
-| TC-AUTH-22 | AUTH-3 | S18 | integration | Handler opens user management | 403 | not yet |
+| TC-AUTH-19 | AUTH-3 | BR 14 | integration | Admin creates, edits, deactivates a user, and resets a password | Each works and is audited | `api/users.test.ts` (no password or hash in the reply or the audit log; duplicate username `DUPLICATE_VALUE`; password policy and SPEC 7 bounds; deactivating or changing a role signs that user out at once, ARCH 5), `web/UsersPage.test.tsx` (add form behind "+ Add user", short password refused in the browser, edit and reset dialogs) |
+| TC-AUTH-20 | AUTH-3 | BR 15 | integration | Admin tries to remove a user who has transactions | The user can only be deactivated; the record and its history stay | `api/users.test.ts` (there is no DELETE: 404 `NOT_FOUND`; deactivated, transaction kept), `web/UsersPage.test.tsx` (no Delete button) |
+| TC-AUTH-21 | AUTH-3 | BACKLOG AUTH-3 | integration | Admin deactivates their own account | Refused | `api/users.test.ts` (409 `CANNOT_DEACTIVATE_SELF`, also with the id in upper case; nothing audited), `web/UsersPage.test.tsx` (the server's message is shown) |
+| TC-AUTH-22 | AUTH-3 | S18 | integration | Handler opens user management | 403 | `api/users.test.ts` (handler and viewer 403 on every endpoint, signed out 401), `web/UsersPage.test.tsx` (handler sees the "not allowed" page and no Users menu item) |
 | TC-AUTH-23 | AUTH-4 | SPEC 3, 5 | component | Signed-out user opens the app, signs in | Sent to login; after sign-in sees home with name and role | `web/LoginPage.test.tsx` |
 | TC-AUTH-24 | AUTH-4 | ARCH 5 | component | Submit login with empty fields | Caught in the browser; no API call | `web/LoginPage.test.tsx` |
 | TC-AUTH-25 | AUTH-4 | ARCH 5 | component | Submit a failed login | Generic API error shown; password cleared | `web/LoginPage.test.tsx` |
