@@ -9,7 +9,12 @@ import { Router } from 'express';
 import { z } from 'zod';
 import { ApiError } from '../lib/errors.ts';
 import { requireRole } from '../middleware/auth.ts';
-import { createSearchRateLimiter } from '../middleware/request-rate-limit.ts';
+import { csvUpload } from '../middleware/csv-upload.ts';
+import {
+  createCsvImportRateLimiter,
+  createSearchRateLimiter,
+} from '../middleware/request-rate-limit.ts';
+import { importBorrowerCsv } from '../services/borrower-import.ts';
 import { borrowerService, createBorrower, updateBorrower } from '../services/borrowers.ts';
 import { getStrikeStatus } from '../services/strikes.ts';
 
@@ -50,6 +55,11 @@ export function createBorrowersRouter() {
 
   router.get('/borrowers', createSearchRateLimiter(), async (req, res) => {
     res.json(await borrowerService.list(borrowerListQuerySchema.parse(req.query)));
+  });
+
+  // MD-6: CSV import. The rate limit and the upload limits run before any parsing (SPEC.md 7).
+  router.post('/borrowers/import', createCsvImportRateLimiter(), csvUpload, async (req, res) => {
+    res.json(await importBorrowerCsv(req.session.userId!, req.file!.buffer));
   });
 
   router.post('/borrowers', async (req, res) => {

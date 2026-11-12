@@ -9,6 +9,8 @@ const ONE_MINUTE_MS = 60 * 1000;
 const GLOBAL_REQUESTS_PER_MINUTE = 600;
 // Search is typed live at the counter, so it gets more room than reports and CSV import (owner decision 2026-11-07).
 const SEARCH_REQUESTS_PER_MINUTE = 60;
+// Reports and CSV import, each endpoint with its own count.
+const EXPENSIVE_REQUESTS_PER_MINUTE = 30;
 
 function createRequestLimiter(
   limit: number,
@@ -35,9 +37,14 @@ export function createGlobalRateLimiter() {
   return createRequestLimiter(GLOBAL_REQUESTS_PER_MINUTE);
 }
 
-// Search: a list request with ?q=. Reports and CSV import get their own 30 a minute limit later.
+// Search: a list request with ?q=.
 export function createSearchRateLimiter() {
   return createRequestLimiter(SEARCH_REQUESTS_PER_MINUTE, (req) => req.query.q === undefined);
+}
+
+// Borrower CSV import (MD-6): 30 a minute per address, counted apart from the reports.
+export function createCsvImportRateLimiter() {
+  return createRequestLimiter(EXPENSIVE_REQUESTS_PER_MINUTE);
 }
 
 // Manual flagging run: once a minute in total (ARCHITECTURE.md 12.5), not per address.

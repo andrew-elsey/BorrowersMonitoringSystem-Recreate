@@ -11,7 +11,8 @@ import {
 } from '@bms/shared';
 import { z } from 'zod';
 import type { Prisma } from '../generated/prisma/client.ts';
-import { audit } from '../lib/audit.ts';
+import { randomUUID } from 'node:crypto';
+import { type AuditEntry, audit, auditMany } from '../lib/audit.ts';
 import { ApiError, isPrismaError } from '../lib/errors.ts';
 import { prisma } from '../lib/prisma.ts';
 import { getSettings } from './settings.ts';
@@ -237,6 +238,137 @@ export async function updateBorrower(
     });
   } catch (error) {
     if (isPrismaError(error, 'P2002')) throw duplicateSchoolId(changes.schoolId ?? '');
+    throw error;
+  }
+}
+
+// One valid CSV row (MD-6). `row` is its line in the file.
+export type BorrowerImportRow = BorrowerInput & { row: number; active: boolean };
+
+// Room for 5,000 rows and their audit entries, under the 30 s request timeout (ARCHITECTURE.md 12.3).
+const IMPORT_TRANSACTION_TIMEOUT_MS = 20_000;
+
+// Prisma builds each statement in JavaScript, which holds the event loop for about 0.2 s at
+// 5,000 rows; pieces of 500 keep every pause short for other requests (ARCHITECTURE.md 12.3).
+const IMPORT_CHUNK_ROWS = 500;
+function chunks<T>(list: T[]): T[][] {
+  const parts: T[][] = [];
+  for (let i = 0; i < list.length; i += IMPORT_CHUNK_ROWS) {
+    parts.push(list.slice(i, i + IMPORT_CHUNK_ROWS));
+  }
+  return parts;
+}
+
+const importFields = ({ schoolId, name, type, department, active }: BorrowerImportRow) => ({
+  schoolId,
+  name,
+  type,
+  department,
+  active,
+});
+
+// Creates or updates borrowers matched on school ID, ignoring case (SPEC.md 6), in one
+// transaction with their audit entries and one BORROWER_IMPORT entry with the counts (rule 14).
+// Set-based (a few statements, not one per row) so 5,000 rows stay quick.
+export async function importBorrowers(
+  actorId: string,
+  rows: BorrowerImportRow[],
+  rejected: number,
+): Promise<{ created: number; updated: number; unchanged: number }> {
+  try {
+    return await prisma.$transaction(
+      async (tx) => {
+        // Lock the matched borrowers, like updateBorrower, so an admin editing one at the same
+        // moment takes turns with the import and the audit entries record what was replaced.
+        const lowered = rows.map((row) => row.schoolId.toLowerCase());
+        const existing = await tx.$queryRaw<Borrower[]>`
+          SELECT id, school_id AS "schoolId", name, type::text AS type, department, active
+          FROM borrowers WHERE lower(school_id) = ANY(${lowered}::text[]) FOR UPDATE`;
+        const bySchoolId = new Map(existing.map((b) => [b.schoolId.toLowerCase(), b]));
+
+        const toCreate: BorrowerImportRow[] = [];
+        const toUpdate: { before: Borrower; after: Borrower; keys: (keyof Borrower)[] }[] = [];
+        for (const row of rows) {
+          const before = bySchoolId.get(row.schoolId.toLowerCase());
+          if (!before) {
+            toCreate.push(row);
+            continue;
+          }
+          const after: Borrower = { id: before.id, ...importFields(row) };
+          const keys = (Object.keys(after) as (keyof Borrower)[]).filter(
+            (key) => after[key] !== before[key],
+          );
+          if (keys.length > 0) toUpdate.push({ before, after, keys });
+        }
+
+        const created: Borrower[] = [];
+        for (const part of chunks(toCreate)) {
+          created.push(
+            ...(await tx.borrower.createManyAndReturn({
+              data: part.map(importFields),
+              select: borrowerFields,
+            })),
+          );
+        }
+        if (toUpdate.length > 0) {
+          const column = (key: keyof Borrower) => toUpdate.map((u) => u.after[key]);
+          await tx.$executeRaw`
+            UPDATE borrowers AS b
+            SET school_id = u.school_id, name = u.name, type = u.type::borrower_type,
+                department = u.department, active = u.active, updated_at = now()
+            FROM unnest(${column('id')}::uuid[], ${column('schoolId')}::text[],
+                        ${column('name')}::text[], ${column('type')}::text[],
+                        ${column('department')}::text[], ${column('active')}::boolean[])
+              AS u(id, school_id, name, type, department, active)
+            WHERE b.id = u.id`;
+        }
+
+        const counts = {
+          created: created.length,
+          updated: toUpdate.length,
+          unchanged: rows.length - created.length - toUpdate.length,
+        };
+        const pick = (source: Borrower, keys: (keyof Borrower)[]) =>
+          Object.fromEntries(keys.map((key) => [key, source[key]]));
+        // Rule 14: the same entries as a create or an edit on the Borrowers screen, plus the summary.
+        const entries: AuditEntry[] = [
+          ...created.map(({ id, ...after }) => ({
+            actorId,
+            action: 'BORROWER_CREATED',
+            entity: 'borrower',
+            entityId: id,
+            after,
+          })),
+          ...toUpdate.map(({ before, after, keys }) => ({
+            actorId,
+            action: 'BORROWER_UPDATED',
+            entity: 'borrower',
+            entityId: before.id,
+            before: pick(before, keys),
+            after: pick(after, keys),
+          })),
+          {
+            actorId,
+            action: 'BORROWER_IMPORT',
+            entity: 'borrower_import',
+            entityId: randomUUID(),
+            after: { ...counts, rejected },
+          },
+        ];
+        for (const part of chunks(entries)) await auditMany(tx, part);
+        return counts;
+      },
+      { timeout: IMPORT_TRANSACTION_TIMEOUT_MS },
+    );
+  } catch (error) {
+    // Someone added one of these school IDs between the lookup and the insert.
+    if (isPrismaError(error, 'P2002')) {
+      throw new ApiError(
+        409,
+        'DUPLICATE_VALUE',
+        'A borrower in this file was added by someone else meanwhile. Import the file again.',
+      );
+    }
     throw error;
   }
 }
