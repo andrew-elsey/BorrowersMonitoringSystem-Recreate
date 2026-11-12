@@ -5,8 +5,8 @@ import { hashPassword } from '../src/lib/password.ts';
 import { prisma } from '../src/lib/prisma.ts';
 import { resetDatabase } from './setup/reset-database.ts';
 
-// RPT-2: borrowing history per borrower (BR section 4, SPEC 7). Test cases TC-RPT-03, TC-RPT-04,
-// and the history part of TC-RPT-07 in TEST_CASES.md.
+// RPT-2 and RPT-3: borrowing history per borrower and per item (BR section 4, SPEC 7). Test cases
+// TC-RPT-03, TC-RPT-04, TC-RPT-05, and the history part of TC-RPT-07 in TEST_CASES.md.
 
 const PASSWORD = 'correct-horse-battery';
 let passwordHash: string;
@@ -268,4 +268,79 @@ test('RPT-2 (ARCH 12.3): history is limited to 30 report requests a minute per I
   const limited = await history(admin, 'from=2026-09-01&to=2026-09-30').expect(429);
   expect(limited.body.error.code).toBe('RATE_LIMITED');
   expect(limited.headers['retry-after']).toBeDefined();
+  // The item history shares the same report count.
+  await itemHistory(admin, 'from=2026-09-01&to=2026-09-30', itemIds[0]!).expect(429);
+});
+
+const itemHistory = (agent: request.Agent, query: string, id: string) =>
+  agent.get(`/api/reports/items/${id}/history?${query}`);
+
+test('TC-RPT-05: item history found by item name and by asset tag, same detail, every borrower', async () => {
+  const mine = await line('2026-09-01T10:00:00+08:00', { item: 0 });
+  await prisma.return.create({
+    data: {
+      transactionItemId: mine.id,
+      quantity: 1,
+      returnedAt: new Date('2026-09-01T15:00:00+08:00'),
+      receivedById: handlerId,
+      condition: 'FAIR',
+    },
+  });
+  await prisma.transactionItem.update({ where: { id: mine.id }, data: { quantityReturned: 1 } });
+  const theirs = await line('2026-09-02T10:00:00+08:00', {
+    item: 0,
+    borrower: otherBorrowerId,
+    flagStatus: 'FLAGGED',
+  });
+  await line('2026-09-03T10:00:00+08:00', { item: 1 }); // another item
+
+  const vic = await login('vic');
+  for (const q of ['Laptop', 'lt-0012']) {
+    const found = await vic.get(`/api/items?q=${q}`).expect(200);
+    expect(found.body.data.map((item: { id: string }) => item.id)).toEqual([itemIds[0]]);
+  }
+  const res = await itemHistory(vic, 'from=2026-09-01&to=2026-09-30', itemIds[0]!).expect(200);
+  expect(res.body).toMatchObject({ page: 1, pageSize: 25, total: 2 });
+  expect(res.body.data[0]).toMatchObject({
+    lineId: theirs.id,
+    borrower: { id: otherBorrowerId, schoolId: '2026-0002', name: 'Liza Ramos' },
+    flagStatus: 'FLAGGED',
+    outstanding: 1,
+  });
+  expect(res.body.data[1]).toMatchObject({
+    lineId: mine.id,
+    borrower: { name: 'James Cruz' },
+    item: { name: 'Laptop', assetTag: 'LT-0012' },
+    room: { name: 'CL-201' },
+    issuedBy: { name: 'Ana Admin' },
+    outstanding: 0,
+    returns: [{ quantity: 1, condition: 'FAIR', receivedBy: { name: 'Hal Handler' } }],
+    flagStatus: 'NONE',
+  });
+
+  const page2 = await itemHistory(
+    vic,
+    'from=2026-09-01&to=2026-09-30&page=2&pageSize=1',
+    itemIds[0]!,
+  ).expect(200);
+  expect(page2.body).toMatchObject({ page: 2, total: 2 });
+  expect(page2.body.data.map((row: { lineId: string }) => row.lineId)).toEqual([mine.id]);
+});
+
+test('TC-RPT-05: item history has the same range limit; an unknown item is NOT_FOUND', async () => {
+  const admin = await login('ana');
+  await itemHistory(admin, 'from=2026-01-01&to=2027-01-01', itemIds[0]!).expect(200);
+  const tooLong = await itemHistory(admin, 'from=2026-01-01&to=2027-01-02', itemIds[0]!).expect(
+    400,
+  );
+  expect(tooLong.body.error.code).toBe('VALIDATION_ERROR');
+  const unknown = await itemHistory(
+    admin,
+    'from=2026-09-01&to=2026-09-30',
+    '00000000-0000-4000-8000-000000000000',
+  ).expect(404);
+  expect(unknown.body.error.code).toBe('NOT_FOUND');
+  await request(createApp())
+    .get(`/api/reports/items/${itemIds[0]}/history?from=2026-09-01&to=2026-09-30`)
+    .expect(401);
 });

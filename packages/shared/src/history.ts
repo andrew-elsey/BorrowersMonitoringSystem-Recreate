@@ -2,7 +2,7 @@ import { z } from 'zod';
 import { FlagStatus, ReturnCondition } from './enums.ts';
 import { pageQuerySchema } from './categories.ts';
 
-// Borrowing history reports (RPT-2 per borrower, BR section 4). Limits from SPEC.md 7.
+// Borrowing history reports (RPT-2 per borrower, RPT-3 per item, BR section 4). Limits from SPEC.md 7.
 export const HISTORY_MAX_RANGE_DAYS = 366;
 
 const DAY_MS = 24 * 60 * 60 * 1000;

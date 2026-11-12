@@ -233,6 +233,7 @@ model TransactionItem {
   returns     Return[]
 
   @@index([flagStatus])
+  @@index([itemId])
   @@map("transaction_items")
 }
 

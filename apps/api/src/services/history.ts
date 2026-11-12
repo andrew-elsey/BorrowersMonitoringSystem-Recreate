@@ -6,7 +6,7 @@ import { ApiError } from '../lib/errors.ts';
 import { prisma } from '../lib/prisma.ts';
 import { borrowerService } from './borrowers.ts';
 
-// Borrowing history reports (RPT-2, BR section 4): read-only, one row per checkout line, paginated,
+// Borrowing history reports (RPT-2 per borrower, RPT-3 per item, BR section 4): read-only, one row per checkout line, paginated,
 // issue dates limited to a range of at most 366 days (SPEC.md 7, checked by historyQuerySchema).
 
 const person = { select: { id: true, name: true } } as const;
@@ -93,4 +93,12 @@ export async function listBorrowerHistory(
     throw new ApiError(404, 'NOT_FOUND', 'Borrower not found.');
   }
   return listHistory({ transaction: { borrowerId } }, query);
+}
+
+// RPT-3: every line of the item with an issue date in the range.
+export async function listItemHistory(itemId: string, query: HistoryQuery): Promise<HistoryPage> {
+  if (!(await prisma.item.findUnique({ where: { id: itemId }, select: { id: true } }))) {
+    throw new ApiError(404, 'NOT_FOUND', 'Item not found.');
+  }
+  return listHistory({ itemId }, query);
 }
