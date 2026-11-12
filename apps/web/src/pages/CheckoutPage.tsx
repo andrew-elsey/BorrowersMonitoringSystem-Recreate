@@ -29,7 +29,7 @@ import { useMessageArea, useNotify } from '../components/Notifications';
 import { RetryAlert } from '../components/RetryAlert';
 import { StatusBadge } from '../components/StatusBadge';
 import { strikeCount, strikeLevel, useStrikes } from '../components/Strikes';
-import { TIMEZONE } from '../timezone';
+import { TIMEZONE, todayInAppZone } from '../timezone';
 
 // Checkout (SPEC.md 5, admins and handlers, BRW-3). Steps 1 to 3 fill the form, the Summary panel
 // confirms it. Every rule (BR 1 to 4, 7) is enforced by POST /api/transactions; the screen only
@@ -40,7 +40,6 @@ const EMPTY: FormValues = { borrowerId: '', locationId: '', lines: [] };
 const RESULTS = 10;
 // Wait for a pause in typing, so a name is one search request, not one per letter.
 const SEARCH_DELAY_MS = 300;
-const todayInAppZone = () => new Intl.DateTimeFormat('en-CA', { timeZone: TIMEZONE }).format();
 const issueTime = new Intl.DateTimeFormat('en-GB', {
   hour: '2-digit',
   minute: '2-digit',

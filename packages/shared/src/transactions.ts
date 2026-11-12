@@ -17,6 +17,13 @@ export const noteField = z
   .max(NOTE_MAX_LENGTH, `Too long: at most ${NOTE_MAX_LENGTH} characters.`)
   .refine((value) => !CONTROL_CHARACTER.test(value), 'Remove the control characters.');
 
+// A calendar date in the app timezone (ARCHITECTURE.md 7). The services also refuse a date before
+// today (BR 7), since the schema cannot know the app's "today".
+export const expectedReturnDateField = z.iso
+  .date('Enter a date as YYYY-MM-DD.')
+  // PostgreSQL has no year 0, so 0000-01-01 could not be stored.
+  .refine((date) => date >= '0001-01-01', 'Enter a real date.');
+
 // POST /api/transactions. The issuing handler, issue time, and semester are never sent: the server
 // takes them from the session, the clock, and the current semester (BR 2).
 export const checkoutSchema = z.object({
@@ -33,12 +40,7 @@ export const checkoutSchema = z.object({
           .min(1, QUANTITY_MESSAGE)
           .max(LINE_QUANTITY_MAX, QUANTITY_MESSAGE),
         note: noteField.optional(),
-        // A calendar date in the app timezone (ARCHITECTURE.md 7).
-        expectedReturnDate: z.iso
-          .date('Enter a date as YYYY-MM-DD.')
-          // PostgreSQL has no year 0, so 0000-01-01 could not be stored.
-          .refine((date) => date >= '0001-01-01', 'Enter a real date.')
-          .optional(),
+        expectedReturnDate: expectedReturnDateField.optional(),
       }),
     )
     .min(1, 'Add at least one item.')
@@ -147,3 +149,14 @@ export type OpenLinePage = {
   noticeThreshold: number;
   blockThreshold: number;
 };
+
+// PATCH /api/lines/:id (BRW-6, BR 7): set the note and expected return date of an open line. Both
+// are sent every time: an empty note or a null date clears it.
+export const lineNoteSchema = z.object({
+  note: noteField,
+  expectedReturnDate: expectedReturnDateField.nullable(),
+});
+export type LineNoteInput = z.infer<typeof lineNoteSchema>;
+
+// The 200 reply.
+export type LineNote = { lineId: string; note: string | null; expectedReturnDate: string | null };

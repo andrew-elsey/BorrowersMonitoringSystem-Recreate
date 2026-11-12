@@ -1,8 +1,17 @@
 import type { OpenLine } from '@bms/shared';
 import { cleanup, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { afterEach, expect, test, vi } from 'vitest';
-import { apiError, HANDLER, mockApi, renderApp, signedInAs } from '../test-utils';
+import { afterEach, beforeAll, expect, test, vi } from 'vitest';
+import {
+  apiError,
+  emulateModalDialogs,
+  HANDLER,
+  mockApi,
+  renderApp,
+  signedInAs,
+} from '../test-utils';
+
+beforeAll(emulateModalDialogs);
 
 // BRW-5: the Return screen. The rules (BR 5, 6) are tested in api/returns.test.ts and
 // api/open-lines.test.ts; these tests check what the screen sends and shows.
@@ -374,4 +383,97 @@ test('TC-BRW-48: a too-broad borrower search shows the API message', async () =>
   expect(
     await screen.findByText(/Too many borrowers have items out; search by item or asset tag\./),
   ).toBeTruthy();
+});
+
+// BRW-6: the note dialog. The rules (BR 7) are tested in api/line-notes.test.ts.
+const patched = (fetchMock: ReturnType<typeof mockApi>) =>
+  calls(fetchMock, 'PATCH', '/lines/').map(([url, init]) => [
+    url,
+    JSON.parse(init!.body as string),
+  ]);
+const editNoteButton = (name: string) =>
+  screen.findByRole('button', { name: `Edit note and date for ${name}` });
+
+test('TC-BRW-30: edit a line note and expected return date from the row', async () => {
+  const fetchMock = fakeApi((method, path, body) =>
+    method === 'PATCH'
+      ? { status: 200, body: { line: { lineId: path, ...(body as object) } } }
+      : undefined,
+  );
+  const user = userEvent.setup();
+  renderApp('/return');
+  await user.click(await editNoteButton(LAPTOP_NAME));
+  const note = screen.getByLabelText('Note') as HTMLTextAreaElement;
+  expect(note.value).toBe('Says he will return it tomorrow morning.');
+  expect(note.getAttribute('maxlength')).toBe('500');
+  expect((screen.getByLabelText('Expected return date') as HTMLInputElement).value).toBe(
+    '2026-11-03',
+  );
+  await user.clear(note);
+  await user.type(note, 'Back at 9');
+  await user.click(screen.getByRole('button', { name: 'Save note' }));
+  expect(await screen.findByText(`Note saved for ${LAPTOP_NAME}.`)).toBeTruthy();
+
+  // The cords line has no date: an empty date is sent as null, not an empty string.
+  await user.click(await editNoteButton('Extension cord, 5 m'));
+  await user.type(screen.getByLabelText('Note'), 'Tomorrow');
+  await user.click(screen.getByRole('button', { name: 'Save note' }));
+  await screen.findByText('Note saved for Extension cord, 5 m.');
+
+  expect(patched(fetchMock)).toEqual([
+    [`/api/lines/${LAPTOP.lineId}`, { note: 'Back at 9', expectedReturnDate: '2026-11-03' }],
+    [`/api/lines/${CORDS.lineId}`, { note: 'Tomorrow', expectedReturnDate: null }],
+  ]);
+});
+
+test('TC-BRW-31: a refused date shows on its field; a closed line closes the dialog with the message', async () => {
+  const closedMessage = 'This line is fully returned, so its note can no longer be changed.';
+  let answer = refuse(400, 'VALIDATION_ERROR', 'Choose today or a later date.', {
+    fields: { expectedReturnDate: ['Choose today or a later date.'] },
+  });
+  fakeApi((method) => (method === 'PATCH' ? answer : undefined));
+  const user = userEvent.setup();
+  renderApp('/return');
+  await user.click(await editNoteButton(LAPTOP_NAME));
+  await user.click(screen.getByRole('button', { name: 'Save note' }));
+  const date = screen.getByLabelText('Expected return date');
+  await waitFor(() => expect(date.getAttribute('aria-invalid')).toBe('true'));
+  expect(document.activeElement).toBe(date);
+
+  answer = refuse(409, 'LINE_NOT_OPEN', closedMessage);
+  await user.click(screen.getByRole('button', { name: 'Save note' }));
+  expect(await screen.findByText(closedMessage)).toBeTruthy();
+  expect(screen.queryByRole('button', { name: 'Save note' })).toBeNull();
+});
+
+test('TC-BRW-31 (BR 7, owner decision 2026-11-12): a stored date that has passed can be kept while the note changes', async () => {
+  // 12 Nov 2026 in Manila; the laptop's stored date, 3 Nov, has passed.
+  vi.useFakeTimers({ toFake: ['Date'] });
+  vi.setSystemTime(new Date('2026-11-12T02:00:00.000Z'));
+  try {
+    const fetchMock = fakeApi((method, path, body) =>
+      method === 'PATCH'
+        ? { status: 200, body: { line: { lineId: path, ...(body as object) } } }
+        : undefined,
+    );
+    const user = userEvent.setup();
+    renderApp('/return');
+    await user.click(await editNoteButton(LAPTOP_NAME));
+    const date = screen.getByLabelText('Expected return date');
+    // The picker's lower bound is the stored date, so keeping it is not marked invalid.
+    expect(date.getAttribute('min')).toBe('2026-11-03');
+    await user.type(screen.getByLabelText('Note'), ' Still out.');
+    await user.click(screen.getByRole('button', { name: 'Save note' }));
+    await screen.findByText(`Note saved for ${LAPTOP_NAME}.`);
+    expect(patched(fetchMock)[0]![1]).toEqual({
+      note: 'Says he will return it tomorrow morning. Still out.',
+      expectedReturnDate: '2026-11-03',
+    });
+
+    // A line with no stored date: the bound is today.
+    await user.click(await editNoteButton('Extension cord, 5 m'));
+    expect(screen.getByLabelText('Expected return date').getAttribute('min')).toBe('2026-11-12');
+  } finally {
+    vi.useRealTimers();
+  }
 });

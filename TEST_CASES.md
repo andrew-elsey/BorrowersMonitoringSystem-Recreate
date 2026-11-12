@@ -165,10 +165,10 @@ Paths are shortened: `api/` is `apps/api/tests/`, `web/` is `apps/web/src/pages/
 | TC-BRW-27 | BRW-5 | SPEC 5 | component | Find open borrowings by borrower, by item, and by asset tag | Matching open lines shown | `web/ReturnPage.test.tsx` (the first load lists every open line; the screen also shows borrower, item and tag, room, quantity out, expected date) |
 | TC-BRW-28 | BRW-5 | BR 5 | component | Return all of one line and part of another, choosing condition | Requests sent with the chosen quantities and conditions | `web/ReturnPage.test.tsx` (GOOD is the default; a unit line is fixed at 1; the confirmation says the flag stays; a bad quantity is stopped on the row; the list reloads after a return, and the quantity box restarts from the new outstanding count) |
 | TC-BRW-29 | BRW-5 | BR 6 | component | Show a borrower with a flagged line | The flagged line is clearly marked | `web/ReturnPage.test.tsx` (the Flagged badge has an icon and the word, the row is tinted) |
-| TC-BRW-30 | BRW-6 | BR 7 | integration | Handler adds and edits a note and expected return date on an open line | Saved and audited | not yet |
-| TC-BRW-31 | BRW-6 | SPEC 7 | integration | Save a 501-character note; edit a note on a closed line | Rejected | not yet |
-| TC-BRW-32 | BRW-6 | BR 7, S4 | integration | James borrows 5 extension cables, handler notes "returning tomorrow" with tomorrow's date; job runs at 17:00 | Line is flagged anyway; strikes counted as usual | not yet |
-| TC-BRW-33 | BRW-6 | RPT-1 | component | Open the dashboard with a noted line | Note and expected return date shown | not yet |
+| TC-BRW-30 | BRW-6 | BR 7 | integration | Handler adds and edits a note and expected return date on an open line | Saved and audited | `api/line-notes.test.ts` (also: an admin may, a viewer 403, signed out 401, empty clears), `web/ReturnPage.test.tsx` (the dialog sends both fields; an empty date is null) |
+| TC-BRW-31 | BRW-6 | SPEC 7 | integration | Save a 501-character note; edit a note on a closed line | Rejected | `api/line-notes.test.ts` (501 characters `VALIDATION_ERROR` on `note`; closed line 409 `LINE_NOT_OPEN`; also a past date and an unknown line; nothing saved or audited; a stored date that has passed may be kept unchanged or cleared but not changed to another past date, owner decision 2026-11-12), `web/ReturnPage.test.tsx` (a field error shows on the field and is focused; a closed line closes the dialog with the message; a passed stored date is kept and is the picker's min) |
+| TC-BRW-32 | BRW-6 | BR 7, S4 | integration | James borrows 5 extension cables, handler notes "returning tomorrow" with tomorrow's date; job runs at 17:00 | Line is flagged anyway; strikes counted as usual | `api/line-notes.test.ts` (also: after the next-day return the flag and strike remain) |
+| TC-BRW-33 | BRW-6 | RPT-1 | component | Open the dashboard with a noted line | Note and expected return date shown | `web/DashboardPage.test.tsx` (the dashboard has no note editing) |
 | TC-BRW-34 | BRW-2 | BR 2, SPEC 4 | integration | A handler, then an admin, checks out in a deactivated room | `LOCATION_INACTIVE` for both; nothing created | `api/checkout.test.ts` |
 | TC-BRW-35 | BRW-2 | BR 7, SPEC 7 | integration | Check out with an expected return date before today, today, and later in Asia/Manila, just before and just after Manila midnight | Before today: `VALIDATION_ERROR` on `lines.0.expectedReturnDate`; today and later: saved | `api/checkout.test.ts` (clock faked at 23:59:59 and 00:00 Manila time) |
 | TC-BRW-36 | BRW-3 | SPEC 3, 7 | integration | Admin and handler call `GET /api/borrowers/lookup` with a matching `q`, a page, a missing, 1-character, and 101-character `q`, and `pageSize=101`; a viewer and a signed-out visitor call it | Admin and handler: 200 with only `id`, `schoolId`, `name`, `type`, `department`, `active` (inactive included), paginated; bad `q` or page size: `VALIDATION_ERROR`; viewer: 403; signed out: 401 | `api/borrowers.test.ts`; the screen uses it: `web/CheckoutPage.test.tsx` |
@@ -245,13 +245,13 @@ Paths are shortened: `api/` is `apps/api/tests/`, `web/` is `apps/web/src/pages/
 
 | ID | Ticket | Rule | Level | Steps | Expected | Automated by |
 |---|---|---|---|---|---|---|
-| TC-RPT-01 | RPT-1 | SPEC 5 | integration | Load the dashboard with open, flagged, and returned lines | Only unreturned lines and borrowers with strikes in the current semester, with notes and expected return dates | not yet |
-| TC-RPT-02 | RPT-1 | S18 | integration | Admin, handler, and view-only load the dashboard | All allowed | not yet |
+| TC-RPT-01 | RPT-1 | SPEC 5 | integration | Load the dashboard with open, flagged, and returned lines | Only unreturned lines and borrowers with strikes in the current semester, with notes and expected return dates | `api/dashboard.test.ts` (returned lines left out; overridden and older-semester strikes not counted; most strikes first; paged; no current semester empty), `web/DashboardPage.test.tsx` (strike levels and the due or flagged text) |
+| TC-RPT-02 | RPT-1 | S18 | integration | Admin, handler, and view-only load the dashboard | All allowed | `api/dashboard.test.ts` (also signed out 401; page size 101 and page 0 `VALIDATION_ERROR`), `web/DashboardPage.test.tsx` (view-only) |
 | TC-RPT-03 | RPT-2 | BR section 4 | integration | History for a borrower over a date range | Room, issuing and receiving handlers, return details, flag status; paginated | not yet |
 | TC-RPT-04 | RPT-2 | SPEC 7, S21 | integration | Request ranges of 366 and 367 days | 366 accepted; 367 `VALIDATION_ERROR` | not yet |
 | TC-RPT-05 | RPT-3 | BR section 4 | integration | History for an item by item and by asset tag | Same detail as RPT-2; paginated | not yet |
 | TC-RPT-06 | RPT-4 | BR section 4 | integration | Usage summary for a period | Most borrowed items with counts by category and by room; range capped at 366 days | not yet |
-| TC-RPT-07 | RPT-1 to RPT-4 | S18 | integration | View-only user loads the dashboard and all four reports | All allowed | not yet |
+| TC-RPT-07 | RPT-1 to RPT-4 | S18 | integration | View-only user loads the dashboard and all four reports | All allowed | dashboard part: `api/dashboard.test.ts`; the four reports: not yet (RPT-2 to RPT-4) |
 
 ## SEC: Security and resilience
 
