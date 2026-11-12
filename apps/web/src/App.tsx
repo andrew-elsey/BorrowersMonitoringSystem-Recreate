@@ -27,6 +27,7 @@ const BorrowersPage = lazy(() =>
   import('./pages/BorrowersPage').then((m) => ({ default: m.BorrowersPage })),
 );
 const RoomsPage = lazy(() => import('./pages/RoomsPage').then((m) => ({ default: m.RoomsPage })));
+const UsersPage = lazy(() => import('./pages/UsersPage').then((m) => ({ default: m.UsersPage })));
 const SettingsPage = lazy(() =>
   import('./pages/SettingsPage').then((m) => ({ default: m.SettingsPage })),
 );
@@ -123,6 +124,14 @@ export const routes: RouteObject[] = [
         element: (
           <RequireRole roles={PERMISSIONS.manageMasterData} pageName="Rooms and labs">
             <RoomsPage />
+          </RequireRole>
+        ),
+      },
+      {
+        path: 'users',
+        element: (
+          <RequireRole roles={PERMISSIONS.manageUsers} pageName="Users">
+            <UsersPage />
           </RequireRole>
         ),
       },

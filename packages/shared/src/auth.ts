@@ -25,17 +25,20 @@ export const loginSchema = z.object({
 });
 export type LoginInput = z.infer<typeof loginSchema>;
 
+// A new password under the policy. Also used when an admin sets or resets one (AUTH-3).
+export const newPasswordField = z
+  .string()
+  .min(PASSWORD_MIN_LENGTH, {
+    error: (issue) =>
+      `Too short: ${String(issue.input).length} of at least ${PASSWORD_MIN_LENGTH} characters.`,
+  })
+  .max(PASSWORD_MAX_LENGTH, tooLong(PASSWORD_MAX_LENGTH));
+
 export const changePasswordSchema = z.object({
   currentPassword: z
     .string()
     .min(1, 'Enter your current password.')
     .max(PASSWORD_MAX_LENGTH, tooLong(PASSWORD_MAX_LENGTH)),
-  newPassword: z
-    .string()
-    .min(PASSWORD_MIN_LENGTH, {
-      error: (issue) =>
-        `Too short: ${String(issue.input).length} of at least ${PASSWORD_MIN_LENGTH} characters.`,
-    })
-    .max(PASSWORD_MAX_LENGTH, tooLong(PASSWORD_MAX_LENGTH)),
+  newPassword: newPasswordField,
 });
 export type ChangePasswordInput = z.infer<typeof changePasswordSchema>;
