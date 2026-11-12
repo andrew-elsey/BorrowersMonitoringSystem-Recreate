@@ -206,6 +206,7 @@ model Transaction {
 
   // Strike counting looks up a borrower's transactions in the current semester (Rule 10).
   @@index([borrowerId, semesterId])
+  @@index([borrowerId, issuedAt])
   @@map("transactions")
 }
 

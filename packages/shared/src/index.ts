@@ -9,3 +9,4 @@ export * from './rooms.ts';
 export * from './settings.ts';
 export * from './transactions.ts';
 export * from './flags.ts';
+export * from './history.ts';
