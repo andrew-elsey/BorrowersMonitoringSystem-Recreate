@@ -1,5 +1,7 @@
 import {
   LINE_QUANTITY_MAX,
+  type LineNote,
+  NOTE_MAX_LENGTH,
   type OpenLine,
   type OpenLinePage,
   type ReturnCondition,
@@ -11,14 +13,16 @@ import {
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { type FormEvent, useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
+import { useForm } from 'react-hook-form';
 import { ApiRequestError, apiFetch, errorText, fieldErrors } from '../api';
 import { Alert } from '../components/Alert';
-import { Field, SelectField } from '../components/Field';
+import { Field, SelectField, showApiFieldErrors, TextAreaField } from '../components/Field';
+import { FormDialog } from '../components/FormDialog';
 import { FlagIcon } from '../components/icons';
-import { useMessageArea } from '../components/Notifications';
+import { useMessageArea, useNotify } from '../components/Notifications';
 import { RetryAlert } from '../components/RetryAlert';
 import { StrikeBadge } from '../components/Strikes';
-import { TIMEZONE } from '../timezone';
+import { TIMEZONE, todayInAppZone } from '../timezone';
 
 // Return (SPEC.md 5, admins and handlers, BRW-5). Finds open lines and returns all or part of one
 // line at a time. Every rule (BR 5, 6) is enforced by POST /api/returns; the screen shows the
@@ -62,6 +66,10 @@ const SEARCH_MESSAGE = `Search text must be ${SEARCH_MIN_LENGTH} to ${SEARCH_MAX
 type Giving = { line: OpenLine; quantity: number; condition: ReturnCondition };
 // A line the API refused: the row to mark and the message to show on it.
 type Refused = { lineId: string; message: string };
+// The note dialog's fields (BRW-6). An empty date means none; it is sent as null.
+type NoteValues = { note: string; expectedReturnDate: string };
+const itemLabel = (line: OpenLine) =>
+  line.item.assetTag ? `${line.item.name} ${line.item.assetTag}` : line.item.name;
 
 const controlClass =
   'h-11 rounded-lg border border-field-border bg-surface px-3 text-base text-ink aria-[invalid=true]:border-2 aria-[invalid=true]:border-danger';
@@ -110,6 +118,35 @@ export function ReturnPage() {
       sending.current = false;
     },
   });
+
+  // BRW-6, BR 7: the note and expected return date of an open line, edited in a dialog from the
+  // row. The API refuses a past date, a closed line, or a note over 500 characters.
+  const notify = useNotify();
+  const [toEdit, setToEdit] = useState<OpenLine | null>(null);
+  const noteForm = useForm<NoteValues>();
+  const saveNote = useMutation({
+    mutationFn: ({ line, values }: { line: OpenLine; values: NoteValues }) =>
+      apiFetch<{ line: LineNote }>('PATCH', `/lines/${line.lineId}`, {
+        note: values.note,
+        expectedReturnDate: values.expectedReturnDate || null,
+      }),
+    onSuccess: (_reply, { line }) => {
+      notify.success(`Note saved for ${itemLabel(line)}.`);
+      setToEdit(null);
+      return queryClient.invalidateQueries({ queryKey: ['open-lines'] });
+    },
+    onError: (error) => {
+      if (showApiFieldErrors(noteForm.setError, error, ['note', 'expectedReturnDate'])) return;
+      notify.error(error);
+      // Returned or gone since the list loaded (LINE_NOT_OPEN, NOT_FOUND): close and reload.
+      setToEdit(null);
+      return queryClient.invalidateQueries({ queryKey: ['open-lines'] });
+    },
+  });
+  function startEditing(line: OpenLine) {
+    noteForm.reset({ note: line.note ?? '', expectedReturnDate: line.expectedReturnDate ?? '' });
+    setToEdit(line);
+  }
 
   // Focus the refused row (FND-7): its quantity, or its Return button for a unit line (the quantity
   // is disabled), or the search when the reload removed the row.
@@ -284,6 +321,7 @@ export function ReturnPage() {
                   busy={giveBack.isPending}
                   error={refused?.lineId === line.lineId ? refused.message : undefined}
                   onReturn={submitReturn}
+                  onEditNote={startEditing}
                 />
               ))}
             </div>
@@ -296,6 +334,34 @@ export function ReturnPage() {
           )}
         </section>
       )}
+
+      <FormDialog
+        open={toEdit !== null}
+        title={`Note and expected return for ${toEdit ? itemLabel(toEdit) : ''}`}
+        submitLabel="Save note"
+        onSubmit={noteForm.handleSubmit((values) => saveNote.mutate({ line: toEdit!, values }))}
+        onCancel={() => setToEdit(null)}
+        isPending={saveNote.isPending}
+      >
+        <TextAreaField
+          id="line-note"
+          label="Note"
+          maxLength={NOTE_MAX_LENGTH}
+          hint="For information only. A note does not stop the line from being flagged at closing."
+          error={noteForm.formState.errors.note?.message}
+          {...noteForm.register('note')}
+        />
+        <Field
+          id="line-expected"
+          type="date"
+          label="Expected return date"
+          // A hint only: the API refuses a date before today (BR 7).
+          min={todayInAppZone()}
+          hint="Optional. Leave empty if the borrower did not say."
+          error={noteForm.formState.errors.expectedReturnDate?.message}
+          {...noteForm.register('expectedReturnDate')}
+        />
+      </FormDialog>
     </>
   );
 }
@@ -307,17 +373,19 @@ function LineRow({
   busy,
   error,
   onReturn,
+  onEditNote,
 }: {
   line: OpenLine;
   busy: boolean;
   error?: string;
   onReturn: (giving: Giving) => void;
+  onEditNote: (line: OpenLine) => void;
 }) {
   const unit = line.item.trackingType === 'UNIT';
   const [quantity, setQuantity] = useState(String(line.outstanding));
   const [condition, setCondition] = useState<ReturnCondition>('GOOD');
   const flagged = line.flagStatus === 'FLAGGED';
-  const name = line.item.assetTag ? `${line.item.name} ${line.item.assetTag}` : line.item.name;
+  const name = itemLabel(line);
   const out =
     line.outstanding === line.quantityBorrowed
       ? String(line.outstanding)
@@ -332,6 +400,14 @@ function LineRow({
           {line.item.assetTag ? `Asset tag ${line.item.assetTag}` : 'Quantity item'}
         </div>
         {line.note && <div className="mt-1 text-sm">{line.note}</div>}
+        <button
+          type="button"
+          aria-label={`Edit note and date for ${name}`}
+          onClick={() => onEditNote(line)}
+          className="mt-1 h-8 cursor-pointer text-sm font-semibold text-primary underline"
+        >
+          Edit note and date
+        </button>
       </div>
       <div className="min-w-0 flex-[0_1_160px] text-sm">
         <div>Out: {out}</div>
