@@ -1,17 +1,9 @@
 import { z } from 'zod';
 import { FlagStatus, ReturnCondition } from './enums.ts';
 import { pageQuerySchema } from './categories.ts';
+import { rangeDays, REPORT_MAX_RANGE_DAYS } from './usage.ts';
 
 // Borrowing history reports (RPT-2 per borrower, RPT-3 per item, BR section 4). Limits from SPEC.md 7.
-export const HISTORY_MAX_RANGE_DAYS = 366;
-
-const DAY_MS = 24 * 60 * 60 * 1000;
-
-// Days covered by a from-to range of YYYY-MM-DD dates, both ends included (1 Jan to 1 Jan is 1 day).
-// Calendar dates parse as UTC midnight, so the difference is always a whole number of days.
-export function historyRangeDays(from: string, to: string): number {
-  return (Date.parse(to) - Date.parse(from)) / DAY_MS + 1;
-}
 
 // ?from=&to=&page=&pageSize=: issue dates are calendar days in the app timezone, both ends included.
 export const historyQuerySchema = pageQuerySchema
@@ -27,9 +19,9 @@ export const historyQuerySchema = pageQuerySchema
     path: ['to'],
     message: 'The end date cannot be before the start date.',
   })
-  .refine((query) => historyRangeDays(query.from, query.to) <= HISTORY_MAX_RANGE_DAYS, {
+  .refine((query) => rangeDays(query.from, query.to) <= REPORT_MAX_RANGE_DAYS, {
     path: ['to'],
-    message: `The date range can be at most ${HISTORY_MAX_RANGE_DAYS} days.`,
+    message: `The date range can be at most ${REPORT_MAX_RANGE_DAYS} days.`,
   });
 export type HistoryQuery = z.infer<typeof historyQuerySchema>;
 

@@ -30,7 +30,7 @@ All times below are `Asia/Manila` unless stated. Default closing time is 17:00.
 
 ### Notes
 
-7. **Notes are informational.** A handler can add or edit a note and an expected return date on an open line (for example, "returning tomorrow"). The expected return date is today or later in the app timezone, with no upper limit (owner decision 2026-11-05). Notes never prevent flagging and never change strikes. Edits are audited.
+7. **Notes are informational.** A handler can add or edit a note and an expected return date on an open line (for example, "returning tomorrow"). When the expected return date is set or changed, it must be today or later in the app timezone, with no upper limit (owner decision 2026-11-05). A date already saved may be kept unchanged after it has passed, and it can always be cleared (owner decision 2026-11-12). Notes never prevent flagging and never change strikes. Edits are audited.
 
 ### Flagging
 

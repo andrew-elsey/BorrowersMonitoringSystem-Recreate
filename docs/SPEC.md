@@ -78,7 +78,7 @@ All domain tables use UUID primary keys and `created_at` / `updated_at` timestam
 | Rooms and labs | admin | Management |
 | Users | admin | Management |
 | Settings and semesters | admin | Closing time, thresholds, semester dates |
-| Reports | all | History per borrower, history per item, usage summary, unreturned and flagged |
+| Reports | all | History per borrower, history per item, usage summary, unreturned and flagged. Usage summary (RPT-4): From and To dates (at most 366 days, both ends counted), top 10 items, categories, and rooms or labs by times borrowed (one checkout line is one time), as bar charts with "Show as table"; `GET /api/reports/usage` |
 | Audit log | admin | Filterable viewer |
 
 ## 6. Borrower CSV import format

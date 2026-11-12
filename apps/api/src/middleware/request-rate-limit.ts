@@ -9,7 +9,7 @@ const ONE_MINUTE_MS = 60 * 1000;
 const GLOBAL_REQUESTS_PER_MINUTE = 600;
 // Search is typed live at the counter, so it gets more room than reports and CSV import (owner decision 2026-11-07).
 const SEARCH_REQUESTS_PER_MINUTE = 60;
-// Reports and CSV import, each endpoint with its own count.
+// Reports (one count shared by every report endpoint, owner decision 2026-11-12) and CSV import (its own count).
 const EXPENSIVE_REQUESTS_PER_MINUTE = 30;
 
 export function createRequestLimiter(
@@ -44,6 +44,12 @@ export function createSearchRateLimiter() {
 
 // Borrower CSV import (MD-6): 30 a minute per address, counted apart from the reports.
 export function createCsvImportRateLimiter() {
+  return createRequestLimiter(EXPENSIVE_REQUESTS_PER_MINUTE);
+}
+
+// Reports (RPT-2 to RPT-4): 30 a minute per address across all report endpoints. app.ts builds one
+// and passes it to every report router, so they share the count.
+export function createReportRateLimiter() {
   return createRequestLimiter(EXPENSIVE_REQUESTS_PER_MINUTE);
 }
 

@@ -12,3 +12,4 @@ export * from './flags.ts';
 export * from './dashboard.ts';
 export * from './history.ts';
 export * from './users.ts';
+export * from './usage.ts';

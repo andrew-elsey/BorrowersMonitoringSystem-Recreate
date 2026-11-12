@@ -2,7 +2,8 @@ import { borrowerLookupQuerySchema, historyQuerySchema, PERMISSIONS } from '@bms
 import { Router } from 'express';
 import { z } from 'zod';
 import { requireRole } from '../middleware/auth.ts';
-import { createRequestLimiter, createSearchRateLimiter } from '../middleware/request-rate-limit.ts';
+import type { RequestHandler } from 'express';
+import { createSearchRateLimiter } from '../middleware/request-rate-limit.ts';
 import { borrowerService } from '../services/borrowers.ts';
 import { listBorrowerHistory, listItemHistory } from '../services/history.ts';
 
@@ -10,12 +11,10 @@ import { listBorrowerHistory, listItemHistory } from '../services/history.ts';
 // Every role may read reports (SPEC.md 3).
 const staff = requireRole(...PERMISSIONS.viewDashboardAndReports);
 const idParams = z.object({ id: z.guid() });
-// Reports are expensive endpoints: 30 a minute per IP (ARCHITECTURE.md 12.3).
-const REPORT_REQUESTS_PER_MINUTE = 30;
 
-export function createHistoryRouter() {
+// reportLimiter is the shared reports limit from app.ts (ARCHITECTURE.md 12.3).
+export function createHistoryRouter(reportLimiter: RequestHandler) {
   const router = Router();
-  const reportLimiter = createRequestLimiter(REPORT_REQUESTS_PER_MINUTE);
 
   // Picks the borrower for the history report. Its own path because view-only users may read reports
   // but not the checkout lookup (SPEC.md 3). Same bounds as that lookup: q required, 2 to 100 characters.

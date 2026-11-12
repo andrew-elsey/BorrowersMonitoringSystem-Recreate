@@ -7,7 +7,7 @@ import { requireFetchHeader } from './middleware/auth.ts';
 import { errorHandler } from './middleware/errors.ts';
 import { createFlaggingRouter } from './routes/flagging.ts';
 import { createFlagsRouter } from './routes/flags.ts';
-import { createGlobalRateLimiter } from './middleware/request-rate-limit.ts';
+import { createGlobalRateLimiter, createReportRateLimiter } from './middleware/request-rate-limit.ts';
 import { createAuthRouter } from './routes/auth.ts';
 import { createBorrowersRouter } from './routes/borrowers.ts';
 import { createCategoriesRouter } from './routes/categories.ts';
@@ -19,6 +19,7 @@ import { createTransactionsRouter } from './routes/transactions.ts';
 import { createHistoryRouter } from './routes/history.ts';
 import { createUsersRouter } from './routes/users.ts';
 import { healthRouter } from './routes/health.ts';
+import { createUsageReportRouter } from './routes/usage-report.ts';
 
 export function createApp() {
   const app = express();
@@ -41,8 +42,11 @@ export function createApp() {
   app.use('/api', createFlagsRouter());
   app.use('/api', createTransactionsRouter());
   app.use('/api', createDashboardRouter());
-  app.use('/api', createHistoryRouter());
+  // One reports limiter shared by every report router, so all reports count together (ARCHITECTURE.md 12.3).
+  const reportLimiter = createReportRateLimiter();
+  app.use('/api', createHistoryRouter(reportLimiter));
   app.use('/api', createUsersRouter());
+  app.use('/api', createUsageReportRouter(reportLimiter));
   // Unknown API paths get the standard error format too (CLAUDE.md rule 10), not Express's HTML page.
   app.use('/api', () => {
     throw new ApiError(404, 'NOT_FOUND', 'Not found.');
