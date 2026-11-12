@@ -1,5 +1,5 @@
 // Checks the nginx limits in apps/web/nginx.conf through a real nginx (SEC-1, ARCHITECTURE.md 12.2,
-// test cases TC-SEC-01 to TC-SEC-04 and TC-SEC-06). Run with `npm run test:nginx`; needs Docker.
+// test cases TC-SEC-01 to TC-SEC-04, TC-SEC-06, and the nginx part of TC-MD-19). Run with `npm run test:nginx`; needs Docker.
 //
 // It starts its own containers on a private network, so it never touches the compose stack:
 // nginx (the same image as apps/web/Dockerfile) with this repo's nginx.conf on 127.0.0.1:18080,
@@ -161,6 +161,18 @@ const checks: [string, () => Promise<void>][] = [
       const body = JSON.stringify({ username: 'a'.repeat(200_000), password: 'x' });
       const response = await fetch(`${BASE}/api/auth/login`, { method: 'POST', body });
       await expectJsonError(response, 413, 'PAYLOAD_TOO_LARGE');
+    },
+  ],
+  [
+    'TC-MD-19: the CSV import takes up to 2 MB, refuses 2.1 MB with 413 as JSON, and allows 2 a minute (burst 1)',
+    async () => {
+      const send = (bytes: number) =>
+        fetch(`${BASE}/api/borrowers/import`, { method: 'POST', body: 'a'.repeat(bytes) });
+      await expectJsonError(await send(2.1 * 1024 * 1024), 413, 'PAYLOAD_TOO_LARGE');
+      const responses = [await send(1.9 * 1024 * 1024), await send(10), await send(10)];
+      assert.deepEqual(statuses(responses), [200, 200, 429]);
+      await expectJsonError(responses[2]!, 429, 'RATE_LIMITED');
+      assert.equal(responses[2]!.headers.get('retry-after'), '30');
     },
   ],
   [
