@@ -22,6 +22,7 @@ const NAV_ITEMS = [
     roles: PERMISSIONS.manageSettingsAndSemesters,
   },
   { to: '/reports', label: 'Reports', roles: PERMISSIONS.viewDashboardAndReports },
+  { to: '/audit', label: 'Audit log', roles: PERMISSIONS.viewAuditLog },
 ];
 
 // Top bar elements sit on green, so their focus ring is gold (ARCHITECTURE.md 14).
