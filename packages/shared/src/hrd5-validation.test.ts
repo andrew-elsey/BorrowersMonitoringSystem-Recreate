@@ -69,6 +69,11 @@ describe('TC-HRD-47 and 48: asset tag on create', () => {
   });
 });
 
+test('TC-HRD-48: an edit with a blank tag changes nothing; a real tag still goes to trackingErrors', () => {
+  expect(messages(itemUpdateSchema, { assetTag: '  ' })).toEqual(['Nothing to update.']);
+  expect(messages(itemUpdateSchema, { assetTag: 'X' })).toEqual([]);
+});
+
 describe('TC-HRD-49: one real-date field', () => {
   const semester = { name: 'S', startDate: '0000-01-01', endDate: '2026-01-01' };
   test('semesters, report ranges and expected return dates refuse year 0', () => {

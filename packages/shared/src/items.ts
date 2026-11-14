@@ -41,7 +41,13 @@ const itemFields = {
     .max(DESCRIPTION_MAX_LENGTH, `Too long: at most ${DESCRIPTION_MAX_LENGTH} characters.`)
     .refine((value) => !OTHER_CONTROL_CHARACTER.test(value), 'Remove the control characters.')
     .optional(),
-  assetTag: textField('Enter an asset tag.').optional(),
+  // A blank tag means "no tag" (create and edit alike): UNIT gets "Enter an asset tag." from
+  // trackingErrors, QUANTITY accepts it, and an edit with only a blank tag is "Nothing to update."
+  assetTag: z
+    .string()
+    .optional()
+    .transform((value) => (value?.trim() ? value : undefined))
+    .pipe(textField('Enter an asset tag.').optional()),
   totalQuantity: z
     .number({ error: QUANTITY_MESSAGE })
     .int(QUANTITY_MESSAGE)
@@ -85,13 +91,6 @@ export const itemSchema = z
   .object({
     trackingType: z.enum(TrackingType, { error: 'Choose a tracking type.' }),
     ...itemFields,
-    // A blank tag means "no tag": UNIT gets "Enter an asset tag." from trackingErrors,
-    // QUANTITY accepts it.
-    assetTag: z
-      .string()
-      .optional()
-      .transform((value) => (value?.trim() ? value : undefined))
-      .pipe(itemFields.assetTag),
   })
   .superRefine((item, ctx) => {
     for (const [field, message] of Object.entries(trackingErrors(item))) {

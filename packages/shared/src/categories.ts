@@ -29,7 +29,7 @@ export const realDateField = (missing: string) =>
 
 // Refine for PATCH bodies, checked on the parsed object so unknown (stripped) keys count as empty.
 export const nothingToUpdate = [
-  (changes: object) => Object.keys(changes).length > 0,
+  (changes: object) => Object.values(changes).some((value) => value !== undefined),
   'Nothing to update.',
 ] as const;
 

@@ -23,4 +23,6 @@ export type Room = {
   createdAt: string;
   transactionCount: number;
 };
+// What a handler gets for the checkout picker: id and name only (active may be absent).
+export type RoomOption = { id: string; name: string; active?: boolean };
 export type RoomPage = { data: Room[]; page: number; pageSize: number; total: number };
