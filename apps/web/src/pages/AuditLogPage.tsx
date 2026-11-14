@@ -103,6 +103,7 @@ export function AuditLogPage() {
   const [errors, setErrors] = useState<{ from?: string; to?: string }>({});
   const fromRef = useRef<HTMLInputElement>(null);
 
+  // shortcut: Actor lists only the first 100 users (page size limit, SPEC 7); page or search users if the department ever has more.
   const users = useQuery({
     queryKey: ['users', 'audit-actors'],
     queryFn: () => apiFetch<UserPage>('GET', '/users?pageSize=100'),
@@ -145,6 +146,7 @@ export function AuditLogPage() {
   return (
     <>
       <h1 className="text-[28px] leading-tight font-bold">Audit log</h1>
+      {users.isError && <RetryAlert query={users} />}
       <form onSubmit={apply} noValidate className="flex min-w-0 flex-wrap items-start gap-3">
         <div className="w-full min-w-0 sm:w-44">
           <Field

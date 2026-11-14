@@ -8,6 +8,10 @@ import { borrowerAuditFindings } from './borrowers.ts';
 // entry is kept under entity "return".
 const LINE_RETURN_ENTRY = `(SELECT MAX(a.created_at) FROM returns r JOIN audit_log a
   ON a.entity = 'return' AND a.entity_id = r.id::text WHERE r.transaction_item_id = t.id)`;
+// A line with no entry of its own (a fresh open line) is judged by its checkout's entry, so an
+// unaudited edit of it is still reported.
+const LINE_RELATED_ENTRY = `GREATEST(${LINE_RETURN_ENTRY}, (SELECT MAX(a.created_at) FROM audit_log a
+  WHERE a.entity = 'transaction' AND a.entity_id = t.transaction_id::text))`;
 // Setting another semester current also clears the old one, but its one entry is under the new id.
 const SEMESTER_SWITCH_ENTRY = `(SELECT MAX(a.created_at) FROM audit_log a
   WHERE a.action = 'SEMESTER_SET_CURRENT' AND a.before -> 'currentSemester' ->> 'id' = t.id::text)`;
@@ -48,7 +52,7 @@ export async function runAuditSweep(): Promise<Finding[]> {
     ),
     changedAfterLastEntry('transactions', 'transaction'),
     changedAfterLastEntry('returns', 'return'),
-    changedAfterLastEntry('transaction_items', 'transaction_item', LINE_RETURN_ENTRY),
+    changedAfterLastEntry('transaction_items', 'transaction_item', LINE_RELATED_ENTRY),
   ]);
   return findings.flat();
 }

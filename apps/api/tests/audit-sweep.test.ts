@@ -282,3 +282,32 @@ test('TC-HRD-18: a normal checkout, return, edit, switch of semester, flag, and 
 
   expect(await problems()).toEqual({});
 });
+
+test('TC-HRD-17: an open line changed by raw SQL, with no entry of its own, is reported', async () => {
+  await seed({ adminUsername: 'admin', adminPassword: 'first-password', includeSampleData: true });
+  const admin = request.agent(createApp());
+  await admin
+    .post('/api/auth/login')
+    .set('X-Requested-With', 'fetch')
+    .send({ username: 'admin', password: 'first-password' })
+    .expect(200);
+  const borrower = await prisma.borrower.findFirstOrThrow();
+  const room = await prisma.location.findFirstOrThrow();
+  const cable = await prisma.item.findFirstOrThrow({ where: { name: 'HDMI cable' } });
+  const out = await admin
+    .post('/api/transactions')
+    .set('X-Requested-With', 'fetch')
+    .send({
+      borrowerId: borrower.id,
+      locationId: room.id,
+      lines: [{ itemId: cable.id, quantity: 1 }],
+    })
+    .expect(201);
+  expect(await problems()).toEqual({});
+
+  const lineId = out.body.transaction.lines[0].id;
+  await prisma.$executeRaw`UPDATE transaction_items SET quantity_borrowed = 2, updated_at = now() + interval '1 minute' WHERE id = ${lineId}::uuid`;
+  expect(await problems()).toEqual({
+    'transaction_items changed after their last audit entry': [lineId],
+  });
+});

@@ -254,6 +254,7 @@ model Return {
   transactionItem TransactionItem @relation(fields: [transactionItemId], references: [id])
   receivedBy      User            @relation(fields: [receivedById], references: [id])
 
+  @@index([transactionItemId])
   @@map("returns")
 }
 
