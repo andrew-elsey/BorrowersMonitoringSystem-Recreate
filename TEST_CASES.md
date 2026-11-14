@@ -297,7 +297,7 @@ Paths are shortened: `api/` is `apps/api/tests/`, `web/` is `apps/web/src/pages/
 | TC-HRD-48 | HRD-5a | SPEC 4 | unit | QUANTITY item with a blank tag, null, then tag "X" | Blank accepted, null gets "Enter a valid value."; "X" gives "Quantity items have no asset tag." | `shared/hrd5-validation.test.ts` |
 | TC-HRD-49 | HRD-5a | SPEC 7 | unit | Date `0000-01-01` as semester start, report from, expected return date | "Enter a real date."; `0001-01-01` accepted | `shared/hrd5-validation.test.ts` |
 | TC-HRD-50 | HRD-5a | SPEC 7 | unit | `{}` and `{foo:1}` against the item, room, borrower, user update schemas | "Nothing to update." | `shared/hrd5-validation.test.ts` |
-| TC-HRD-51 | HRD-5a | SPEC 7 | integration | PATCH `{}` and `{foo:1}` on items, rooms, borrowers, users | 400 VALIDATION_ERROR, message "Nothing to update." | `api/hrd5-api.test.ts` |
+| TC-HRD-51 | HRD-5a | SPEC 7 | integration | PATCH `{}` and `{foo:1}` on items, rooms, borrowers, users | 400 VALIDATION_ERROR, message "Nothing to update."; also a QUANTITY item PATCH with the same name and a blank tag is 200 with no audit entry | `api/hrd5-api.test.ts` |
 | TC-HRD-52 | HRD-5a | SPEC 3 | integration | GET /api/rooms as handler and as admin | Handler rows have only `id` and `name`; admin rows are complete | `api/hrd5-api.test.ts` |
 | TC-HRD-53 | HRD-5a | SPEC 7 | integration | `?page=abc`; semester starting `0000-01-01` | 400 with plain messages (no 500) | `api/hrd5-api.test.ts` |
 | TC-HRD-54 | HRD-5a | BR 11 | integration | Update settings thresholds out of order in SQL/Prisma | Rejected by `settings_threshold_order` | `api/hrd5-api.test.ts` |

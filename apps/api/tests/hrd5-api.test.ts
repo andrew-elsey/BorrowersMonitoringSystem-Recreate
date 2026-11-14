@@ -66,6 +66,25 @@ test('TC-HRD-52: handlers get only id and name for rooms; admins get everything'
   expect(asAdmin.body.data[0]).toHaveProperty('transactionCount');
 });
 
+test('TC-HRD-51: a QUANTITY item edit with the same name and a blank tag changes nothing and writes no audit', async () => {
+  const category = await prisma.category.create({ data: { name: 'Cables' } });
+  const item = await prisma.item.create({
+    data: {
+      name: 'Cord',
+      categoryId: category.id,
+      trackingType: 'QUANTITY',
+      totalQuantity: 5,
+      condition: 'GOOD',
+    },
+  });
+  await admin
+    .patch(`/api/items/${item.id}`)
+    .set('X-Requested-With', 'fetch')
+    .send({ name: 'Cord', assetTag: '' })
+    .expect(200);
+  expect(await prisma.auditLog.count({ where: { entityId: item.id } })).toBe(0);
+});
+
 describe('TC-HRD-53: friendly validation messages over HTTP', () => {
   test('?page=abc and a semester starting in year 0', async () => {
     const page = await admin.get('/api/rooms?page=abc');
