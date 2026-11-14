@@ -121,6 +121,24 @@ test('TC-AUTH-19: "+ Add user" opens the form; a short password is refused in th
   );
 });
 
+test('TC-AUTH-19: submitting Add user with errors focuses the first invalid field (card JITzLaQx)', async () => {
+  fakeApi();
+  const user = userEvent.setup();
+  renderApp('/users');
+  await user.click(await screen.findByRole('button', { name: '+ Add user' }));
+  const form = screen.getByRole('form', { name: 'Add user' });
+  await user.click(within(form).getByRole('button', { name: 'Create user' }));
+  await vi.waitFor(() =>
+    expect(document.activeElement).toBe(within(form).getByLabelText('Full name')),
+  );
+
+  // Only the later fields invalid: focus goes to the first of those, Role.
+  await user.type(within(form).getByLabelText('Full name'), 'Bea Navarro');
+  await user.type(within(form).getByLabelText('Username'), 'bnavarro');
+  await user.click(within(form).getByRole('button', { name: 'Create user' }));
+  await vi.waitFor(() => expect(document.activeElement).toBe(within(form).getByLabelText('Role')));
+});
+
 test('a taken username shows under the Username field', async () => {
   fakeApi((method) =>
     method === 'POST'
