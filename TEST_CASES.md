@@ -254,7 +254,7 @@ Paths are shortened: `api/` is `apps/api/tests/`, `web/` is `apps/web/src/pages/
 | TC-RPT-04 | RPT-2 | SPEC 7, S21 | integration | Request ranges of 366 and 367 days | 366 accepted; 367 `VALIDATION_ERROR` | `api/history.test.ts`, `web/pages/ReportsPage.test.tsx` |
 | TC-RPT-05 | RPT-3 | BR section 4 | integration | History for an item by item and by asset tag | Same detail as RPT-2; paginated | `api/history.test.ts`, `web/pages/ReportsPage.test.tsx` |
 | TC-RPT-06 | RPT-4 | BR section 4 | integration | Usage summary for a period | Most borrowed items with counts by category and by room; range capped at 366 days | `api/usage-report.test.ts`, `web/pages/UsageReport.test.tsx` |
-| TC-RPT-07 | RPT-1 to RPT-4 | S18 | integration | View-only user loads the dashboard and all four reports | All allowed | `api/dashboard.test.ts`, `api/history.test.ts` (both history reports), `api/usage-report.test.ts`, `web/pages/UsageReport.test.tsx` |
+| TC-RPT-07 | RPT-1 to RPT-4 | S18 | integration | View-only user loads all four reports: the Dashboard (unreturned and flagged) and the three Reports tabs | All allowed | `api/dashboard.test.ts`, `api/history.test.ts` (both history reports), `api/usage-report.test.ts`, `web/pages/UsageReport.test.tsx` |
 
 ## SEC: Security and resilience
 
