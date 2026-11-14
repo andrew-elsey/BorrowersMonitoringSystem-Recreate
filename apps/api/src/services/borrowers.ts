@@ -13,6 +13,7 @@ import { z } from 'zod';
 import type { Prisma } from '../generated/prisma/client.ts';
 import { randomUUID } from 'node:crypto';
 import { type AuditEntry, audit, auditMany } from '../lib/audit.ts';
+import { type Finding, changedAfterLastEntry, missingEntry } from '../lib/audit-sweep-sql.ts';
 import { ApiError, isPrismaError } from '../lib/errors.ts';
 import { prisma } from '../lib/prisma.ts';
 import { getSettings } from './settings.ts';
@@ -371,4 +372,13 @@ export async function importBorrowers(
     }
     throw error;
   }
+}
+
+// The audit sweep's checks for this table (HRD-1, BR 14). They live here because only this file
+// may read the borrowers table (CLAUDE.md rule 1).
+export async function borrowerAuditFindings(): Promise<Finding[]> {
+  return Promise.all([
+    missingEntry('borrowers', 'borrower', 'BORROWER_CREATED'),
+    changedAfterLastEntry('borrowers', 'borrower'),
+  ]);
 }
