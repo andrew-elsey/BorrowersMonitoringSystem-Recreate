@@ -28,8 +28,9 @@ function fileError(message: string): ApiError {
 // shortcut: a line break inside a quoted value counts as a row, so such a file may be refused
 // early; valid borrower fields cannot hold line breaks anyway.
 function checkRowCount(text: string): void {
-  let lines = text.split('\n').length;
-  if (text.endsWith('\n')) lines -= 1;
+  // The same line breaks csv-parse accepts (\r\n, \n or a bare \r), so CR-only files count too.
+  const parts = text.split(/\r\n|\r|\n/);
+  const lines = parts.at(-1) === '' ? parts.length - 1 : parts.length;
   if (lines - 1 > CSV_IMPORT_MAX_ROWS) {
     throw new ApiError(
       413,
