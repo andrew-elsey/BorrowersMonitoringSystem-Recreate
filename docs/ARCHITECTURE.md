@@ -34,7 +34,7 @@ Adding a dependency outside this list needs the owner's approval.
     api/
       Dockerfile
       prisma/            schema.prisma, migrations/, seed.ts
-      scripts/           admin-reset-password.ts
+      scripts/           admin-reset-password.ts, backup.ts, restore.ts, backup-lib.ts (HRD-3)
       src/
         routes/          HTTP only: parse, authorize, call a service, send response
         services/        business rules; one file per area (checkout, returns, flagging, strikes, ...)

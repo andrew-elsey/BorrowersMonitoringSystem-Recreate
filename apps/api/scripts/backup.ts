@@ -2,7 +2,7 @@
 // pg_dump runs inside the db container; its output is streamed into a file on the host.
 // The session table's rows are left out (they only hold sign-ins, which a restore would invalidate anyway).
 import { spawn } from 'node:child_process';
-import { createWriteStream, readdirSync, renameSync, rmSync, statSync } from 'node:fs';
+import { createWriteStream, existsSync, readdirSync, renameSync, rmSync, statSync } from 'node:fs';
 import { once } from 'node:events';
 import { join } from 'node:path';
 import { backupFileName, filesToPrune, loadEnv } from './backup-lib.ts';
@@ -16,26 +16,36 @@ if (!dir) {
   process.exit(1);
 }
 
+if (!existsSync(dir)) {
+  console.error(`BACKUP_DIR does not exist: ${dir}`);
+  process.exit(1);
+}
+
 const finalPath = join(dir, backupFileName(new Date()));
 const partialPath = `${finalPath}.partial`;
 const out = createWriteStream(partialPath);
-const dump = spawn(
-  'docker',
-  [
-    'compose',
-    'exec',
-    '-T',
-    'db',
-    'sh',
-    '-c',
-    'pg_dump -U "$POSTGRES_USER" -d "$POSTGRES_DB" -Fc --exclude-table-data=session',
-  ],
-  { stdio: ['ignore', 'pipe', 'inherit'] },
-);
-dump.stdout.pipe(out);
-const [[code]] = await Promise.all([once(dump, 'close'), once(out, 'close')]);
+let code: number | null = null;
+try {
+  const dump = spawn(
+    'docker',
+    [
+      'compose',
+      'exec',
+      '-T',
+      'db',
+      'sh',
+      '-c',
+      'pg_dump -U "$POSTGRES_USER" -d "$POSTGRES_DB" -Fc --exclude-table-data=session',
+    ],
+    { stdio: ['ignore', 'pipe', 'inherit'] },
+  );
+  dump.stdout.pipe(out);
+  [[code]] = await Promise.all([once(dump, 'close'), once(out, 'close')]);
+} catch {
+  out.destroy(); // e.g. docker is not on PATH: release the file, the failure branch below cleans up
+}
 
-if (code !== 0 || statSync(partialPath).size === 0) {
+if (code !== 0 || !existsSync(partialPath) || statSync(partialPath).size === 0) {
   rmSync(partialPath, { force: true });
   console.error('Backup failed. Nothing was kept and no old backups were deleted.');
   process.exit(1);

@@ -45,7 +45,10 @@ const typed = await rl.question(
 rl.close();
 if (!isConfirmed(typed, databaseName)) fail('Not confirmed. Nothing was changed.');
 
-spawnSync('docker', ['compose', 'stop', 'api'], { stdio: 'inherit' });
+// Never restore while the api is still serving.
+if (spawnSync('docker', ['compose', 'stop', 'api'], { stdio: 'inherit' }).status !== 0) {
+  fail('Could not stop the api. Nothing was changed.');
+}
 let code: number | null;
 try {
   code = await runInDb(
