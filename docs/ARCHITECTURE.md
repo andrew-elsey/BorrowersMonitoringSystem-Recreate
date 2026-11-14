@@ -303,17 +303,17 @@ Machine: 12 x 12th Gen Intel Core i5-12400F, 31.8 GiB RAM, Windows 11, Docker De
 
 | # | Criterion | Result |
 |---|---|---|
-| 1 | Login flood | 200 connections for 60 s: 311,564 requests, answered 401 (10) and 429 (311,554, from nginx), no 5xx, no errors or timeouts, p99 219 ms. The signed-in client from the host did checkout, return and dashboard cycles (162 requests): p95 207 ms, max 1,707 ms, no failures. api peak memory 175 of 512 MiB, no OOM kill, no restart. A valid login from the host worked right after the flood. After the 15 minute throttle window a valid login from the flooded address returned 200 (TC-SEC-22, `LOAD_FULL=1`). |
+| 1 | Login flood | 200 connections for 60 s: 311,564 requests, answered 401 (10) and 429 (311,554, from nginx), no 5xx, no errors or timeouts, p99 219 ms. The signed-in client from the host did checkout, return and dashboard cycles (162 requests): p95 207 ms, max 1,707 ms (the one slow call seen, a checkout during the flood; 1,644 ms in a second run; p95 stays far under the 2 s limit), no failures. api peak memory 175 of 512 MiB, no OOM kill, no restart. A valid login from the host worked right after the flood. After the 15 minute throttle window a valid login from the flooded address returned 200 (TC-SEC-22, `LOAD_FULL=1`). |
 | 2 | Slow connections | 25 sockets dripping header bytes for 25 s: nginx closed all 25 after about 10 s (`client_header_timeout`). The other client (117 requests) had p95 36 ms and no failures. |
 | 3 | Oversized input | 150 KB JSON and 3 MB CSV under load (88 and 43 requests): every answer was 413 `PAYLOAD_TOO_LARGE` from nginx. The replies carry none of the headers Express adds (a normal API reply does), so nothing reached the api. |
-| 4 | Heavy reads | Slowest of five requests on the seeded data: usage 366 days 77 ms; borrower history (a borrower with 2,000 transactions) 366 days page 100 71 ms; item history 366 days page 100 40 ms; items `?q=` 35 ms; borrowers `?q=` 30 ms; `/api/returns/open?q=` 41 ms; `/api/flags?q=` 51 ms. Audit viewer: skipped (HRD-1 not merged). |
-| 5 | Flagging under load | `POST /api/flagging/run` twice at once while autocannon ran 160 dashboard requests (all 200): one run flagged all 500 eligible lines, the other got 429 (the one-a-minute limit), nothing eligible was left unflagged, and no line has more than one `LINE_FLAGGED` entry. The `FLAGGING_RUN` check was skipped (HRD-1b not merged). |
+| 4 | Heavy reads | Slowest of five requests (three for each audit filter, 25 report calls in all, to stay under the shared 30 a minute reports limit; 150 ms pause between calls) on the seeded data: usage 366 days 77 ms; borrower history (a borrower with 2,000 transactions) 366 days page 100 71 ms; item history 366 days page 100 40 ms; items `?q=` 35 ms; borrowers `?q=` 30 ms; `/api/returns/open?q=` 41 ms; `/api/flags?q=` 51 ms. Audit viewer: skipped (HRD-1 not merged). |
+| 5 | Flagging under load | `POST /api/flagging/run` and an unchanged `PUT /api/settings` (which also starts a run, with no one-a-minute limit) fired at the same moment, while autocannon ran 160 dashboard requests (all 200): both answered 200, the manual run flagged all 499 eligible lines, nothing eligible was left unflagged, no line has more than one `LINE_FLAGGED` entry, and the new entries equal the lines flagged. The `FLAGGING_RUN` check was skipped (HRD-1b not merged). |
 
 End of run: api 185 of 512 MiB, web 11 of 128 MiB, db 136 of 1,024 MiB, no restart or OOM kill in any service.
 
 **Tuned limits:** none so far.
 
-**What this does not show.** The advisory lock is not exercised at HTTP level: the one-a-minute limit refuses the second call before it reaches the lock (the lock has its own integration test). The slow-connection test uses 25 sockets from one address, below the 30 connections per address limit.
+**What this does not show.** Which of the two simultaneous runs wins the advisory lock is not asserted (either order is fine); the test checks the database, not one reply. The slow-connection test uses 25 sockets from one address, below the 30 connections per address limit.
 
 ## 13. Decision log
 

@@ -274,7 +274,7 @@ Paths are shortened: `api/` is `apps/api/tests/`, `web/` is `apps/web/src/pages/
 | TC-SEC-12 | SEC-2 | ARCH 12.7 | manual | Slow-connection (slowloris) test | Other clients keep working | `tests/load/main.ts` (`npm run test:load`) |
 | TC-SEC-13 | SEC-2 | ARCH 12.7, S21 | manual | Oversized JSON body and oversized CSV under load | Rejected with 413 without reaching a service | `tests/load/main.ts` (`npm run test:load`) |
 | TC-SEC-14 | SEC-2 | ARCH 12.7 | manual | Reports and search at maximum ranges on seeded data (5,000 borrowers, 500 items, 20,000 transactions) | Each answers in under 2 s | `tests/load/main.ts` (`npm run test:load`) |
-| TC-SEC-15 | SEC-2 | ARCH 12.7 | manual | Run the flagging job while the API is under load | Correct results; no overlapping runs | `tests/load/main.ts` (`npm run test:load`) |
+| TC-SEC-15 | SEC-2 | ARCH 12.7 | manual | Run the flagging job while the API is under load | Two runs at once (the manual run and a settings save): nothing left unflagged, no line flagged twice, api stays up | `tests/load/main.ts` (`npm run test:load`) |
 | TC-SEC-16 | SEC-2 | ARCH 12.7, D18 | manual | `seed.ts` run with NODE_ENV=production, and with a database name that has no "load" in it | Both refuse and load nothing | `tests/load/main.ts` (`npm run test:load`) |
 | TC-SEC-17 | SEC-2 | ARCH 12.7, D18 | manual | `seed.sql` run against a database without "load" in its name | The SQL itself refuses ("Refusing to seed") | `tests/load/main.ts` (`npm run test:load`) |
 | TC-SEC-18 | SEC-2 | ARCH 12.7 | manual | Seed the load stack | 5,000 borrowers, 500 items, 20,000 transactions and at least 100,000 audit rows (CHECKOUT, RETURN, LINE_FLAGGED, ITEM_UPDATED) | `tests/load/main.ts` (`npm run test:load`) |

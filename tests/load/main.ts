@@ -370,7 +370,11 @@ async function main() {
   let bad = '';
   for (const [name, path] of reads) {
     const times: number[] = [];
-    for (let i = 0; i < 5; i++) {
+    // The audit viewer shares the 30 a minute reports limit with the two history reports and usage:
+    // 5 + 5 + 5 + 1 probe + 3 x 3 = 25. The pause keeps cheap searches under nginx's 10 a second.
+    const samples = name.startsWith('audit') ? 3 : 5;
+    for (let i = 0; i < samples; i++) {
+      await sleep(150);
       const r = await api('GET', path, cookie);
       if (r.status !== 200) bad ||= `${name} -> ${r.status}`;
       times.push(r.ms);
@@ -383,7 +387,7 @@ async function main() {
         'TC-SEC-19',
         `Audit viewer filter "${name}" under 2 s`,
         max < 2000 ? 'PASS' : 'FAIL',
-        `max ${max.toFixed(0)} ms of 5`,
+        `max ${max.toFixed(0)} ms of ${samples}`,
       );
   }
   check(
@@ -460,13 +464,22 @@ async function main() {
   ENV.LOAD_COOKIE = cookie;
   const load = container('load', ['LOAD_COOKIE']);
   await sleep(3000); // let the background load start
-  const [first, second] = await Promise.all([
+  // The manual run is limited to one a minute, so a second POST is refused before it reaches the
+  // lock. Saving the settings unchanged also starts a run at once (rescheduleFlagging) with no such
+  // limit, so the two really compete for the advisory lock.
+  const current = (await api('GET', '/api/settings', cookie)).json.settings;
+  const { closingTime, warningThreshold, noticeThreshold, blockThreshold } = current;
+  const [manual, viaSettings] = await Promise.all([
     api('POST', '/api/flagging/run', cookie),
-    api('POST', '/api/flagging/run', cookie),
+    api('PUT', '/api/settings', cookie, {
+      closingTime,
+      warningThreshold,
+      noticeThreshold,
+      blockThreshold,
+    }),
   ]);
   const loadResult = await load;
-  const winner = [first, second].find((r) => r.status === 200);
-  const loser = [first, second].find((r) => r.status !== 200);
+  await sleep(3000); // the run started by the settings save may still be finishing
   const flaggedNow = Number(sql(`SELECT count(*) FROM audit_log WHERE action = 'LINE_FLAGGED';`));
   const stillEligible = Number(sql(eligibleSql));
   const doubles = Number(
@@ -479,14 +492,12 @@ async function main() {
   );
   check(
     'TC-SEC-15',
-    'Flagging under load: one run does the work, the other is refused, and nothing is left unflagged',
-    !!winner &&
-      winner.json?.run?.flagged === eligible &&
-      !winner.json.run.skipped &&
-      loser?.status === 429 &&
+    'Flagging under load, two runs at once: nothing is left unflagged and the api stays up',
+    manual.status === 200 &&
+      viaSettings.status === 200 &&
       stillEligible === 0 &&
       !('500' in loadCodes),
-    `eligible ${eligible}, run ${JSON.stringify(winner?.json?.run)}, second call ${loser?.status}, still eligible ${stillEligible}, background load ${loadResult.requests.total} requests ${JSON.stringify(loadCodes)}`,
+    `eligible ${eligible}, manual run ${manual.status} ${JSON.stringify(manual.json?.run)}, settings save ${viaSettings.status}, still eligible ${stillEligible}, background load ${loadResult.requests.total} requests ${JSON.stringify(loadCodes)}`,
   );
   check(
     'TC-SEC-25',
@@ -494,23 +505,27 @@ async function main() {
     doubles === 0 && flaggedNow - flaggedBefore === eligible,
     `lines with 2+ entries ${doubles}, new entries ${flaggedNow - flaggedBefore} (eligible ${eligible})`,
   );
-  const runEntries = sql(
-    `SELECT count(*) || '|' || count(*) FILTER (WHERE after IS NOT NULL) FROM audit_log WHERE action = 'FLAGGING_RUN';`,
+  // HRD-1b: a run that did the work writes one FLAGGING_RUN entry (a skipped run writes none), so the
+  // runs together flagged exactly `eligible` lines. Assumes the entry's "after" has a numeric
+  // "flagged" field: adjust here to the real shape once HRD-1b is merged.
+  const [runCount, wellFormed, runFlagged] = sql(
+    `SELECT count(*), count(*) FILTER (WHERE after IS NOT NULL), coalesce(sum((after->>'flagged')::int), 0)
+     FROM audit_log WHERE action = 'FLAGGING_RUN';`,
   )
     .split('|')
-    .map(Number) as [number, number];
-  if (runEntries[0] === runsBefore)
+    .map(Number) as [number, number, number];
+  if (runCount === runsBefore)
     skipOrFail(
       'TC-SEC-25',
-      'FLAGGING_RUN entry written once for the run',
+      'FLAGGING_RUN entries written for the runs',
       'no FLAGGING_RUN entry (HRD-1b not merged)',
     );
   else
     check(
       'TC-SEC-25',
-      'FLAGGING_RUN entry written once for the run',
-      runEntries[0] - runsBefore === 1 && runEntries[1] === runEntries[0],
-      `new entries ${runEntries[0] - runsBefore}, with an "after" ${runEntries[1]} of ${runEntries[0]}`,
+      'FLAGGING_RUN entries written for the runs: well-formed, and together they flagged every eligible line',
+      runCount > runsBefore && wellFormed === runCount && runFlagged === eligible,
+      `new entries ${runCount - runsBefore}, with an "after" ${wellFormed} of ${runCount}, lines flagged by them ${runFlagged} (eligible ${eligible})`,
     );
 
   // ---- TC-SEC-21: final memory and restart state of every service ----
