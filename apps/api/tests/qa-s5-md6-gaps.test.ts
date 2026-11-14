@@ -76,13 +76,16 @@ test('SPEC 6: CRLF line endings import the same as LF', async () => {
   expect(res.body).toMatchObject({ created: 2, rejected: [] });
 });
 
-// BUG (MD-6, SPEC 7 / S21): the 5,000-row cap counts "\n" only, but csv-parse also accepts "\r"
-// as the row separator, so a file with CR-only line endings skips the cap and is parsed and
-// imported in full. Kept as it.fails so the suite stays green; remove .fails when fixed.
-test.fails(
-  'BUG SPEC 7: a CSV of 5,001 rows with CR-only line endings is refused with PAYLOAD_TOO_LARGE',
-  async () => {
-    const res = await upload([HEADER, ...rows(5001)].join('\r'));
+// Was a bug (MD-6, SPEC 7 / S21, card Qn9mX1tn): the cap counted "\n" only, but csv-parse also
+// accepts a bare "\r", so a CR-only file skipped the cap.
+test.each([
+  ['CR-only', '\r'],
+  ['LF', '\n'],
+  ['CRLF', '\r\n'],
+])(
+  'SPEC 7: a CSV of 5,001 rows with %s line endings is refused with PAYLOAD_TOO_LARGE',
+  async (_name, lineBreak) => {
+    const res = await upload([HEADER, ...rows(5001)].join(lineBreak));
     expect(res.status).toBe(413);
     expect(res.body.error.code).toBe('PAYLOAD_TOO_LARGE');
     expect(await prisma.borrower.count()).toBe(1); // only the seeded borrower
