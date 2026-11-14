@@ -17,6 +17,7 @@ import { todayInAppZone } from '../timezone';
 // no chart library is needed; "Show as table" gives the same numbers as text. The server checks the
 // range again (CLAUDE.md rule 2).
 
+// Default period: From is 30 days before today, To is today (owner decision 2026-11-14).
 const DEFAULT_DAYS = 30;
 const DAY_MS = 24 * 60 * 60 * 1000;
 const daysBefore = (date: string, days: number) =>
@@ -42,7 +43,7 @@ function rangeError(range: UsageQuery): string | undefined {
 
 export function UsageReport() {
   const today = todayInAppZone();
-  const [from, setFrom] = useState(daysBefore(today, DEFAULT_DAYS - 1));
+  const [from, setFrom] = useState(daysBefore(today, DEFAULT_DAYS));
   const [to, setTo] = useState(today);
   const [shown, setShown] = useState<UsageQuery>({ from, to });
   const [error, setError] = useState<string>();
