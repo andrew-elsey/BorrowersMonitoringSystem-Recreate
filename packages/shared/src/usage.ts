@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { realDateField } from './categories.ts';
 
 // Usage summary report (RPT-4, BR section 4). Limits from SPEC.md 7.
 export const REPORT_MAX_RANGE_DAYS = 366;
@@ -17,11 +18,8 @@ export function rangeDays(from: string, to: string): number {
 // included, at most 366 days (SPEC.md 7). Each report schema adds these fields, then applies
 // refineReportRange.
 export const reportRangeFields = {
-  from: z.iso
-    .date('Enter a start date.')
-    // PostgreSQL has no year 0, so 0000-01-01 could not be compared.
-    .refine((date) => date >= '0001-01-01', 'Enter a real date.'),
-  to: z.iso.date('Enter an end date.'),
+  from: realDateField('Enter a start date.'),
+  to: realDateField('Enter an end date.'),
 };
 
 export function refineReportRange<T extends z.ZodType<{ from: string; to: string }>>(schema: T) {

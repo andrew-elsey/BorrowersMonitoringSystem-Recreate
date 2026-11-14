@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { newPasswordField } from './auth.ts';
-import { textField } from './categories.ts';
+import { nothingToUpdate, textField } from './categories.ts';
 import { Role } from './enums.ts';
 
 // User management (AUTH-3, admin only). Users are never deleted (BR 15): they are deactivated.
@@ -24,7 +24,8 @@ export type UserInput = z.infer<typeof userSchema>;
 export const userUpdateSchema = userSchema
   .omit({ password: true })
   .extend({ active: z.boolean() })
-  .partial();
+  .partial()
+  .refine(...nothingToUpdate);
 export type UserUpdate = z.infer<typeof userUpdateSchema>;
 
 // PUT /api/users/:id/password: an admin sets a new password for someone else.

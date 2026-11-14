@@ -10,6 +10,7 @@ import {
   NOTE_MAX_LENGTH,
   type Room,
   type RoomInput,
+  type RoomOption,
   type RoomPage,
   roomSchema,
   SEARCH_MAX_LENGTH,
@@ -141,7 +142,11 @@ export function CheckoutPage() {
   // department ever has more.
   const rooms = useQuery({
     queryKey: ['rooms', 'checkout'],
-    queryFn: () => apiFetch<RoomPage>('GET', '/rooms?page=1&pageSize=100'),
+    queryFn: () =>
+      apiFetch<Omit<RoomPage, 'data'> & { data: RoomOption[] }>(
+        'GET',
+        '/rooms?page=1&pageSize=100',
+      ),
   });
   // Lines still out at closing time are flagged (BR 8). From settings, never hardcoded (rule 3);
   // "closing time" stands in until it loads.

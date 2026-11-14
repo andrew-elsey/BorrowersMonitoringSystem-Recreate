@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { CONTROL_CHARACTER, pageQuerySchema, textField } from './categories.ts';
+import { CONTROL_CHARACTER, nothingToUpdate, pageQuerySchema, textField } from './categories.ts';
 import { BorrowerType } from './enums.ts';
 
 // A borrower as every caller sees it (SPEC.md 4). Read only through BorrowerService (CLAUDE.md
@@ -44,7 +44,10 @@ export const borrowerSchema = z.object({
 export type BorrowerInput = z.infer<typeof borrowerSchema>;
 
 // Edit body: any of the fields, plus active to deactivate or reactivate (BR 15).
-export const borrowerUpdateSchema = borrowerSchema.extend({ active: z.boolean() }).partial();
+export const borrowerUpdateSchema = borrowerSchema
+  .extend({ active: z.boolean() })
+  .partial()
+  .refine(...nothingToUpdate);
 export type BorrowerUpdate = z.infer<typeof borrowerUpdateSchema>;
 
 // GET /api/borrowers?q=&type=&active=&page=&pageSize=. q has the search bounds (SPEC.md 7); BorrowerService

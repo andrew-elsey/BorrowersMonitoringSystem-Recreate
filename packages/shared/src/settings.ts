@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { textField } from './categories.ts';
+import { realDateField, textField } from './categories.ts';
 
 // Semesters and settings (MD-7, SPEC.md 4).
 
@@ -8,8 +8,8 @@ import { textField } from './categories.ts';
 export const semesterSchema = z
   .object({
     name: textField('Enter a semester name.'),
-    startDate: z.iso.date('Enter a start date.'),
-    endDate: z.iso.date('Enter an end date.'),
+    startDate: realDateField('Enter a start date.'),
+    endDate: realDateField('Enter an end date.'),
   })
   // YYYY-MM-DD strings sort in date order.
   .refine((semester) => semester.endDate >= semester.startDate, {

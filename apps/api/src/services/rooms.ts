@@ -1,4 +1,4 @@
-import type { Room, RoomPage, RoomUpdate } from '@bms/shared';
+import type { Room, RoomOption, RoomPage, RoomUpdate } from '@bms/shared';
 import { audit } from '../lib/audit.ts';
 import { ApiError, isPrismaError } from '../lib/errors.ts';
 import { prisma } from '../lib/prisma.ts';
@@ -53,7 +53,7 @@ export async function listRooms(
   page: number,
   pageSize: number,
   activeOnly: boolean,
-): Promise<RoomPage> {
+): Promise<Omit<RoomPage, 'data'> & { data: Room[] | RoomOption[] }> {
   const where = activeOnly ? { active: true } : {};
   const [rows, total] = await prisma.$transaction([
     prisma.location.findMany({
@@ -65,7 +65,12 @@ export async function listRooms(
     }),
     prisma.location.count({ where }),
   ]);
-  return { data: rows.map(toRoom), page, pageSize, total };
+  const rooms = rows.map(toRoom);
+  // Handlers only need the checkout picker: id and name, no creator or counts.
+  const data: Room[] | RoomOption[] = activeOnly
+    ? rooms.map(({ id, name }) => ({ id, name }))
+    : rooms;
+  return { data, page, pageSize, total };
 }
 
 // Used by the admin screen and by handlers adding a room at checkout. created_by is the signed-in
