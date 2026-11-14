@@ -55,7 +55,6 @@ Adding a dependency outside this list needs the owner's approval.
         AppShell.tsx     top bar and the role-filtered menu
   packages/
     shared/              Zod schemas, enums, and types used by both api and web
-  scripts/               backup.sh, restore.sh (HRD-3)
   tests/load/            autocannon abuse and load scripts (SEC-2)
   docker-compose.yml
   .env.example
@@ -199,9 +198,10 @@ Environment variables (all documented in `.env.example`):
 | `TRUST_PROXY_HOPS` | Number of proxies in front of the API (nginx = 1) | 1 |
 | `HASH_CONCURRENCY` | Password hashes allowed at once | 2 |
 | `HASH_QUEUE_MAX` | Hash requests allowed to wait | 10 |
+| `BACKUP_DIR` | Host folder for `npm run backup` files, outside the project (section 12.6); read by the host scripts only, not by the containers | none (required for backups) |
 | `NODE_ENV` | Environment | production in containers |
 
-Moving to a department PC means copying the repo, creating `.env`, and running `docker compose up -d --build`. Other machines on the LAN reach it at `http://<pc-ip>:8080`. Backups use `pg_dump` through a documented script (HRD-3).
+Moving to a department PC means copying the repo, creating `.env`, and running `docker compose up -d --build`. Other machines on the LAN reach it at `http://<pc-ip>:8080`. Backups use `pg_dump` through `npm run backup` and `npm run restore` (HRD-3, section 12.6). Set `BACKUP_DIR` in `.env` to a folder outside the project; both scripts run on the host and call `pg_dump`/`pg_restore` inside the db container through `docker compose exec`.
 
 ## 11. Testing strategy
 
@@ -275,7 +275,9 @@ argon2 is deliberately slow and memory hungry, which makes `/api/auth/login` the
 - Log rotation with the `json-file` driver (`max-size: 10m`, `max-file: 3`) so logs cannot fill the disk.
 - Rate-limit hits are logged at warn level with the IP, never with passwords or session IDs.
 - Containers run as a non-root user.
-- Backup files are stored outside the web root, in a folder only the admin account can read.
+- Backup files are stored outside the web root, in a folder only the admin account can read (on Windows, remove other accounts' access with `icacls`; the step is written up in HRD-4).
+- **Backup** (`npm run backup`, `apps/api/scripts/backup.ts`): needs `BACKUP_DIR` (no default; it refuses to run without it). Runs `pg_dump -Fc --exclude-table-data=session` in the db container and streams it to `bms-YYYYMMDD-HHmmss.dump.partial`, renamed only when `pg_dump` exits 0 with a non-empty file. Only after a good backup does it delete `bms-*.dump` files older than 14 days (never any other file). A daily Task Scheduler job runs it (HRD-4).
+- **Restore** (`npm run restore -- <file>`, `restore.ts`): needs a terminal. It checks the file with `pg_restore --list`, asks the person to type the database name, stops the api, runs `pg_restore --clean --if-exists --no-owner --single-transaction`, and always starts the api again (which reruns migrations and the seed). It replaces all data, and every session is gone afterwards, so everyone signs in again. Because it is one transaction, a failed restore leaves the database as it was.
 
 ### 12.7 Verification
 

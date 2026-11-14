@@ -285,7 +285,12 @@ Paths are shortened: `api/` is `apps/api/tests/`, `web/` is `apps/web/src/pages/
 | TC-HRD-03 | HRD-1 | BR 14 | integration | Run the audit sweep after a state change with no audit entry | The change is reported | not yet |
 | TC-HRD-04 | HRD-2 | BR section 3 | e2e | Checkout, partial return, end-of-day flagging, strike, block, override in Docker | The whole flow passes | not yet |
 | TC-HRD-05 | HRD-2 | BR section 3 | manual | Check every scenario S1 to S21 against the coverage table below | Each has an automated test that passes | not yet |
-| TC-HRD-06 | HRD-3 | ARCH 12.6 | manual | Back up, restore on a clean environment | Data restored; backup files outside the web root, readable only by admin | not yet |
+| TC-HRD-06 | HRD-3 | ARCH 12.6 | manual | Back up, `docker compose down -v`, start clean, restore the file | Data restored; backup files outside the web root, readable only by admin | manual (run 2026-11-14 on a throwaway project, see the card) |
+| TC-HRD-25 | HRD-3 | ARCH 12.6 | unit | Name a backup file | `bms-YYYYMMDD-HHmmss.dump`; `.partial` files are not backups | `apps/api/tests/backup.test.ts` |
+| TC-HRD-26 | HRD-3 | ARCH 12.6 | unit | Choose which files to prune | Only `bms-*.dump` older than 14 days; other files and `.partial` kept | `apps/api/tests/backup.test.ts` |
+| TC-HRD-27 | HRD-3 | ARCH 12.6 | unit | Check the typed restore confirmation | Only the exact database name is accepted | `apps/api/tests/backup.test.ts` |
+| TC-HRD-28 | HRD-3 | ARCH 12.6 | manual | Run `npm run backup` without `BACKUP_DIR`, and with the db stopped | Refuses with a clear message; no file kept, old backups not deleted | manual |
+| TC-HRD-29 | HRD-3 | ARCH 12.6 | manual | Run `npm run restore` from a non-terminal, with a wrong confirmation, and with a corrupt file | Refuses each time; api not stopped; data unchanged | manual |
 | TC-HRD-07 | HRD-4 | ARCH 12.1 | manual | Follow the LAN guide on another PC | App reachable from the network with `COOKIE_SECURE=false`; port bound to the LAN address | not yet |
 | TC-HRD-08 | HRD-5 | SPEC 8 | manual | Go through each screen with bad input, slow loads, and empty data | Clear messages, consistent loading and empty states, keyboard-friendly checkout | not yet |
 | TC-HRD-09 | HRD-6 | SPEC 8, ARCH 3, 13 | manual | Run `npm run build` | No chunk-size warning; each screen page (Home, Inventory, Borrowers, Rooms, Settings, Change password) is its own chunk | manual |

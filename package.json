@@ -16,7 +16,9 @@
     "test:db": "docker compose -f docker-compose.yml -f docker-compose.dev.yml --profile test up -d --wait db-test",
     "test:nginx": "node apps/web/scripts/check-nginx.ts",
     "db:migrate": "npm run db:migrate -w @bms/api",
-    "db:seed": "npm run db:seed -w @bms/api"
+    "db:seed": "npm run db:seed -w @bms/api",
+    "backup": "node apps/api/scripts/backup.ts",
+    "restore": "node apps/api/scripts/restore.ts"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

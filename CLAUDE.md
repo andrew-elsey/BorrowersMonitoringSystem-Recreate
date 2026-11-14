@@ -46,6 +46,8 @@ npm run dev:db              # start only the dev database, published on 127.0.0.
 npm run db:migrate          # create/apply a migration in development (needs dev:db)
 npm run db:seed             # add missing seed data in development, with sample data (needs dev:db and DATABASE_URL in .env)
 docker compose exec api npm run admin:reset-password -- <username>   # emergency password reset (hidden prompt)
+npm run backup              # pg_dump to BACKUP_DIR (set in .env, outside the repo); keeps 14 days (needs the stack running)
+npm run restore -- <file>   # replace the database from a backup; stops the api, asks you to type the database name
 ```
 
 Not yet created (ticket in brackets):
