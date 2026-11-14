@@ -138,17 +138,25 @@ test('TC-HRD-19: a handler has no Audit log in the menu and is told it is not al
   expect(screen.queryByRole('link', { name: 'Audit log' })).toBeNull();
 });
 
-test('TC-HRD-19: when the user list fails to load, the page says so with a Retry button', async () => {
+test('TC-HRD-19: when the user list fails to load, the page says so; after a good Retry, focus moves to From', async () => {
+  let usersFail = true;
   mockApi((_method, path) => {
     if (path === '/auth/me') return signedInAs(ADMIN);
     if (path.startsWith('/users'))
-      return {
-        status: 500,
-        body: { error: { code: 'INTERNAL_ERROR', message: 'Something went wrong.' } },
-      };
+      return usersFail
+        ? {
+            status: 500,
+            body: { error: { code: 'INTERNAL_ERROR', message: 'Something went wrong.' } },
+          }
+        : { status: 200, body: { data: [], page: 1, pageSize: 100, total: 0 } };
     return { status: 200, body: { data: [], page: 1, pageSize: 25, total: 0 } };
   });
   renderApp('/audit');
   const alert = await screen.findByRole('alert');
-  expect(within(alert).getByRole('button', { name: 'Retry' })).toBeTruthy();
+  usersFail = false;
+  await userEvent.click(within(alert).getByRole('button', { name: 'Retry' }));
+  await vi.waitFor(() =>
+    expect(document.activeElement).toBe(screen.getByLabelText('From (required)')),
+  );
+  expect(screen.queryByRole('alert')).toBeNull();
 });

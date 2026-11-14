@@ -146,7 +146,7 @@ export function AuditLogPage() {
   return (
     <>
       <h1 className="text-[28px] leading-tight font-bold">Audit log</h1>
-      {users.isError && <RetryAlert query={users} />}
+      {users.isError && <RetryAlert query={users} onRetried={() => fromRef.current?.focus()} />}
       <form onSubmit={apply} noValidate className="flex min-w-0 flex-wrap items-start gap-3">
         <div className="w-full min-w-0 sm:w-44">
           <Field
