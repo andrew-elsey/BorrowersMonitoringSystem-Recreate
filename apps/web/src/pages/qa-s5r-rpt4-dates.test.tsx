@@ -5,7 +5,7 @@ import type { SignedInUser } from '../auth';
 import { mockApi, renderApp, signedInAs } from '../test-utils';
 
 // QA rerun gap tests for the RPT-4 default-dates fix (ae0ab2f): the Usage summary's default period
-// is the last 30 days ending today in Asia/Manila, read from the app clock, on any date. Also
+// runs from 30 days before today to today in Asia/Manila, read from the app clock, on any date. Also
 // TC-RPT-07 after the owner decision of 2026-11-14: Reports has three tabs, the Dashboard is the
 // fourth report.
 
@@ -44,10 +44,10 @@ const usageRequests = (fetchMock: ReturnType<typeof mockApi>) =>
 
 test.each([
   // [clock in UTC, expected From, expected To (Manila date)]
-  ['2027-01-01T16:30:00.000Z', '2026-12-04', '2027-01-02'], // just after midnight in Manila, new year
-  ['2028-02-29T03:00:00.000Z', '2028-01-31', '2028-02-29'], // leap day
-  ['2028-03-01T15:59:59.000Z', '2028-02-01', '2028-03-01'], // 23:59:59 in Manila, leap year
-  ['2026-03-30T00:00:00.000Z', '2026-03-01', '2026-03-30'], // 30 days back crosses February
+  ['2027-01-01T16:30:00.000Z', '2026-12-03', '2027-01-02'], // just after midnight in Manila, new year
+  ['2028-02-29T03:00:00.000Z', '2028-01-30', '2028-02-29'], // leap day
+  ['2028-03-01T15:59:59.000Z', '2028-01-31', '2028-03-01'], // 23:59:59 in Manila, leap year
+  ['2026-03-30T00:00:00.000Z', '2026-02-28', '2026-03-30'], // 30 days back crosses February
 ])('RPT-4: with the clock at %s the default period is %s to %s', async (instant, from, to) => {
   const fetchMock = fakeApiAt(instant);
   renderApp('/reports');

@@ -9,7 +9,7 @@ import { mockApi, renderApp, signedInAs } from '../test-utils';
 
 const VIEWER: SignedInUser = { id: 'u9', name: 'Rafael Castillo', username: 'rc', role: 'VIEWER' };
 const SUMMARY: UsageSummary = {
-  from: '2026-10-14',
+  from: '2026-10-13',
   to: '2026-11-12',
   items: [
     { id: 'i1', name: 'Extension cord', assetTag: null, timesBorrowed: 12 },
@@ -59,8 +59,8 @@ test('TC-RPT-07: a view-only user opens Reports and sees the last 30 days as bar
 
   const items = await screen.findByRole('region', { name: 'Most borrowed items' });
   expect(screen.getByRole('link', { name: 'Reports' }).getAttribute('aria-current')).toBe('page');
-  expect(usageRequests(fetchMock)).toEqual(['/api/reports/usage?from=2026-10-14&to=2026-11-12']);
-  within(items).getByText('Times borrowed, 14 Oct 2026 – 12 Nov 2026');
+  expect(usageRequests(fetchMock)).toEqual(['/api/reports/usage?from=2026-10-13&to=2026-11-12']);
+  within(items).getByText('Times borrowed, 13 Oct 2026 – 12 Nov 2026');
   const list = within(items).getByRole('list', { name: 'Most borrowed items' });
   expect(within(list).getAllByRole('listitem').map(text)).toEqual([
     'Extension cord12',
@@ -102,5 +102,5 @@ test('a range over 366 days is refused in the form with its length, and no reque
 test('a period with nothing borrowed says so', async () => {
   fakeApi({ ...SUMMARY, items: [], categories: [], rooms: [] });
   await openUsageTab();
-  await screen.findByText('Nothing was borrowed from 14 Oct 2026 – 12 Nov 2026.');
+  await screen.findByText('Nothing was borrowed from 13 Oct 2026 – 12 Nov 2026.');
 });
