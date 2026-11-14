@@ -291,6 +291,16 @@ Paths are shortened: `api/` is `apps/api/tests/`, `web/` is `apps/web/src/pages/
 | TC-HRD-09 | HRD-6 | SPEC 8, ARCH 3, 13 | manual | Run `npm run build` | No chunk-size warning; each screen page (Home, Inventory, Borrowers, Rooms, Settings, Change password) is its own chunk | manual |
 | TC-HRD-10 | HRD-6 | SPEC 8 | component | Render the app at each route (`/`, `/inventory`, `/borrowers`, `/rooms`, `/settings`, `/password`, `/login`) with the lazy pages | Each page renders inside the app shell | the page tests (`apps/web/src/pages/*.test.tsx`) through `renderApp` |
 | TC-HRD-11 | HRD-6 | SPEC 8 | manual | Under `docker compose up`, open sign-in with the browser network tab open, sign in, then open every menu item | Sign-in and the shell load from the entry chunk; each screen fetches its own chunk on first visit, shows "Loading…" briefly if slow, and renders | manual |
+| TC-HRD-45 | HRD-5a | SPEC 7 | unit | Validate `{}`, `page=abc`, wrong types against the shared schemas | No message contains "Invalid input", "expected" or "received" | `shared/hrd5-validation.test.ts` |
+| TC-HRD-46 | HRD-5a | SPEC 7 | unit | QUANTITY item with total quantity `'x'` | The schema's own message still wins over the global one | `shared/hrd5-validation.test.ts` |
+| TC-HRD-47 | HRD-5a | SPEC 4 | unit | UNIT item with an empty or blank asset tag | "Enter an asset tag." once | `shared/hrd5-validation.test.ts` |
+| TC-HRD-48 | HRD-5a | SPEC 4 | unit | QUANTITY item with a blank tag, null, then tag "X" | Blank accepted, null gets "Enter a valid value."; "X" gives "Quantity items have no asset tag." | `shared/hrd5-validation.test.ts` |
+| TC-HRD-49 | HRD-5a | SPEC 7 | unit | Date `0000-01-01` as semester start, report from, expected return date | "Enter a real date."; `0001-01-01` accepted | `shared/hrd5-validation.test.ts` |
+| TC-HRD-50 | HRD-5a | SPEC 7 | unit | `{}` and `{foo:1}` against the item, room, borrower, user update schemas | "Nothing to update." | `shared/hrd5-validation.test.ts` |
+| TC-HRD-51 | HRD-5a | SPEC 7 | integration | PATCH `{}` and `{foo:1}` on items, rooms, borrowers, users | 400 VALIDATION_ERROR, message "Nothing to update." | `api/hrd5-api.test.ts` |
+| TC-HRD-52 | HRD-5a | SPEC 3 | integration | GET /api/rooms as handler and as admin | Handler rows have only `id` and `name`; admin rows are complete | `api/hrd5-api.test.ts` |
+| TC-HRD-53 | HRD-5a | SPEC 7 | integration | `?page=abc`; semester starting `0000-01-01` | 400 with plain messages (no 500) | `api/hrd5-api.test.ts` |
+| TC-HRD-54 | HRD-5a | BR 11 | integration | Update settings thresholds out of order in SQL/Prisma | Rejected by `settings_threshold_order` | `api/hrd5-api.test.ts` |
 
 ## DOC: Documentation
 
@@ -314,7 +324,7 @@ Paths are shortened: `api/` is `apps/api/tests/`, `web/` is `apps/web/src/pages/
 | BR 8 End-of-day flagging | TC-FLG-06 to 12 |
 | BR 9 Catch-up | TC-FLG-10 |
 | BR 10 Strike count | TC-FLG-01 to 04 |
-| BR 11 Thresholds | TC-BRW-26, TC-FLG-17 to 21 |
+| BR 11 Thresholds | TC-BRW-26, TC-FLG-17 to 21, TC-HRD-54 |
 | BR 12 Semester reset | TC-FLG-05 |
 | BR 13 Override | TC-FLG-04, 23, 24 |
 | BR 14 Audit | TC-FND-15, 17, TC-AUTH-06, 19, TC-MD-01, 08, TC-BRW-04, 20, 30, TC-FLG-07, 24, TC-HRD-01, 03 |

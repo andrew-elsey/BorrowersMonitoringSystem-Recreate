@@ -23,6 +23,31 @@ export const textField = (missing: string) =>
     .max(NAME_MAX_LENGTH, `Too long: at most ${NAME_MAX_LENGTH} characters.`)
     .refine((value) => !CONTROL_CHARACTER.test(value), 'Remove the control characters.');
 
+// A date field YYYY-MM-DD. PostgreSQL has no year 0, so 0000-01-01 could not be stored or compared.
+export const realDateField = (missing: string) =>
+  z.iso.date(missing).refine((date) => date >= '0001-01-01', 'Enter a real date.');
+
+// Refine for PATCH bodies, checked on the parsed object so unknown (stripped) keys count as empty.
+export const nothingToUpdate = [
+  (changes: object) => Object.keys(changes).length > 0,
+  'Nothing to update.',
+] as const;
+
+// Zod's own English texts ("Invalid input: expected string, received undefined") must never reach
+// users. Messages written on a schema still win; this only words what is left.
+z.config({
+  customError: (issue) => {
+    if (issue.code === 'invalid_type') return 'Enter a valid value.';
+    if (issue.code === 'too_big' && issue.origin === 'string')
+      return `Too long: at most ${issue.maximum} characters.`;
+    if (issue.code === 'too_small' && issue.origin === 'string')
+      return `Too short: at least ${issue.minimum} characters.`;
+    if (issue.code === 'too_big') return `Enter a value of at most ${issue.maximum}.`;
+    if (issue.code === 'too_small') return `Enter a value of at least ${issue.minimum}.`;
+    return 'Enter a valid value.';
+  },
+});
+
 // Create and rename take the same body. Names are unique regardless of case (SPEC.md 4); the API
 // answers DUPLICATE_VALUE.
 export const categorySchema = z.object({ name: textField('Enter a category name.') });

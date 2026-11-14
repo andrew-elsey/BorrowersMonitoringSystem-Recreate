@@ -152,7 +152,7 @@ test('TC-AUTH-19: duplicate usernames, short passwords, and bad input are refuse
   await post(admin, { ...NEW_USER, username: '   ' }).expect(400);
   // The edit body cannot set a password.
   const before = await prisma.user.findUniqueOrThrow({ where: { id: handlerId } });
-  await patch(admin, handlerId, { password: 'sneaky-new-pass' }).expect(200);
+  await patch(admin, handlerId, { password: 'sneaky-new-pass' }).expect(400);
   const after = await prisma.user.findUniqueOrThrow({ where: { id: handlerId } });
   expect(after.passwordHash).toBe(before.passwordHash);
 

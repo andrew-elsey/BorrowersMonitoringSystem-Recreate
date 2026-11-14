@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { searchTextField } from './borrowers.ts';
-import { CONTROL_CHARACTER, pageQuerySchema } from './categories.ts';
+import { CONTROL_CHARACTER, pageQuerySchema, realDateField } from './categories.ts';
 import { type FlagStatus, ReturnCondition, type TrackingType } from './enums.ts';
 
 // Checkout (BRW-2, BR 1 to 4). Limits from SPEC.md 7.
@@ -19,10 +19,7 @@ export const noteField = z
 
 // A calendar date in the app timezone (ARCHITECTURE.md 7). The services also refuse a date before
 // today (BR 7), since the schema cannot know the app's "today".
-export const expectedReturnDateField = z.iso
-  .date('Enter a date as YYYY-MM-DD.')
-  // PostgreSQL has no year 0, so 0000-01-01 could not be stored.
-  .refine((date) => date >= '0001-01-01', 'Enter a real date.');
+export const expectedReturnDateField = realDateField('Enter a date as YYYY-MM-DD.');
 
 // POST /api/transactions. The issuing handler, issue time, and semester are never sent: the server
 // takes them from the session, the clock, and the current semester (BR 2).

@@ -65,7 +65,11 @@ export async function listRooms(
     }),
     prisma.location.count({ where }),
   ]);
-  return { data: rows.map(toRoom), page, pageSize, total };
+  const rooms = rows.map(toRoom);
+  // Handlers only need the checkout picker: id and name, no creator or counts. The cast keeps the
+  // admin type; the web picker reads only id and name.
+  const data = activeOnly ? (rooms.map(({ id, name }) => ({ id, name })) as Room[]) : rooms;
+  return { data, page, pageSize, total };
 }
 
 // Used by the admin screen and by handlers adding a room at checkout. created_by is the signed-in

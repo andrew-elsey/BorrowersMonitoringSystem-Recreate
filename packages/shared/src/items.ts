@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { pageQuerySchema, textField } from './categories.ts';
+import { nothingToUpdate, pageQuerySchema, textField } from './categories.ts';
 import { searchTextField } from './borrowers.ts';
 import { ItemCondition, ItemStatus, TrackingType } from './enums.ts';
 
@@ -85,10 +85,20 @@ export const itemSchema = z
   .object({
     trackingType: z.enum(TrackingType, { error: 'Choose a tracking type.' }),
     ...itemFields,
+    // A blank tag means "no tag": UNIT gets "Enter an asset tag." from trackingErrors,
+    // QUANTITY accepts it.
+    assetTag: z
+      .string()
+      .optional()
+      .transform((value) => (value?.trim() ? value : undefined))
+      .pipe(itemFields.assetTag),
   })
   .superRefine((item, ctx) => {
     for (const [field, message] of Object.entries(trackingErrors(item))) {
-      ctx.addIssue({ code: 'custom', path: [field], message });
+      // Skip a field that already has an issue, so a blank tag is not reported twice.
+      if (!ctx.issues.some((issue) => issue.path?.[0] === field)) {
+        ctx.addIssue({ code: 'custom', path: [field], message });
+      }
     }
   });
 export type ItemInput = z.infer<typeof itemSchema>;
@@ -102,7 +112,8 @@ export const itemUpdateSchema = z
     trackingType: z
       .never({ error: 'The tracking type cannot be changed after the item is created.' })
       .optional(),
-  });
+  })
+  .refine(...nothingToUpdate);
 export type ItemUpdate = z.infer<typeof itemUpdateSchema>;
 
 // GET /api/items?q=&categoryId=&status=&trackingType=&page=&pageSize=. q matches name or asset tag.
