@@ -180,15 +180,7 @@ export function UsersPage() {
           <h2 className="text-xl font-bold">Add user</h2>
           <div className="grid grid-cols-[repeat(auto-fill,minmax(240px,1fr))] items-start gap-4">
             <UserFields form={addForm} idPrefix="new" autoFocus />
-            <Field
-              id="new-password"
-              type="password"
-              autoComplete="new-password"
-              label="Starting password"
-              hint={TELL_THE_USER}
-              error={addForm.formState.errors.password?.message}
-              {...addForm.register('password')}
-            />
+            <StartingPasswordField form={addForm} />
           </div>
           <div className="flex flex-wrap justify-end gap-3">
             <button type="button" onClick={closeAddForm} className={secondaryButtonClass}>
@@ -309,6 +301,22 @@ export function UsersPage() {
 }
 
 // Full name, username, and role: shared by the add form and the edit dialog.
+// Its own component so the field is registered after UserFields' fields: react-hook-form focuses
+// the first invalid field in registration order (FND-5 form behaviour, card JITzLaQx).
+function StartingPasswordField({ form }: { form: UseFormReturn<UserInput> }) {
+  return (
+    <Field
+      id="new-password"
+      type="password"
+      autoComplete="new-password"
+      label="Starting password"
+      hint={TELL_THE_USER}
+      error={form.formState.errors.password?.message}
+      {...form.register('password')}
+    />
+  );
+}
+
 function UserFields({
   form,
   idPrefix,
