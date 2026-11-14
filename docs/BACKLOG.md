@@ -17,9 +17,9 @@ Document references: `BR` = `BUSINESS_RULES.md`, `ARCH` = `ARCHITECTURE.md`, `SP
 | 3 | Checkout: handlers can check items out; return API works; rate limits and request limits in place; web bundle split | BRW-1, BRW-2, BRW-3, BRW-4, SEC-1, HRD-6 | 22 |
 | 4 | Returns and flagging: full return flow, end-of-day flagging, strikes, blocking, override | BRW-5, FLG-1, FLG-2, FLG-3, FLG-4, REG-1 | 21 |
 | 5 | Dashboard, reports, admin tools | BRW-6, RPT-1, RPT-2, RPT-3, RPT-4, AUTH-3, MD-6 | 20 |
-| 6 | Hardening, abuse testing, and release | HRD-1, HRD-2, HRD-3, HRD-4, HRD-5, SEC-2 | 20 |
+| 6 | Hardening, abuse testing, and release | HRD-1, HRD-1b, HRD-2, HRD-3, HRD-4, HRD-5, HRD-5b, SEC-2, FND-8 | 25 |
 
-Total: 132 points. Sprints 1 (26), 2 (23), and 3 (22) are over the working capacity of about 20; that is accepted for now and will be revisited once Sprint 1 shows the real velocity.
+Total: 137 points. Sprint 6 grew from 20 to 25 on 2026-11-14 (owner approved: HRD-1b and HRD-5b split out, FND-8 added). Sprints 1 (26), 2 (23), and 3 (22) are over the working capacity of about 20; that is accepted for now and will be revisited once Sprint 1 shows the real velocity.
 
 ## Epic FND: Foundation
 
@@ -48,6 +48,10 @@ Acceptance: every timestamp the API writes (`@default(now())`, `@updatedAt`, exp
 **FND-7 · Bug: API field errors don't move focus or get announced** (1 pt, Sprint 2). Depends on: FND-5.
 Found in FND-5 manual QA on 2026-11-01. After an API field error (for example a wrong current password), focus stays where it was instead of moving to the field, and the inline error is not announced to screen readers. Browser-side errors already move focus. Every form screen uses `showApiFieldErrors`, so it is fixed once there.
 Acceptance: after API field errors, focus moves to the first errored field in form order; each inline field error is announced to screen readers; a component test covers both (TC-FND-30); README usage updated; full suite, lint, and typecheck pass. Refs: SPEC 8, ARCH 7.
+
+**FND-8 · Bug: nginx returns 502 after the api container restarts** (1 pt, Sprint 6). Depends on: FND-2.
+nginx resolves `api` once at startup, so after the api container restarts with a new address every request gets 502 until web restarts. Owner put it in Sprint 6 on 2026-11-14, before the HRD-4 deploy guide and the SEC-2 load runs.
+Acceptance: after `docker compose restart api` the app works again without restarting web; the nginx config check (`npm run test:nginx`) still passes. Refs: ARCH 10, 12.2.
 
 ## Epic AUTH: Authentication and users
 
@@ -158,18 +162,29 @@ Acceptance: autocannon scripts in `tests/load` run against the compose stack fro
 
 **HRD-1 · Audit log viewer** (3 pts, Sprint 6). Depends on: FND-3.
 Admin viewer with filters by actor, entity, and date, plus a sweep to find state changes with no audit entry. Always date-filtered and paginated (SPEC 7).
+Owner decisions 2026-11-14: at most 366 days per search, shares the reports rate limit; Entity filter is a fixed list and Actor includes "System" (no actor); the sweep is `npm run audit:sweep` (script and test, not a screen) and reports records with no audit entry plus rows changed after their latest entry; seed rows count as having entries.
+
+**HRD-1b · Last flagging run on Flag review** (2 pts, Sprint 6). Depends on: FLG-4. Split from HRD-1 on 2026-11-14.
+Acceptance: every flagging run, scheduled or "Run flagging now", writes one `FLAGGING_RUN` audit entry in the same transaction, including runs that flag 0 lines; the Flag review screen shows "Last flagging run" (Manila time and lines flagged) and "Next run" (next closing time from settings); the read is bounded; ARCH 3 updated. Refs: BR 9, 14, ARCH 3.
 
 **HRD-2 · End-to-end tests** (5 pts, Sprint 6). Depends on: FLG-4.
 Playwright flow: checkout, partial return, end-of-day flagging, strike, block, override. Runs in Docker. Confirm every scenario in BR section 3 has an automated test.
+Owner decisions 2026-11-14: flagging is triggered by moving closing time to just past and blocking by lowering the strike thresholds in Settings (no test-only hooks in production code); runs on its own compose project and database as `npm run test:e2e`.
 
 **HRD-3 · Backup and restore** (2 pts, Sprint 6). Depends on: FND-2.
 Documented `pg_dump` backup and restore scripts, verified on a clean environment. Backup files are stored outside the web root and readable only by the admin account (ARCH 12.6).
+Owner decisions 2026-11-14: Node scripts `npm run backup` and `npm run restore` (the department PC runs Windows); "admin account" means the Windows account (documented `icacls` step); daily Task Scheduler job keeping 14 days; restore asks for a typed confirmation and stops the api first; `pg_dump -Fc`; session data excluded.
 
 **HRD-4 · LAN deployment guide and README** (2 pts, Sprint 6). Depends on: FND-2.
-Step-by-step instructions to run on a department PC and reach it from other machines on the network, including `COOKIE_SECURE=false` for plain HTTP, binding the web port to the LAN address, firewall steps, and why the app must not be exposed to the internet (ARCH 12.1).
+Step-by-step instructions to run on a department PC and reach it from other machines on the network, including `COOKIE_SECURE=false` for plain HTTP, binding the web port to the LAN address, firewall steps, and why the app must not be exposed to the internet (ARCH 12.1). The README covers setup, settings, and day-to-day operation (added to match the Trello card, owner decision 2026-11-14).
+Owner decisions 2026-11-14: the guide is `docs/DEPLOYMENT.md`, linked from the README; the user manual is a separate later document. Day-to-day notes include: after an error while saving a checkout or return, check the borrower's open items before entering it again; the backup schedule; re-running the load test on the department PC.
 
 **HRD-5 · UX and error handling pass** (3 pts, Sprint 6). Depends on: BRW-5.
-Clear validation and error messages; keyboard-friendly checkout; consistent loading and empty states.
+Clear validation and error messages throughout; keyboard-friendly checkout; consistent loading and empty states.
+Split on 2026-11-14: HRD-5 covers the API and validation fixes decided in its Trello comments (no raw validation messages, asset-tag messages, handler room list returns id and name, empty edit returns "Nothing to update.", database check on strike threshold order, one shared real-date field); HRD-5b covers the screens.
+
+**HRD-5b · UX pass: UI fixes** (2 pts, Sprint 6). Depends on: HRD-5. Split from HRD-5 on 2026-11-14.
+Acceptance: Items Retry moves focus to the first field; the Return screen shows SEARCH_TOO_BROAD without Retry; the Flag review over-cap note is a status message shown only when the list loaded; a friendly error page when a page fails to load; focus after dismissing a message and after a NOT_FOUND does not drop to the page body; focus moves on after choosing a borrower by keyboard on Checkout; consistent loading and empty states. Refs: SPEC 5, 8, ARCH 13.
 
 **HRD-6 · Split the web bundle** (1 pt, Sprint 3). Depends on: none.
 Acceptance: route-level code splitting with `React.lazy` and `Suspense` for the screen pages, using only what React and Vite already provide (no new dependency); `npm run build` shows no chunk-size warning, or the remaining large chunk is explained in ARCH; the sign-in screen and the app shell still load first, the existing tests pass, and every route still renders under `docker compose up`. Refs: SPEC 8, ARCH 3, 13.
