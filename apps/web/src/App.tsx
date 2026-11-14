@@ -8,7 +8,9 @@ import { NotAllowedPage } from './pages/NotAllowedPage';
 
 // Screen pages load on demand so the sign-in screen and the app shell download first (HRD-6).
 // AppShell shows the Suspense fallback while a page's chunk loads.
-const HomePage = lazy(() => import('./pages/HomePage').then((m) => ({ default: m.HomePage })));
+const DashboardPage = lazy(() =>
+  import('./pages/DashboardPage').then((m) => ({ default: m.DashboardPage })),
+);
 const FlagReviewPage = lazy(() =>
   import('./pages/FlagReviewPage').then((m) => ({ default: m.FlagReviewPage })),
 );
@@ -25,8 +27,12 @@ const BorrowersPage = lazy(() =>
   import('./pages/BorrowersPage').then((m) => ({ default: m.BorrowersPage })),
 );
 const RoomsPage = lazy(() => import('./pages/RoomsPage').then((m) => ({ default: m.RoomsPage })));
+const UsersPage = lazy(() => import('./pages/UsersPage').then((m) => ({ default: m.UsersPage })));
 const SettingsPage = lazy(() =>
   import('./pages/SettingsPage').then((m) => ({ default: m.SettingsPage })),
+);
+const ReportsPage = lazy(() =>
+  import('./pages/ReportsPage').then((m) => ({ default: m.ReportsPage })),
 );
 const ChangePasswordPage = lazy(() =>
   import('./pages/ChangePasswordPage').then((m) => ({ default: m.ChangePasswordPage })),
@@ -68,8 +74,8 @@ export const routes: RouteObject[] = [
       {
         index: true,
         element: (
-          <RequireRole roles={PERMISSIONS.viewDashboardAndReports} pageName="Home">
-            <HomePage />
+          <RequireRole roles={PERMISSIONS.viewDashboardAndReports} pageName="Dashboard">
+            <DashboardPage />
           </RequireRole>
         ),
       },
@@ -122,6 +128,14 @@ export const routes: RouteObject[] = [
         ),
       },
       {
+        path: 'users',
+        element: (
+          <RequireRole roles={PERMISSIONS.manageUsers} pageName="Users">
+            <UsersPage />
+          </RequireRole>
+        ),
+      },
+      {
         path: 'settings',
         element: (
           <RequireRole
@@ -129,6 +143,14 @@ export const routes: RouteObject[] = [
             pageName="Settings and semesters"
           >
             <SettingsPage />
+          </RequireRole>
+        ),
+      },
+      {
+        path: 'reports',
+        element: (
+          <RequireRole roles={PERMISSIONS.viewDashboardAndReports} pageName="Reports">
+            <ReportsPage />
           </RequireRole>
         ),
       },

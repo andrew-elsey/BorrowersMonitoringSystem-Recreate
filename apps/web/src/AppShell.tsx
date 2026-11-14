@@ -8,18 +8,20 @@ import { NotificationProvider } from './components/Notifications';
 // The menu, in SPEC.md 5 order. Each item lists the roles that may open it (SPEC.md 3), and an item
 // is added only when its screen is built: the rest join in their own tickets.
 const NAV_ITEMS = [
-  { to: '/', label: 'Home', roles: PERMISSIONS.viewDashboardAndReports },
+  { to: '/', label: 'Dashboard', roles: PERMISSIONS.viewDashboardAndReports },
   { to: '/checkout', label: 'Checkout', roles: PERMISSIONS.checkoutAndReturn },
   { to: '/return', label: 'Return', roles: PERMISSIONS.checkoutAndReturn },
   { to: '/flags', label: 'Flag review', roles: PERMISSIONS.overrideFlags },
   { to: '/inventory', label: 'Inventory and categories', roles: PERMISSIONS.manageMasterData },
   { to: '/borrowers', label: 'Borrowers', roles: PERMISSIONS.manageMasterData },
   { to: '/rooms', label: 'Rooms and labs', roles: PERMISSIONS.manageMasterData },
+  { to: '/users', label: 'Users', roles: PERMISSIONS.manageUsers },
   {
     to: '/settings',
     label: 'Settings and semesters',
     roles: PERMISSIONS.manageSettingsAndSemesters,
   },
+  { to: '/reports', label: 'Reports', roles: PERMISSIONS.viewDashboardAndReports },
 ];
 
 // Top bar elements sit on green, so their focus ring is gold (ARCHITECTURE.md 14).

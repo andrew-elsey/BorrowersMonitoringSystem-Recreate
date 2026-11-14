@@ -35,7 +35,7 @@ A web-based Inventory and Borrowing System for a college department. It tracks e
 
 All domain tables use UUID primary keys and `created_at` / `updated_at` timestamps (UTC). Enum values are uppercase strings.
 
-**users**: name, username (unique), password_hash, role (`ADMIN`, `HANDLER`, `VIEWER`), active.
+**users**: name, username (unique, case-insensitive; stored as typed; sign-in matches it exactly), password_hash, role (`ADMIN`, `HANDLER`, `VIEWER`), active.
 
 **borrowers**: school_id (unique, case-insensitive; stored as typed), name, type (`STUDENT`, `FACULTY`, `EMPLOYEE`), department, active.
 
@@ -69,16 +69,16 @@ All domain tables use UUID primary keys and `created_at` / `updated_at` timestam
 | Screen | Roles | Purpose |
 |---|---|---|
 | Login, change password | all | Sign in and change own password |
-| Dashboard | all | Currently unreturned items and flagged borrowers, with notes and expected return dates |
+| Dashboard | all | Currently unreturned items and flagged borrowers, with notes and expected return dates (read-only; notes are edited on Return). The menu entry and the page at `/` are "Dashboard". Endpoints: `GET /api/dashboard/unreturned`, `GET /api/dashboard/flagged-borrowers` |
 | Checkout | admin, handler | Borrower lookup, room or lab picker with add-new, item search with quantity, per-line note and expected return date, strike count and banners (warning, stricter notice, blocked; `GET /api/borrowers/:id/strikes`) |
-| Return | admin, handler | Find open borrowings by borrower, item, or asset tag; return all or part; select condition. Flagged lines are marked; a retired or lost item can still be returned (owner decision 2026-11-10); `GET /api/returns/open` feeds it; a strike badge sits next to each borrower, from the strikes and thresholds in the `GET /api/returns/open` reply (FLG-3) |
+| Return | admin, handler | Find open borrowings by borrower, item, or asset tag; return all or part; select condition. Flagged lines are marked; a retired or lost item can still be returned (owner decision 2026-11-10); `GET /api/returns/open` feeds it; a strike badge sits next to each borrower, from the strikes and thresholds in the `GET /api/returns/open` reply (FLG-3); "Edit note and date" on each line opens a dialog to set its note and expected return date (BRW-6, `PATCH /api/lines/:id`) |
 | Flag review | admin | List of the current semester's `FLAGGED` lines (an overridden line leaves the list; older semesters stay in the database for history and reports) with borrower and their strikes ("N strikes", plus "blocked" at the block threshold), item, issued, flagged, now, note, and expected return date; filter by returned or still out and by borrower or item text; override with a reason of 5 to 500 characters; "Run flagging now" with a confirm (once a minute). With no current semester the empty state says "No current semester is set." Endpoints: `GET /api/flags`, `POST /api/flags/:id/override`, `POST /api/flagging/run` |
 | Inventory and categories | admin | Item and category management |
 | Borrowers | admin | Management, search, Type and Status filters, CSV import |
 | Rooms and labs | admin | Management |
 | Users | admin | Management |
 | Settings and semesters | admin | Closing time, thresholds, semester dates |
-| Reports | all | History per borrower, history per item, usage summary, unreturned and flagged |
+| Reports | all | History per borrower, history per item, usage summary. The fourth report, unreturned and flagged, is the Dashboard (owner decision 2026-11-14). Usage summary (RPT-4): From and To dates (at most 366 days, both ends counted; by default From is 30 days before today and To is today in Asia/Manila, owner decision 2026-11-14), top 10 items, categories, and rooms or labs by times borrowed (one checkout line is one time), as bar charts with "Show as table"; `GET /api/reports/usage` |
 | Audit log | admin | Filterable viewer |
 
 ## 6. Borrower CSV import format

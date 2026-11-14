@@ -16,7 +16,8 @@ export const requireFetchHeader: RequestHandler = (req, _res, next) => {
 // Goes on every signed-in route: rejects signed-out requests (401) and roles not listed (403)
 // before any other database work (ARCHITECTURE.md 5, 12.3). Pass an entry of PERMISSIONS
 // (SPEC.md 3), e.g. requireRole(...PERMISSIONS.overrideFlags).
-// shortcut: trusts the role stored in the session at login, so a role change takes effect at next login; recheck the user row here once AUTH-3 can change roles or deactivate users.
+// Trusts the role stored in the session at login. That stays true: deactivating a user or changing
+// their role signs them out everywhere (services/users.ts, AUTH-3).
 export function requireRole(...roles: readonly Role[]): RequestHandler {
   return (req, _res, next) => {
     const { userId, role } = req.session;

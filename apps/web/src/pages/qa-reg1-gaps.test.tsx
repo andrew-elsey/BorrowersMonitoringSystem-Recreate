@@ -197,7 +197,7 @@ describe('tab titles on every route and role (TC-FND-31 edges)', () => {
   });
 
   test.each([
-    ['/', 'Home'],
+    ['/', 'Dashboard'],
     ['/password', 'Change password'],
     ['/checkout', 'Not allowed'],
     ['/inventory', 'Not allowed'],

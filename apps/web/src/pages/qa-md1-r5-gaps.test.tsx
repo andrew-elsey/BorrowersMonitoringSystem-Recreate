@@ -77,6 +77,10 @@ test('an error notification sits in <main> above the heading, outside the table,
 test('a notification raised just before navigating to another signed-in page is not lost', async () => {
   mockApi((method, path) => {
     if (path === '/auth/me') return signedInAs(ADMIN);
+    // The Dashboard (RPT-1) loads its own lists; answer them with empty pages, not categories,
+    // or the page crashes whenever they arrive before the assertion (a race under load).
+    if (path.startsWith('/dashboard/')) return page([]);
+    if (path === '/closing-time') return { status: 200, body: { closingTime: '17:00' } };
     if (method === 'GET') return page([AUDIO]);
     return { status: 201, body: { category: { id: 'c9', name: 'Projectors', itemCount: 0 } } };
   });
@@ -86,9 +90,9 @@ test('a notification raised just before navigating to another signed-in page is 
 
   await user.type(screen.getByLabelText('New category'), 'Projectors');
   await user.click(screen.getByRole('button', { name: 'Add category' }));
-  await user.click(screen.getByRole('link', { name: 'Home' }));
+  await user.click(screen.getByRole('link', { name: 'Dashboard' }));
 
-  expect(await screen.findByRole('heading', { name: 'Home' })).toBeTruthy();
+  expect(await screen.findByRole('heading', { name: 'Dashboard' })).toBeTruthy();
   expect(within(screen.getByRole('main')).getByRole('status').textContent).toContain('Projectors');
 });
 

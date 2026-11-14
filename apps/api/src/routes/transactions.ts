@@ -1,8 +1,18 @@
-import { checkoutSchema, openLinesQuerySchema, PERMISSIONS, returnSchema } from '@bms/shared';
+import {
+  checkoutSchema,
+  lineNoteSchema,
+  openLinesQuerySchema,
+  PERMISSIONS,
+  returnSchema,
+} from '@bms/shared';
 import { Router } from 'express';
+import { z } from 'zod';
 import { requireRole } from '../middleware/auth.ts';
 import { checkout } from '../services/checkout.ts';
+import { updateLineNote } from '../services/lineNotes.ts';
 import { listOpenLines, recordReturn } from '../services/returns.ts';
+
+const idParams = z.object({ id: z.guid().toLowerCase() });
 
 // HTTP only: parse, authorize, call the service (ARCHITECTURE.md 4). Rules live in
 // services/checkout.ts and services/returns.ts.
@@ -27,6 +37,13 @@ export function createTransactionsRouter() {
   // and nginx still apply.
   router.get('/returns/open', requireRole(...PERMISSIONS.checkoutAndReturn), async (req, res) => {
     res.json(await listOpenLines(openLinesQuerySchema.parse(req.query)));
+  });
+
+  // BRW-6, BR 7: admins and handlers set the note and expected return date of an open line.
+  router.patch('/lines/:id', requireRole(...PERMISSIONS.editLineNote), async (req, res) => {
+    const { id } = idParams.parse(req.params);
+    const input = lineNoteSchema.parse(req.body);
+    res.json({ line: await updateLineNote(req.session.userId!, id, input) });
   });
 
   return router;

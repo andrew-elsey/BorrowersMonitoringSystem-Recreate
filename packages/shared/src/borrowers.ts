@@ -77,3 +77,18 @@ export const borrowerLookupQuerySchema = pageQuerySchema.extend({
     error: `Search text must be ${SEARCH_MIN_LENGTH} to ${SEARCH_MAX_LENGTH} characters.`,
   }),
 });
+
+// POST /api/borrowers/import (MD-6): a CSV in the format of SPEC.md 6, sent as multipart field
+// "file". Upload limits from SPEC.md 7, checked before parsing (PAYLOAD_TOO_LARGE).
+export const CSV_IMPORT_MAX_BYTES = 2 * 1024 * 1024;
+export const CSV_IMPORT_MAX_ROWS = 5000;
+export const CSV_IMPORT_HEADER = ['school_id', 'name', 'type', 'department', 'active'] as const;
+
+// The 200 reply. `row` is the line in the file (the header is line 1). `unchanged` counts rows
+// that matched a borrower with exactly the same values: nothing is written or audited for them.
+export type BorrowerImportResult = {
+  created: number;
+  updated: number;
+  unchanged: number;
+  rejected: { row: number; schoolId: string; reason: string }[];
+};

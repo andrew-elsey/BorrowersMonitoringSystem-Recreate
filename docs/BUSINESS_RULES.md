@@ -30,7 +30,7 @@ All times below are `Asia/Manila` unless stated. Default closing time is 17:00.
 
 ### Notes
 
-7. **Notes are informational.** A handler can add or edit a note and an expected return date on an open line (for example, "returning tomorrow"). The expected return date is today or later in the app timezone, with no upper limit (owner decision 2026-11-05). Notes never prevent flagging and never change strikes. Edits are audited.
+7. **Notes are informational.** A handler can add or edit a note and an expected return date on an open line (for example, "returning tomorrow"). When the expected return date is set or changed, it must be today or later in the app timezone, with no upper limit (owner decision 2026-11-05). A date already saved may be kept unchanged after it has passed, and it can always be cleared (owner decision 2026-11-12). Notes never prevent flagging and never change strikes. Edits are audited.
 
 ### Flagging
 
@@ -111,7 +111,7 @@ Notation: "Day 1" is a normal working day with closing time 17:00 and a current 
 - A handler calling the override endpoint gets 403.
 - A view-only user calling checkout gets 403.
 - A handler cannot open user management.
-- A view-only user can load the dashboard and all four reports.
+- A view-only user can load all four reports: the Dashboard (unreturned and flagged) and the three tabs on Reports.
 
 **S19. Retiring versus deleting.** An admin tries to delete an item that appears in past transactions. The request is rejected with `HAS_HISTORY` and the admin is told to retire it. Deleting an item with no history is allowed.
 
@@ -125,7 +125,7 @@ Notation: "Day 1" is a normal working day with closing time 17:00 and a current 
 
 ## 4. Reports (read-only)
 
-- **Unreturned and flagged**: open lines and borrowers with strikes in the current semester, with notes and expected return dates.
+- **Unreturned and flagged**: this report is the Dashboard, not a tab on Reports. Open lines and borrowers with strikes in the current semester, with notes and expected return dates.
 - **History per borrower**: filter by date range; show room, issuing and receiving handlers, return details, and flag status.
 - **History per item**: lookup by item or asset tag, same detail.
 - **Usage summary**: most borrowed items in a chosen period, with counts by category and by room or lab.

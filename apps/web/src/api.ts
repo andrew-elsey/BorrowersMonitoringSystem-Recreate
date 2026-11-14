@@ -25,12 +25,16 @@ export class ApiRequestError extends Error {
 
 type StandardErrorBody = { error?: { code?: string; message?: string; details?: unknown } };
 
+// A FormData body (a file upload) is sent as is; the browser sets its multipart Content-Type.
 export async function apiFetch<T>(method: string, path: string, body?: unknown): Promise<T> {
+  const isForm = body instanceof FormData;
   const response = await fetch(`/api${path}`, {
     method,
     // CSRF: the API refuses state-changing requests without this header (ARCHITECTURE.md 5).
-    headers: { 'X-Requested-With': 'fetch', 'Content-Type': 'application/json' },
-    body: body === undefined ? undefined : JSON.stringify(body),
+    headers: isForm
+      ? { 'X-Requested-With': 'fetch' }
+      : { 'X-Requested-With': 'fetch', 'Content-Type': 'application/json' },
+    body: isForm ? body : body === undefined ? undefined : JSON.stringify(body),
   });
   if (response.status === 204) return undefined as T;
   // nginx may answer with something other than JSON (a 502 while the api restarts, for example).

@@ -21,7 +21,10 @@ const gates = vi.hoisted(() => {
 
 // Each stub keeps the page's named export, so App.tsx's `.then((m) => m.XPage)` mapping is exercised.
 const stub = (page: string) => ({ [page]: () => <h1>{page} stub</h1> });
-vi.mock('./HomePage', async () => (await gates.waitFor('HomePage'), stub('HomePage')));
+vi.mock(
+  './DashboardPage',
+  async () => (await gates.waitFor('DashboardPage'), stub('DashboardPage')),
+);
 vi.mock(
   './InventoryPage',
   async () => (await gates.waitFor('InventoryPage'), stub('InventoryPage')),

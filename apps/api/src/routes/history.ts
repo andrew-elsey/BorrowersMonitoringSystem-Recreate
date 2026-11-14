@@ -1,0 +1,38 @@
+import { borrowerLookupQuerySchema, historyQuerySchema, PERMISSIONS } from '@bms/shared';
+import { Router } from 'express';
+import { z } from 'zod';
+import { requireRole } from '../middleware/auth.ts';
+import type { RequestHandler } from 'express';
+import { createSearchRateLimiter } from '../middleware/request-rate-limit.ts';
+import { borrowerService } from '../services/borrowers.ts';
+import { listBorrowerHistory, listItemHistory } from '../services/history.ts';
+
+// HTTP only: parse, authorize, call the service (ARCHITECTURE.md 4). Rules live in services/history.ts.
+// Every role may read reports (SPEC.md 3).
+const staff = requireRole(...PERMISSIONS.viewDashboardAndReports);
+const idParams = z.object({ id: z.guid() });
+
+// reportLimiter is the shared reports limit from app.ts (ARCHITECTURE.md 12.3).
+export function createHistoryRouter(reportLimiter: RequestHandler) {
+  const router = Router();
+
+  // Picks the borrower for the history report. Its own path because view-only users may read reports
+  // but not the checkout lookup (SPEC.md 3). Same bounds as that lookup: q required, 2 to 100 characters.
+  router.get('/reports/borrowers', staff, createSearchRateLimiter(), async (req, res) => {
+    const { q, page, pageSize } = borrowerLookupQuerySchema.parse(req.query);
+    res.json(await borrowerService.list({ q, page, pageSize }));
+  });
+
+  router.get('/reports/borrowers/:id/history', staff, reportLimiter, async (req, res) => {
+    const { id } = idParams.parse(req.params);
+    res.json(await listBorrowerHistory(id, historyQuerySchema.parse(req.query)));
+  });
+
+  // RPT-3: the screen finds the item with GET /api/items?q= (name or asset tag, every role).
+  router.get('/reports/items/:id/history', staff, reportLimiter, async (req, res) => {
+    const { id } = idParams.parse(req.params);
+    res.json(await listItemHistory(id, historyQuerySchema.parse(req.query)));
+  });
+
+  return router;
+}

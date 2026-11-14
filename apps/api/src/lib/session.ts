@@ -1,6 +1,7 @@
 import { PrismaSessionStore } from '@quixo3/prisma-session-store';
 import type { Role } from '@bms/shared';
 import session from 'express-session';
+import type { Prisma } from '../generated/prisma/client.ts';
 import { config } from './config.ts';
 import { prisma } from './prisma.ts';
 
@@ -15,6 +16,18 @@ declare module 'express-session' {
 }
 
 export const SESSION_COOKIE_NAME = 'bms.sid';
+
+// Signs a user out everywhere by deleting their session rows (the user id is inside the JSON
+// `data` column), except `keepSessionId` when given. Their next request on any other session is 401.
+// Runs in the caller's transaction, so it happens together with the change that needs it.
+export async function signOutUser(
+  tx: Prisma.TransactionClient,
+  userId: string,
+  keepSessionId = '',
+): Promise<void> {
+  await tx.$executeRaw`
+    DELETE FROM session WHERE data::jsonb ->> 'userId' = ${userId} AND sid <> ${keepSessionId}`;
+}
 const PRUNE_EXPIRED_EVERY_MS = 15 * 60 * 1000;
 
 // Built once per process, so there is one store and one prune timer however many apps are created.
