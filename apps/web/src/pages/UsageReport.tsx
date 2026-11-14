@@ -11,7 +11,7 @@ import { type FormEvent, useRef, useState } from 'react';
 import { apiFetch } from '../api';
 import { Field } from '../components/Field';
 import { RetryAlert } from '../components/RetryAlert';
-import { TIMEZONE } from '../timezone';
+import { todayInAppZone } from '../timezone';
 
 // The Usage summary tab of Reports (RPT-4, all staff). Bars are plain CSS, one series per chart, so
 // no chart library is needed; "Show as table" gives the same numbers as text. The server checks the
@@ -19,7 +19,6 @@ import { TIMEZONE } from '../timezone';
 
 const DEFAULT_DAYS = 30;
 const DAY_MS = 24 * 60 * 60 * 1000;
-const todayInAppZone = () => new Intl.DateTimeFormat('en-CA', { timeZone: TIMEZONE }).format();
 const daysBefore = (date: string, days: number) =>
   new Date(Date.parse(date) - days * DAY_MS).toISOString().slice(0, 10);
 // from and to are calendar dates, so they are shown as is, not shifted by a timezone.

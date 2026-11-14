@@ -39,11 +39,8 @@ test('RPT-2: the history report defaults To to the Manila date of the clock', as
   expect(toField().value).toBe('2030-06-15');
 });
 
-// BUG (RPT-4): UsageReport.tsx todayInAppZone() calls Intl.DateTimeFormat#format() with no date,
-// which reads the real system clock instead of Date, so the default period ignores the app's
-// clock. This is also why UsageReport.test.tsx fails on any day but 12 Nov 2026. Kept as
-// test.fails so the suite stays green; remove .fails when fixed.
-test.fails('BUG RPT-4: the usage summary defaults To to the Manila date of the clock', async () => {
+// Was a bug (RPT-4, card HxHsDaNo): the default period read the real system clock, not Date.
+test('RPT-4: the usage summary defaults To to the Manila date of the clock', async () => {
   renderApp('/reports');
   await userEvent.click(await screen.findByRole('tab', { name: 'Usage summary' }));
   await screen.findByRole('button', { name: 'Show report' });
