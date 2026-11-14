@@ -41,6 +41,7 @@ npm run test:db             # start the throwaway test database (needed by npm t
 npm test                    # unit and integration tests (needs TEST_DATABASE_URL in .env or the shell)
 npm run test:nginx          # check the nginx limits through a real nginx in throwaway containers (needs Docker, uses port 18080)
 npm run build               # compile shared and api with tsc, build web with Vite
+npm run audit:sweep         # after build: list records with no audit entry (in Docker: docker compose exec api npm run audit:sweep)
 npm run format              # Prettier (Markdown is excluded)
 npm run dev:db              # start only the dev database, published on 127.0.0.1:5432
 npm run db:migrate          # create/apply a migration in development (needs dev:db)

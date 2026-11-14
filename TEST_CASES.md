@@ -280,9 +280,17 @@ Paths are shortened: `api/` is `apps/api/tests/`, `web/` is `apps/web/src/pages/
 
 | ID | Ticket | Rule | Level | Steps | Expected | Automated by |
 |---|---|---|---|---|---|---|
-| TC-HRD-01 | HRD-1 | BR 14, SPEC 7 | integration | Admin filters the audit log by actor, entity, and date | Matching entries, paginated; a request without a date range is rejected | not yet |
-| TC-HRD-02 | HRD-1 | SPEC 3 | integration | Handler opens the audit log | 403 | not yet |
-| TC-HRD-03 | HRD-1 | BR 14 | integration | Run the audit sweep after a state change with no audit entry | The change is reported | not yet |
+| TC-HRD-01 | HRD-1 | BR 14, SPEC 7 | integration | Admin filters the audit log by actor, entity, and date | Matching entries, paginated; a request without a date range is rejected | `audit-log.test.ts` |
+| TC-HRD-02 | HRD-1 | SPEC 3 | integration | Handler opens the audit log | 403 | `audit-log.test.ts` |
+| TC-HRD-03 | HRD-1 | BR 14 | integration | Run the audit sweep after a state change with no audit entry | The change is reported | `audit-sweep.test.ts` |
+| TC-HRD-12 | HRD-1 | BR 14, ARCH 6 | integration | Entries just before and after a Manila day boundary, filtered for that day | Both ends of the day are included; the next instant is not | `audit-log.test.ts` |
+| TC-HRD-13 | HRD-1 | BR 14, D8 | integration | Filter with `actor=system`; read one entry | Only entries with no actor; each entry shows actor name, action, entity, entity id, before, and after | `audit-log.test.ts` |
+| TC-HRD-14 | HRD-1 | SPEC 7 | integration | Page through entries; ask for page size 101, page 0, an unknown entity, or an unknown actor | Newest first, with the total; the bad requests are 400 `VALIDATION_ERROR`; `flagging_run` is a valid entity | `audit-log.test.ts` |
+| TC-HRD-15 | HRD-1 | SPEC 7, D7 | integration | Ask with no dates, one date, end before start, year 0000, 366 days, 367 days | Only 366 days or fewer with both dates is 200; the rest are 400 | `audit-log.test.ts` |
+| TC-HRD-16 | HRD-1 | ARCH 12.3, D7 | integration | 15 audit requests and 15 usage reports in a minute, then one more audit request; then a handler asks | The 31st is 429 `RATE_LIMITED`: the count is shared; the handler still gets 403, so the role check runs before the limit | `audit-log.test.ts` |
+| TC-HRD-17 | HRD-1 | BR 14, D9 | integration | Sweep a database of unaudited records of every kind, then rows changed after their last entry | Each is reported under its own check with its id; a RETURN entry covers its line and a SEMESTER_SET_CURRENT entry covers the semester it replaced | `audit-sweep.test.ts` |
+| TC-HRD-18 | HRD-1 | BR 14, D9 | integration | Seed, then through the API: create records, check out, return (one damaged), edit a note, change settings, add a semester and switch the current one twice, flag, override, then sweep | No findings (seed rows count as audited) | `audit-sweep.test.ts` |
+| TC-HRD-19 | HRD-1 | SPEC 5, D8 | component | Admin opens Audit log from the menu; picks Actor System and an Entity; enters a range over 366 days; no entries; a handler opens `/audit` | Last 7 days in Manila time with before and after in each row; the filters are sent; the range is refused with no request; the empty text names the range; a handler sees "not allowed" and no menu item | `AuditLogPage.test.tsx` |
 | TC-HRD-04 | HRD-2 | BR section 3 | e2e | Checkout, partial return, end-of-day flagging, strike, block, override in Docker | The whole flow passes | not yet |
 | TC-HRD-05 | HRD-2 | BR section 3 | manual | Check every scenario S1 to S21 against the coverage table below | Each has an automated test that passes | not yet |
 | TC-HRD-06 | HRD-3 | ARCH 12.6 | manual | Back up, restore on a clean environment | Data restored; backup files outside the web root, readable only by admin | not yet |
@@ -317,7 +325,7 @@ Paths are shortened: `api/` is `apps/api/tests/`, `web/` is `apps/web/src/pages/
 | BR 11 Thresholds | TC-BRW-26, TC-FLG-17 to 21 |
 | BR 12 Semester reset | TC-FLG-05 |
 | BR 13 Override | TC-FLG-04, 23, 24 |
-| BR 14 Audit | TC-FND-15, 17, TC-AUTH-06, 19, TC-MD-01, 08, TC-BRW-04, 20, 30, TC-FLG-07, 24, TC-HRD-01, 03 |
+| BR 14 Audit | TC-FND-15, 17, TC-AUTH-06, 19, TC-MD-01, 08, TC-BRW-04, 20, 30, TC-FLG-07, 24, TC-HRD-01, 03, 17, 18 |
 | BR 15 No deletion of history | TC-FND-14, TC-AUTH-20, TC-MD-02, 07, 12 |
 | BR 16 Throttled, never locked | TC-AUTH-10, 11, 12, 34 |
 | S1 Same-day return | TC-FLG-06 |
