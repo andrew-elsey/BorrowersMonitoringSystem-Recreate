@@ -270,11 +270,21 @@ Paths are shortened: `api/` is `apps/api/tests/`, `web/` is `apps/web/src/pages/
 | TC-SEC-08 | SEC-1 | ARCH 12.3 | integration | Cause an unexpected error in a route; cause an unhandled rejection | Route: `INTERNAL_ERROR` with no internals; unhandled: logged and the process exits so Docker restarts it | `api/qa-regression-flows.test.ts` (a failed audit insert in a route answers 500 `INTERNAL_ERROR`), `api/request-limits.test.ts` (exit on unhandled errors) |
 | TC-SEC-09 | SEC-1 | SPEC 7, S21 | integration | Send a body over 100 KB to Express directly | `PAYLOAD_TOO_LARGE` | `api/auth.test.ts` |
 | TC-SEC-10 | SEC-1 | SPEC 7 | unit | Validate the shared Zod schemas at and over every SPEC 7 limit | At the limit accepted; over it rejected | `packages/shared/src/limits.test.ts` (override reasons, report ranges, and CSV rows come with their tickets) |
-| TC-SEC-11 | SEC-2 | ARCH 12.7 | manual | Login flood: 200 connections for 60 s while a signed-in client from another source works | p95 under 2 s; api under its memory limit with no restart; valid login works after the window | not yet |
-| TC-SEC-12 | SEC-2 | ARCH 12.7 | manual | Slow-connection (slowloris) test | Other clients keep working | not yet |
-| TC-SEC-13 | SEC-2 | ARCH 12.7, S21 | manual | Oversized JSON body and oversized CSV under load | Rejected with 413 without reaching a service | not yet |
-| TC-SEC-14 | SEC-2 | ARCH 12.7 | manual | Reports and search at maximum ranges on seeded data (5,000 borrowers, 500 items, 20,000 transactions) | Each answers in under 2 s | not yet |
-| TC-SEC-15 | SEC-2 | ARCH 12.7 | manual | Run the flagging job while the API is under load | Correct results; no overlapping runs | not yet |
+| TC-SEC-11 | SEC-2 | ARCH 12.7 | manual | Login flood: 200 connections for 60 s while a signed-in client from another source works | p95 under 2 s; api under its memory limit with no restart; valid login works after the window | `tests/load/main.ts` (`npm run test:load`) |
+| TC-SEC-12 | SEC-2 | ARCH 12.7 | manual | Slow-connection (slowloris) test | Other clients keep working | `tests/load/main.ts` (`npm run test:load`) |
+| TC-SEC-13 | SEC-2 | ARCH 12.7, S21 | manual | Oversized JSON body and oversized CSV under load | Rejected with 413 without reaching a service | `tests/load/main.ts` (`npm run test:load`) |
+| TC-SEC-14 | SEC-2 | ARCH 12.7 | manual | Reports and search at maximum ranges on seeded data (5,000 borrowers, 500 items, 20,000 transactions) | Each answers in under 2 s | `tests/load/main.ts` (`npm run test:load`) |
+| TC-SEC-15 | SEC-2 | ARCH 12.7 | manual | Run the flagging job while the API is under load | Correct results; no overlapping runs | `tests/load/main.ts` (`npm run test:load`) |
+| TC-SEC-16 | SEC-2 | ARCH 12.7, D18 | manual | `seed.ts` run with NODE_ENV=production, and with a database name that has no "load" in it | Both refuse and load nothing | `tests/load/main.ts` (`npm run test:load`) |
+| TC-SEC-17 | SEC-2 | ARCH 12.7, D18 | manual | `seed.sql` run against a database without "load" in its name | The SQL itself refuses ("Refusing to seed") | `tests/load/main.ts` (`npm run test:load`) |
+| TC-SEC-18 | SEC-2 | ARCH 12.7 | manual | Seed the load stack | 5,000 borrowers, 500 items, 20,000 transactions and at least 100,000 audit rows (CHECKOUT, RETURN, LINE_FLAGGED, ITEM_UPDATED) | `tests/load/main.ts` (`npm run test:load`) |
+| TC-SEC-19 | SEC-2 | ARCH 12.7, HRD-1 | manual | Audit viewer at 366 days, page 100, unfiltered and with the entity and actor filters | Each answers in under 2 s; skipped with a message until HRD-1 is merged | `tests/load/main.ts` (`npm run test:load`) |
+| TC-SEC-20 | SEC-2 | ARCH 12.7 | manual | The login flood is answered by the nginx limits | No 2xx, no 5xx, no errors or timeouts at the flooder | `tests/load/main.ts` (`npm run test:load`) |
+| TC-SEC-21 | SEC-2 | ARCH 12.6, 12.7 | manual | Memory and restarts of api, web and db after the flood and after the whole run | Under the memory limit, no OOM kill, RestartCount 0 | `tests/load/main.ts` (`npm run test:load`) |
+| TC-SEC-22 | SEC-2 | ARCH 12.4, 12.7, S20 | manual | A valid login from the flooded address once the 15 minute throttle window has passed | 200 (needs `LOAD_FULL=1`; skipped otherwise) | `tests/load/main.ts` (`npm run test:load`) |
+| TC-SEC-23 | SEC-2 | ARCH 12.2 | manual | About 25 sockets drip header bytes and never finish | nginx closes every one within 15 s (client_header_timeout 10 s) | `tests/load/main.ts` (`npm run test:load`) |
+| TC-SEC-24 | SEC-2 | ARCH 12.7, S21 | manual | The 413 answers to the oversized JSON and CSV | API error body `PAYLOAD_TOO_LARGE` and none of the headers Express adds, so the request never reached the api | `tests/load/main.ts` (`npm run test:load`) |
+| TC-SEC-25 | SEC-2 | ARCH 12.7, BR 8, 9, HRD-1b | manual | Audit entries of the flagging run under load | Each line has at most one LINE_FLAGGED entry and the run wrote one per flagged line; exactly one well-formed FLAGGING_RUN entry (that part is skipped until HRD-1b is merged) | `tests/load/main.ts` (`npm run test:load`) |
 
 ## HRD: Hardening
 

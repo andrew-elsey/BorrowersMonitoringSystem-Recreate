@@ -36,6 +36,7 @@ npm run lint        # ESLint
 npm run typecheck   # tsc in every workspace
 npm test            # Vitest across all workspaces (needs npm run test:db and TEST_DATABASE_URL)
 npm run test:nginx  # nginx limits through a real nginx (needs Docker)
+npm run test:load   # abuse and load tests (needs Docker, about 10 minutes)
 npm run build       # compile shared and api to dist/, build web with Vite
 npm run format      # Prettier
 ```

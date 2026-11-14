@@ -8,19 +8,21 @@
   ],
   "scripts": {
     "lint": "eslint .",
-    "typecheck": "npm run typecheck --workspaces",
+    "typecheck": "npm run typecheck --workspaces && tsc -p tests/load",
     "test": "npm run db:generate -w @bms/api && vitest run",
     "build": "npm run build --workspaces --if-present",
     "format": "prettier --write .",
     "dev:db": "docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d --wait db",
     "test:db": "docker compose -f docker-compose.yml -f docker-compose.dev.yml --profile test up -d --wait db-test",
     "test:nginx": "node apps/web/scripts/check-nginx.ts",
+    "test:load": "node tests/load/main.ts",
     "db:migrate": "npm run db:migrate -w @bms/api",
     "db:seed": "npm run db:seed -w @bms/api"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
     "@types/node": "^26.6.6",
+    "autocannon": "^9.0.0",
     "eslint": "^10.13.0",
     "prettier": "^3.9.10",
     "typescript": "^6.0.3",

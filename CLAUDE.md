@@ -40,6 +40,7 @@ npm run typecheck
 npm run test:db             # start the throwaway test database (needed by npm test)
 npm test                    # unit and integration tests (needs TEST_DATABASE_URL in .env or the shell)
 npm run test:nginx          # check the nginx limits through a real nginx in throwaway containers (needs Docker, uses port 18080)
+npm run test:load           # abuse and load tests on a throwaway "bms-load" compose stack, port 18180 (needs Docker, takes about 10 minutes; LOAD_FULL=1 adds a 15 minute wait)
 npm run build               # compile shared and api with tsc, build web with Vite
 npm run format              # Prettier (Markdown is excluded)
 npm run dev:db              # start only the dev database, published on 127.0.0.1:5432

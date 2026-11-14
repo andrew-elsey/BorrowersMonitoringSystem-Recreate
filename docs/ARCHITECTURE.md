@@ -209,7 +209,7 @@ Moving to a department PC means copying the repo, creating `.env`, and running `
 - **Integration tests** (Vitest and Supertest) against a real PostgreSQL database, started through a Docker Compose test profile. Each test file starts from a clean schema. The database comes from `TEST_DATABASE_URL` (shell first, then `.env`), which is required with no default (owner decision 2026-11-08): two suites sharing one database wipe each other's rows, so each worktree running tests at the same time uses its own database name ending in `_test` (create it on the db-test container first). Every scenario S1 to S21 in `BUSINESS_RULES.md` becomes a test.
 - **Component tests** (React Testing Library in jsdom, with `fetch` replaced by a fake API) for the login and change-password forms (AUTH-4) and the checkout and return forms.
 - **End-to-end** (Playwright, HRD-2): checkout, partial return, flagging, strike, block, override.
-- **Abuse and load tests** (autocannon, SEC-2): login flood, slow connections, oversized bodies and uploads, maximum-range reports, all run from a separate container against the compose stack. Pass criteria are in section 12.7.
+- **Abuse and load tests** (autocannon, SEC-2): login flood, slow connections, oversized bodies and uploads, maximum-range reports, all run from a separate container against the compose stack. They live in `tests/load` and run with `npm run test:load` (not part of `npm test`; it needs Docker and takes about 10 minutes, or about 25 with `LOAD_FULL=1`). Pass criteria and the recorded results are in section 12.7.
 - Use an injected clock for anything involving closing time or semesters.
 
 ## 12. Abuse and denial-of-service resistance
@@ -288,6 +288,32 @@ Ticket SEC-2 load-tests these protections with autocannon, run from a separate c
 5. **Flagging under load:** the flagging job runs correctly, without overlapping runs, while the API is under load.
 
 Record the results and any tuned limits in this section.
+
+**How to run it.** `npm run test:load` (needs Docker; about 10 minutes, `LOAD_FULL=1` adds the 15 minute throttle wait of TC-SEC-22). It builds its own compose project `bms-load` (web on `127.0.0.1:18180`, database `bms_load`, throwaway secrets made at start, volumes removed at the end), so it never touches the real stack. Files in `tests/load`:
+
+- `seed.ts` and `seed.sql` load 5,000 borrowers, 500 items, 20,000 transactions and about 104,500 audit rows (CHECKOUT, RETURN, LINE_FLAGGED and ITEM_UPDATED, like the real code writes). `seed.ts` refuses when `NODE_ENV` is production or the database name has no "load" in it, and the SQL checks `current_database()` again. It runs on the host because the api container always has `NODE_ENV=production`.
+- `run.ts` and `slow.ts` run inside a `node:24.11.1-bookworm-slim` container on the compose network and talk to `http://web:8080`, so the load comes from another address and goes through nginx. `run.ts` calls the autocannon CLI (`--json`).
+- `main.ts` drives it all. The "other client" and every measurement run on the host (another source address than the load), plus SQL checks and `docker stats` / `docker inspect`.
+- Heavy reads are measured as five sequential requests per endpoint, not a flood: the reports limit (30 a minute), the search limit (60 a minute) and nginx (10 a second) would otherwise turn the test into a 429 test.
+- The audit viewer timings (HRD-1) and the `FLAGGING_RUN` entry check (HRD-1b) are skipped with a message while the endpoint or entries are missing. `LOAD_REQUIRE_HRD=1` turns those skips into failures.
+
+**Results: PRELIMINARY (trial run on feature/SEC-2-load-tests, before FND-8, HRD-1, HRD-1b and HRD-5a were merged; the final run is recorded after they are).**
+
+Machine: 12 x 12th Gen Intel Core i5-12400F, 31.8 GiB RAM, Windows 11, Docker Desktop 29.8.1 (12 CPUs, 15.5 GiB for the Docker VM), 2026-11-14. Load generator and stack share this one machine, which is harder on the stack than a separate load machine.
+
+| # | Criterion | Result |
+|---|---|---|
+| 1 | Login flood | 200 connections for 60 s: 311,564 requests, answered 401 (10) and 429 (311,554, from nginx), no 5xx, no errors or timeouts, p99 219 ms. The signed-in client from the host did checkout, return and dashboard cycles (162 requests): p95 207 ms, max 1,707 ms, no failures. api peak memory 175 of 512 MiB, no OOM kill, no restart. A valid login from the host worked right after the flood. After the 15 minute throttle window a valid login from the flooded address returned 200 (TC-SEC-22, `LOAD_FULL=1`). |
+| 2 | Slow connections | 25 sockets dripping header bytes for 25 s: nginx closed all 25 after about 10 s (`client_header_timeout`). The other client (117 requests) had p95 36 ms and no failures. |
+| 3 | Oversized input | 150 KB JSON and 3 MB CSV under load (88 and 43 requests): every answer was 413 `PAYLOAD_TOO_LARGE` from nginx. The replies carry none of the headers Express adds (a normal API reply does), so nothing reached the api. |
+| 4 | Heavy reads | Slowest of five requests on the seeded data: usage 366 days 77 ms; borrower history (a borrower with 2,000 transactions) 366 days page 100 71 ms; item history 366 days page 100 40 ms; items `?q=` 35 ms; borrowers `?q=` 30 ms; `/api/returns/open?q=` 41 ms; `/api/flags?q=` 51 ms. Audit viewer: skipped (HRD-1 not merged). |
+| 5 | Flagging under load | `POST /api/flagging/run` twice at once while autocannon ran 160 dashboard requests (all 200): one run flagged all 500 eligible lines, the other got 429 (the one-a-minute limit), nothing eligible was left unflagged, and no line has more than one `LINE_FLAGGED` entry. The `FLAGGING_RUN` check was skipped (HRD-1b not merged). |
+
+End of run: api 185 of 512 MiB, web 11 of 128 MiB, db 136 of 1,024 MiB, no restart or OOM kill in any service.
+
+**Tuned limits:** none so far.
+
+**What this does not show.** The advisory lock is not exercised at HTTP level: the one-a-minute limit refuses the second call before it reaches the lock (the lock has its own integration test). The slow-connection test uses 25 sockets from one address, below the 30 connections per address limit.
 
 ## 13. Decision log
 
