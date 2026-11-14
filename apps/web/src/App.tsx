@@ -34,6 +34,9 @@ const SettingsPage = lazy(() =>
 const ReportsPage = lazy(() =>
   import('./pages/ReportsPage').then((m) => ({ default: m.ReportsPage })),
 );
+const AuditLogPage = lazy(() =>
+  import('./pages/AuditLogPage').then((m) => ({ default: m.AuditLogPage })),
+);
 const ChangePasswordPage = lazy(() =>
   import('./pages/ChangePasswordPage').then((m) => ({ default: m.ChangePasswordPage })),
 );
@@ -151,6 +154,14 @@ export const routes: RouteObject[] = [
         element: (
           <RequireRole roles={PERMISSIONS.viewDashboardAndReports} pageName="Reports">
             <ReportsPage />
+          </RequireRole>
+        ),
+      },
+      {
+        path: 'audit',
+        element: (
+          <RequireRole roles={PERMISSIONS.viewAuditLog} pageName="Audit log">
+            <AuditLogPage />
           </RequireRole>
         ),
       },

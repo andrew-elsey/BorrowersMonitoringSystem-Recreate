@@ -10,7 +10,8 @@
     "db:generate": "prisma generate",
     "db:migrate": "prisma migrate dev",
     "db:seed": "node --conditions=source --env-file-if-exists=../../.env prisma/seed.ts",
-    "admin:reset-password": "node dist/scripts/admin-reset-password.js"
+    "admin:reset-password": "node dist/scripts/admin-reset-password.js",
+    "audit:sweep": "node --env-file-if-exists=../../.env dist/scripts/audit-sweep.js"
   },
   "dependencies": {
     "@bms/shared": "*",
