@@ -291,6 +291,11 @@ Paths are shortened: `api/` is `apps/api/tests/`, `web/` is `apps/web/src/pages/
 | TC-HRD-17 | HRD-1 | BR 14, D9 | integration | Sweep a database of unaudited records of every kind, then rows changed after their last entry | Each is reported under its own check with its id, including an open line changed by raw SQL (judged by its checkout entry); a RETURN entry covers its line and a SEMESTER_SET_CURRENT entry covers the semester it replaced | `audit-sweep.test.ts` |
 | TC-HRD-18 | HRD-1 | BR 14, D9 | integration | Seed, then through the API: create records, check out, return (one damaged), edit a note, change settings, add a semester and switch the current one twice, flag, override, then sweep | No findings (seed rows count as audited) | `audit-sweep.test.ts` |
 | TC-HRD-19 | HRD-1 | SPEC 5, D8 | component | Admin opens Audit log from the menu; picks Actor System and an Entity; enters a range over 366 days; no entries; a handler opens `/audit` | Last 7 days in Manila time with before and after in each row; the filters are sent; the range is refused with no request; the empty text names the range; a handler sees "not allowed" and no menu item | `AuditLogPage.test.tsx` |
+| TC-HRD-20 | HRD-1b | BR 14, D5 | integration | A run flags 0 lines, then a run flags 2 | One `FLAGGING_RUN` entry each (entity `flagging_run`, null actor, `after.flagged` 0 then 2) | `qa-flg2-gaps.test.ts` |
+| TC-HRD-21 | HRD-1b | BR 14, D5 | integration | Admin presses "Run flagging now" | One `FLAGGING_RUN` entry with the admin as actor | `qa-flg2-gaps.test.ts` |
+| TC-HRD-22 | HRD-1b | BR 14, D5 | integration | A run skipped because the lock is held; a run that fails after writing its entry | No entry for the skipped run; the entry is rolled back with the failed run | `qa-flg2-gaps.test.ts` |
+| TC-HRD-23 | HRD-1b | D6 | integration | GET /api/flags before any run, after a run, and with an injected clock before and at closing 17:00 Manila | `lastRun` null, then `{ at, flagged }`; `nextRunAt` is today's closing, then tomorrow's | `qa-flg2-gaps.test.ts` |
+| TC-HRD-24 | HRD-1b | D6 | component | Open Flag review with a last run, then with none | "Last flagging run: <Manila time>, N lines flagged. Next run: ..."; or "No flagging run yet." | `FlagReviewPage.test.tsx` |
 | TC-HRD-04 | HRD-2 | BR section 3 | e2e | Checkout, partial return, end-of-day flagging, strike, block, override in Docker | The whole flow passes | not yet |
 | TC-HRD-05 | HRD-2 | BR section 3 | manual | Check every scenario S1 to S21 against the coverage table below | Each has an automated test that passes | not yet |
 | TC-HRD-06 | HRD-3 | ARCH 12.6 | manual | Back up, `docker compose down -v`, start clean, restore the file | Data restored; backup files outside the web root, readable only by admin | manual (run 2026-11-14 on a throwaway project, see the card) |
@@ -340,7 +345,7 @@ Paths are shortened: `api/` is `apps/api/tests/`, `web/` is `apps/web/src/pages/
 | BR 11 Thresholds | TC-BRW-26, TC-FLG-17 to 21, TC-HRD-54 |
 | BR 12 Semester reset | TC-FLG-05 |
 | BR 13 Override | TC-FLG-04, 23, 24 |
-| BR 14 Audit | TC-FND-15, 17, TC-AUTH-06, 19, TC-MD-01, 08, TC-BRW-04, 20, 30, TC-FLG-07, 24, TC-HRD-01, 03, 17, 18 |
+| BR 14 Audit | TC-FND-15, 17, TC-AUTH-06, 19, TC-MD-01, 08, TC-BRW-04, 20, 30, TC-FLG-07, 24, TC-HRD-01, 03, 17, 18, 20 to 23 |
 | BR 15 No deletion of history | TC-FND-14, TC-AUTH-20, TC-MD-02, 07, 12 |
 | BR 16 Throttled, never locked | TC-AUTH-10, 11, 12, 34 |
 | S1 Same-day return | TC-FLG-06 |

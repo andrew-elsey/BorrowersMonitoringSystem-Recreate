@@ -336,3 +336,38 @@ test('TC-FLG-41: Run flagging now asks first, runs, and shows the refusal within
   await user.click(screen.getByRole('button', { name: 'Run flagging now' }));
   expect(screen.queryByText(refusal)).toBeNull();
 });
+
+test('TC-HRD-24: shows the last flagging run and the next run in Manila time, or that there is none', async () => {
+  const page = (lastRun: object | null) => ({
+    status: 200,
+    body: {
+      data: [],
+      page: 1,
+      pageSize: 25,
+      total: 0,
+      blockThreshold: 5,
+      hasCurrentSemester: true,
+      borrowerSearchSkipped: false,
+      lastRun,
+      nextRunAt: '2026-11-03T09:00:00.000Z', // 17:00 Manila
+    },
+  });
+  fakeApi((method, path) =>
+    method === 'GET' && path.startsWith('/flags')
+      ? page({ at: '2026-11-02T09:00:05.000Z', flagged: 3 })
+      : undefined,
+  );
+  renderApp('/flags');
+  expect(
+    await screen.findByText(
+      /Last flagging run: 2 Nov, 17:00, 3 lines flagged\. Next run: 3 Nov, 17:00\./,
+    ),
+  ).toBeTruthy();
+  cleanup();
+
+  fakeApi((method, path) =>
+    method === 'GET' && path.startsWith('/flags') ? page(null) : undefined,
+  );
+  renderApp('/flags');
+  expect(await screen.findByText(/No flagging run yet\. Next run: 3 Nov, 17:00\./)).toBeTruthy();
+});

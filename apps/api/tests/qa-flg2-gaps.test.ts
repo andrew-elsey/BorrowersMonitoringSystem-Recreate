@@ -11,6 +11,7 @@ import {
 } from '../src/jobs/flagging.ts';
 import { hashPassword } from '../src/lib/password.ts';
 import { prisma } from '../src/lib/prisma.ts';
+import { listFlaggedLines } from '../src/services/flags.ts';
 import { recordReturn } from '../src/services/returns.ts';
 import { countStrikes } from '../src/services/strikes.ts';
 import { resetDatabase } from './setup/reset-database.ts';
@@ -219,9 +220,72 @@ test('BR 14: a scheduled flag writes one full LINE_FLAGGED audit entry per line,
   }
 });
 
-test('BR 14: a run that flags nothing writes no audit entry', async () => {
+test('BR 14, D5: a run that flags nothing writes no LINE_FLAGGED entry, only its FLAGGING_RUN entry', async () => {
   await runFlagging(at('17:00:00'));
-  expect(await prisma.auditLog.count()).toBe(0);
+  expect(await prisma.auditLog.count({ where: { action: 'LINE_FLAGGED' } })).toBe(0);
+  expect(await prisma.auditLog.count({ where: { action: 'FLAGGING_RUN' } })).toBe(1);
+});
+
+// --- HRD-1b, D5, D6: the FLAGGING_RUN entry and Last/Next run on GET /api/flags ---
+
+const runEntries = () =>
+  prisma.auditLog.findMany({ where: { action: 'FLAGGING_RUN' }, orderBy: { createdAt: 'asc' } });
+const flagsPage = (now?: Date) =>
+  listFlaggedLines({ returned: 'all', page: 1, pageSize: 25 }, undefined, now);
+
+test('TC-HRD-20: a run with 0 lines and one with 2 lines each write one FLAGGING_RUN entry', async () => {
+  await runFlagging(at('17:00:00'));
+  await openLine(at('10:00:00'));
+  await openLine(at('11:00:00'));
+  await runFlagging(manila('2026-09-02', '17:00:00'));
+  const entries = await runEntries();
+  expect(entries).toHaveLength(2);
+  expect(entries[0]).toMatchObject({ actorId: null, entity: 'flagging_run' });
+  expect(entries[0]!.after).toMatchObject({ flagged: 0 });
+  expect(entries[1]!.after).toMatchObject({ flagged: 2 });
+});
+
+test('TC-HRD-21: a manual run records the admin as the actor', async () => {
+  const response = await trigger(await signIn('ada'));
+  expect(response.status).toBe(200);
+  const entries = await runEntries();
+  expect(entries).toHaveLength(1);
+  expect(entries[0]!.actorId).toBe(adminId);
+});
+
+test('TC-HRD-22: a skipped run writes no entry and a failed run rolls its entry back', async () => {
+  await prisma.$transaction(async (tx) => {
+    await tx.$queryRaw`SELECT pg_advisory_xact_lock(${FLAGGING_LOCK_KEY})::text`;
+    expect(await runFlagging(at('17:00:00'))).toEqual({ flagged: 0, skipped: true });
+  });
+  expect(await runEntries()).toHaveLength(0);
+
+  // Run the real transaction, then fail after the callback has written its entry.
+  const real = prisma.$transaction.bind(prisma) as unknown as (
+    fn: (tx: never) => Promise<unknown>,
+  ) => unknown;
+  vi.spyOn(prisma, '$transaction').mockImplementationOnce(((fn: (tx: never) => Promise<unknown>) =>
+    real(async (tx) => {
+      await fn(tx);
+      throw new Error('fail after the audit entry');
+    })) as never);
+  await expect(runFlagging(at('17:00:00'))).rejects.toThrow('fail after');
+  expect(await runEntries()).toHaveLength(0);
+});
+
+test('TC-HRD-23: GET /api/flags has lastRun (or null) and nextRunAt from the injected clock', async () => {
+  const agent = await signIn('ada');
+  expect((await agent.get('/api/flags').expect(200)).body.lastRun).toBeNull();
+  await openLine(at('10:00:00'));
+  await runFlagging(at('17:00:00'));
+  const { lastRun } = (await agent.get('/api/flags').expect(200)).body;
+  expect(lastRun.flagged).toBe(1);
+  expect(Math.abs(Date.now() - new Date(lastRun.at).getTime())).toBeLessThan(10_000);
+  // Closing is 17:00 Manila: before it, the next run is today's; at it, tomorrow's.
+  expect((await flagsPage(at('12:00:00'))).nextRunAt).toBe(at('17:00:00').toISOString());
+  expect((await flagsPage(at('17:00:00'))).nextRunAt).toBe(
+    manila('2026-09-02', '17:00:00').toISOString(),
+  );
 });
 
 // --- BR 9, S22, S23: rescheduling and retry ---
