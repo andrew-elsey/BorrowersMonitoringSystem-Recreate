@@ -188,7 +188,7 @@ export function InventoryItems() {
       notify.error(error);
       if (error instanceof ApiRequestError && error.code === 'NOT_FOUND') {
         setToEdit(null);
-        return refresh();
+        return refresh().then(() => addButtonRef.current?.focus());
       }
     },
   });
@@ -207,7 +207,8 @@ export function InventoryItems() {
       // S19: the page explains it and offers to retire the item instead.
       if (error instanceof ApiRequestError && error.code === 'HAS_HISTORY') setRefused(item);
       else notify.error(error);
-      return refresh();
+      const gone = error instanceof ApiRequestError && error.code === 'NOT_FOUND';
+      return refresh().then(() => gone && addButtonRef.current?.focus());
     },
   });
 
@@ -383,7 +384,7 @@ export function InventoryItems() {
 
           {items.isError ? (
             // Without this, a failed load would look like an empty list.
-            <RetryAlert query={items} />
+            <RetryAlert query={items} onRetried={() => addButtonRef.current?.focus()} />
           ) : (
             <DataTable
               caption="Items"

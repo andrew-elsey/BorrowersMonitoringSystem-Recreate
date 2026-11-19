@@ -477,3 +477,18 @@ test('TC-BRW-31 (BR 7, owner decision 2026-11-12): a stored date that has passed
     vi.useRealTimers();
   }
 });
+
+test('TC-HRD-31: a too-broad search shows the message without a Retry button', async () => {
+  fakeApi((method, path) =>
+    method === 'GET' && path.includes('q=')
+      ? refuse(422, 'SEARCH_TOO_BROAD', 'Too many borrowers have items out; search by item.')
+      : undefined,
+  );
+  const user = userEvent.setup();
+  renderApp('/return');
+  await screen.findByText('Laptop, Dell Latitude 5440');
+  await user.type(screen.getByLabelText('Search'), 'mi');
+  await user.click(screen.getByRole('button', { name: SEARCH_BUTTON }));
+  expect(await screen.findByText(/Too many borrowers have items out/)).toBeTruthy();
+  expect(screen.queryByRole('button', { name: 'Retry' })).toBeNull();
+});

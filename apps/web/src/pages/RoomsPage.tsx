@@ -83,7 +83,7 @@ export function RoomsPage() {
       // Someone else deleted it while the dialog was open: close it and drop the row.
       if (isNotFound(error)) {
         setToRename(null);
-        return refresh();
+        return refresh().then(() => addForm.setFocus('name'));
       }
     },
   });
@@ -117,7 +117,7 @@ export function RoomsPage() {
     onError: (error) => {
       notify.error(error);
       setToDelete(null);
-      return refresh();
+      return refresh().then(() => isNotFound(error) && addForm.setFocus('name'));
     },
   });
 

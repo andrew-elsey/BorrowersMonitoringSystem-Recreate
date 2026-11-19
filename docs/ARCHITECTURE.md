@@ -314,7 +314,7 @@ Record the results and any tuned limits in this section.
 | UI colors | College of Fine Arts and Design logo colors (section 14) | The handout room belongs to the college; contrast checked against WCAG AA |
 | College logo | Not used | No license to use it |
 | UI font | System font stack (Segoe UI Variable on Windows 11) | No download, works offline on the LAN, no new dependency |
-| Web bundle | Screen pages lazy-loaded with `React.lazy` and one `Suspense` in `AppShell` | Sign-in and the app shell load first; the entry chunk (React, router, TanStack Query, shared Zod schemas, sign-in, shell) stays under Vite's 500 kB warning with no new dependency. If a page chunk fails to load (for example after a redeploy while a tab is open), React Router shows its default error page and a reload fixes it; a friendlier `errorElement` is left for HRD-5 |
+| Web bundle | Screen pages lazy-loaded with `React.lazy` and one `Suspense` in `AppShell` | Sign-in and the app shell load first; the entry chunk (React, router, TanStack Query, shared Zod schemas, sign-in, shell) stays under Vite's 500 kB warning with no new dependency. If a page chunk fails to load (for example after a redeploy while a tab is open), the layout route in `App.tsx` has an `errorElement` (`pages/PageLoadError.tsx`, HRD-5b) that says "This page could not load" with a Reload button |
 | Test database | `TEST_DATABASE_URL` required, no default (2026-11-08) | Two suites sharing one database wipe each other's rows |
 
 ## 14. UI theme
@@ -375,6 +375,7 @@ Decisions the owner made with the second mockup:
 - The audit sweep in HRD-1 is a script and a test, not a screen.
 - The checkout confirmation summary is the Summary panel next to the form, plus a success message after saving, not a separate confirm step (owner decision 2026-11-05).
 - The shared message area (`NotificationProvider`, at the top of `<main>`) is pinned with `position: sticky` at the top of the window, so success and error messages stay visible on long pages (owner decision 2026-11-05, BRW-3). It stays in the page flow below the top bar, has the page background, and sets `scroll-padding-top` on the page to its own height, so a field or button that gets focus is scrolled in below the messages, never under them. Page messages with more than text (Checkout's saved and not-saved results, with their Start a new checkout button) are rendered into the same area through a portal (`useMessageArea`), so they are pinned too; the padding follows whatever is in the area.
+- Focus never drops to the page body (HRD-5b). Dismissing a message moves focus to the next message's Dismiss button, or to `<main>` (it has `tabIndex={-1}`) when none is left. When a refused edit, rename, or delete (NOT_FOUND) removes a row and its button, the page refocuses its add field (Items and Users: the add button) after the reload. Choosing a borrower on Checkout focuses the room picker. Return shows SEARCH_TOO_BROAD as a plain error with no Retry, because retrying cannot fix it.
 - The usage summary (RPT-4) uses bar charts. ARCHITECTURE section 2 names no chart library, so adding one needs the owner's approval. The mockup's light and dark chart switch is ignored: the app has light colors only.
 - The banner and message wording in the mockup is approved as written.
 

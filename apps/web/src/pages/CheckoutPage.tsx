@@ -247,6 +247,8 @@ export function CheckoutPage() {
     setBorrower(chosen);
     form.setValue('borrowerId', chosen.id, { shouldValidate: form.formState.isSubmitted });
     setShowBorrowers(false);
+    // The focused Choose button is gone, so move on to step 2, the room.
+    form.setFocus('locationId');
   }
 
   function addLine(item: ListedItem) {

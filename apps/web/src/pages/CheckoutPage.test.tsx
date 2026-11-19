@@ -587,3 +587,17 @@ test('a view-only user cannot open Checkout, and it is not in their menu', async
   expect(await screen.findByRole('heading', { name: "You can't open this page" })).toBeTruthy();
   expect(screen.queryByRole('link', { name: 'Checkout' })).toBeNull();
 });
+
+// Bug wxTtqdMT / HRD-5b: the Choose button disappears, so focus moves on to the room picker.
+test('TC-HRD-42: choosing a borrower with the keyboard moves focus to the room picker', async () => {
+  fakeApi();
+  const user = userEvent.setup();
+  renderApp('/checkout');
+  await screen.findByRole('heading', { name: 'Checkout' });
+  await user.type(screen.getByLabelText('Find by name or school ID'), 'ga');
+  (await screen.findByRole('button', { name: 'Choose Paolo Garcia' })).focus();
+  await user.keyboard('{Enter}');
+  await vi.waitFor(() =>
+    expect(document.activeElement).toBe(screen.getByLabelText('Where will the items be used?')),
+  );
+});
