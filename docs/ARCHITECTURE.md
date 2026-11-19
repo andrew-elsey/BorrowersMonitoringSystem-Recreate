@@ -239,7 +239,8 @@ Required settings, kept in `apps/web/nginx.conf` and tuned on the department PC:
 - Set `X-Forwarded-For` to `$remote_addr` (overwrite, never append) so a client cannot fake its address.
 - Gzip and cache static assets so page loads cost the API nothing. `/assets` sends one `Cache-Control: public, max-age=31536000, immutable` header.
 - The CSV import has its own location, `= /api/borrowers/import` (MD-6): zone `csv_import` at 2 a minute with burst 1 (so a corrected file can be sent again right away), `client_max_body_size 2m`, and `Retry-After: 30` on its 429.
-- `npm run test:nginx` checks these limits through a real nginx: it runs the nginx image with this config and a stub API in throwaway containers on port 18080, never touching the compose stack.
+- nginx finds the api again after it restarts (FND-8). The config has `resolver 127.0.0.11 valid=10s ipv6=off;` (Docker's DNS) and `upstream api { zone api_upstream 64k; server api:3000 resolve; }`, and every `proxy_pass` uses `http://api`. Without this nginx looked up `api` once at startup and answered 502 after the api container came back on a new address. The zone must not be named `api`: that is the request-rate zone. Now a restart gives at most a few seconds of 502, and nginx also starts when `api` is not up yet.
+- `npm run test:nginx` checks these limits through a real nginx: it runs the nginx image with this config and a stub API in throwaway containers on port 18080, never touching the compose stack. It also brings the stub API back on a different address and expects 200 within 15 seconds (TC-FND-32).
 
 ### 12.3 Express
 
