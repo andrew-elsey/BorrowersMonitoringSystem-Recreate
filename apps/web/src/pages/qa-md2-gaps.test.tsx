@@ -223,3 +223,60 @@ test('the Categories tab at /inventory?tab=categories loads no items; the Items 
     'page',
   );
 });
+
+// HRD-5b item 15: after a NOT_FOUND the row and its Edit button are gone, so focus goes to "+ Add item".
+// A realistic NOT_FOUND: the item is gone, so the reloaded list no longer has its row.
+function itemGoneApi(failing: 'PATCH' | 'DELETE') {
+  let gone = false;
+  fakeApi((method, path) => {
+    if (method === failing) {
+      gone = true;
+      return { status: 404, body: apiError('NOT_FOUND', 'Item not found.') };
+    }
+    return gone && method === 'GET' && path.startsWith('/items')
+      ? { status: 200, body: { data: [], page: 1, pageSize: 25, total: 0 } }
+      : undefined;
+  });
+}
+
+test('TC-HRD-38: an edit refused with NOT_FOUND focuses + Add item', async () => {
+  itemGoneApi('PATCH');
+  const user = userEvent.setup();
+  renderApp('/inventory');
+  await user.click(await screen.findByRole('button', { name: 'Edit QA-0001' }));
+  await user.click(screen.getByRole('button', { name: 'Save changes' }));
+  await screen.findByText('Item not found.');
+  await vi.waitFor(() =>
+    expect(document.activeElement).toBe(screen.getByRole('button', { name: '+ Add item' })),
+  );
+});
+
+test('TC-HRD-38: a delete refused with NOT_FOUND focuses + Add item', async () => {
+  itemGoneApi('DELETE');
+  const user = userEvent.setup();
+  renderApp('/inventory');
+  await user.click(await screen.findByRole('button', { name: 'Delete QA-0001' }));
+  const confirm = screen.getByRole('dialog', { name: 'Delete item?' });
+  await user.click(within(confirm).getByRole('button', { name: /^Delete/ }));
+  await screen.findByText('Item not found.');
+  await vi.waitFor(() =>
+    expect(document.activeElement).toBe(screen.getByRole('button', { name: '+ Add item' })),
+  );
+});
+
+test('TC-HRD-34: after Retry on the Items list works, focus moves to + Add item', async () => {
+  let fail = true;
+  fakeApi((method, path) =>
+    method === 'GET' && path.startsWith('/items') && fail
+      ? { status: 500, body: apiError('INTERNAL_ERROR', 'Could not load.') }
+      : undefined,
+  );
+  const user = userEvent.setup();
+  renderApp('/inventory');
+  await user.click(await screen.findByRole('button', { name: 'Retry' }));
+  fail = false;
+  await user.click(await screen.findByRole('button', { name: 'Retry' }));
+  await vi.waitFor(() =>
+    expect(document.activeElement).toBe(screen.getByRole('button', { name: '+ Add item' })),
+  );
+});

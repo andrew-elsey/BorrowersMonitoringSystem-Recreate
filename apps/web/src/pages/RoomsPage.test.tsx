@@ -161,3 +161,18 @@ test('the screen is in the admin menu only; a handler gets the not-allowed page 
   expect(await screen.findByRole('heading', { name: "You can't open this page" })).toBeTruthy();
   expect(screen.queryByRole('link', { name: 'Rooms and labs' })).toBeNull();
 });
+
+// HRD-5b item 15: after a NOT_FOUND the row and its Delete button are gone, so focus goes to the add field.
+test('TC-HRD-41: a delete refused with NOT_FOUND focuses the add field', async () => {
+  fakeApi((method) =>
+    method === 'DELETE'
+      ? { status: 404, body: apiError('NOT_FOUND', 'Room not found.') }
+      : undefined,
+  );
+  const user = userEvent.setup();
+  renderApp('/rooms');
+  await user.click((await screen.findAllByRole('button', { name: /^Delete / }))[0]!);
+  await user.click(screen.getByRole('button', { name: /^Delete room/ }));
+  await screen.findByText('Room not found.');
+  await vi.waitFor(() => expect(document.activeElement?.getAttribute('name')).toBe('name'));
+});

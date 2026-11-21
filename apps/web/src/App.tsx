@@ -2,6 +2,7 @@ import { PERMISSIONS, type Role } from '@bms/shared';
 import { lazy, type ReactNode } from 'react';
 import { Navigate, useLocation, type RouteObject } from 'react-router';
 import { AppShell } from './AppShell';
+import { PageLoadError } from './pages/PageLoadError';
 import { useAuth } from './auth';
 import { LoginPage } from './pages/LoginPage';
 import { NotAllowedPage } from './pages/NotAllowedPage';
@@ -73,6 +74,7 @@ export const routes: RouteObject[] = [
         <AppShell />
       </RequireSignIn>
     ),
+    errorElement: <PageLoadError />,
     children: [
       {
         index: true,

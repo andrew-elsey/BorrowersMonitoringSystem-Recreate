@@ -227,8 +227,8 @@ export function FlagReviewPage() {
         </button>
       </form>
 
-      {flags.data?.borrowerSearchSkipped && (
-        <p className="text-sm text-muted">
+      {!flags.isError && flags.data?.borrowerSearchSkipped && (
+        <p role="status" className="text-sm text-muted">
           Too many borrowers have flagged lines to search by name. Showing matches by item or asset
           tag only.
         </p>

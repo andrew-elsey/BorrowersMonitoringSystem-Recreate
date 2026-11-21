@@ -126,7 +126,7 @@ export function BorrowersPage() {
       notify.error(error);
       if (error instanceof ApiRequestError && error.code === 'NOT_FOUND') {
         setToEdit(null);
-        return refresh();
+        return refresh().then(() => addForm.setFocus('schoolId'));
       }
     },
   });

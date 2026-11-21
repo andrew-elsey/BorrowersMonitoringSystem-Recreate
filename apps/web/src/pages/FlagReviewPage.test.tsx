@@ -349,6 +349,60 @@ test('TC-FLG-41: Run flagging now asks first, runs, and shows the refusal within
   expect(screen.queryByText(refusal)).toBeNull();
 });
 
+// HRD-5b items 11 and 12: the over-cap note is a status message and only shows when the list loaded.
+test('TC-HRD-32: the over-cap note is a status message', async () => {
+  fakeApi((method, path) =>
+    method === 'GET' && path.startsWith('/flags')
+      ? {
+          status: 200,
+          body: {
+            data: [LINE],
+            page: 1,
+            pageSize: 25,
+            total: 1,
+            blockThreshold: 5,
+            hasCurrentSemester: true,
+            borrowerSearchSkipped: true,
+            lastRun: null,
+            nextRunAt: '2026-11-03T09:00:00.000Z',
+          },
+        }
+      : undefined,
+  );
+  renderApp('/flags');
+  const note = await screen.findByText(/Too many borrowers have flagged lines/);
+  expect(note.getAttribute('role')).toBe('status');
+});
+
+test('TC-HRD-33: the over-cap note is hidden while the list shows an error', async () => {
+  let fail = false;
+  fakeApi((method, path) => {
+    if (method !== 'GET' || !path.startsWith('/flags')) return undefined;
+    if (fail) return { status: 500, body: apiError('INTERNAL_ERROR', 'Could not load.') };
+    return {
+      status: 200,
+      body: {
+        data: [LINE],
+        page: 1,
+        pageSize: 25,
+        total: 1,
+        blockThreshold: 5,
+        hasCurrentSemester: true,
+        borrowerSearchSkipped: true,
+        lastRun: null,
+        nextRunAt: '2026-11-03T09:00:00.000Z',
+      },
+    };
+  });
+  const user = userEvent.setup();
+  renderApp('/flags');
+  await screen.findByText(/Too many borrowers have flagged lines/);
+  fail = true;
+  await user.type(screen.getByLabelText('Borrower or item'), 'mi{Enter}');
+  await screen.findByText('Could not load.');
+  expect(screen.queryByText(/Too many borrowers have flagged lines/)).toBeNull();
+});
+
 test('TC-HRD-24: shows the last flagging run and the next run in Manila time, or that there is none', async () => {
   const page = (lastRun: object | null) => ({
     status: 200,

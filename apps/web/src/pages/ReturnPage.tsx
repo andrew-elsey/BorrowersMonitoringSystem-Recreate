@@ -287,7 +287,12 @@ export function ReturnPage() {
       </form>
 
       {open.isError ? (
-        <RetryAlert query={open} onRetried={() => searchRef.current?.focus()} />
+        // A search that is too broad cannot be fixed by retrying: the text has to change.
+        open.error instanceof ApiRequestError && open.error.code === 'SEARCH_TOO_BROAD' ? (
+          <Alert kind="error">{errorText(open.error)}</Alert>
+        ) : (
+          <RetryAlert query={open} onRetried={() => searchRef.current?.focus()} />
+        )
       ) : open.isPending ? (
         <p className="text-muted">Loading…</p>
       ) : lines.length === 0 ? (
