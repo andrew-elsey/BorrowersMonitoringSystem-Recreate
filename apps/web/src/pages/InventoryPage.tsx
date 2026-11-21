@@ -111,6 +111,7 @@ function CategoriesTab() {
       if (isNotFound(error)) {
         setToRename(null);
         // The row and its Rename button are gone: focus the add field, not the page start.
+        // shortcut: relies on the refetch finishing after the dialog closes (true over a real network); wait a frame if that changes.
         return refresh().then(() => addForm.setFocus('name'));
       }
     },

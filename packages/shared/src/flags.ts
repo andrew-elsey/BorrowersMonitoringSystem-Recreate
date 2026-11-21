@@ -49,6 +49,8 @@ export type FlaggedLinePage = {
   blockThreshold: number; // strikes at or over this are blocked (BR 11)
   hasCurrentSemester: boolean; // false: the list is empty because no semester is current (BR 10)
   borrowerSearchSkipped: boolean; // true: too many flagged borrowers, so q matched item or asset tag only
+  lastRun: { at: string; flagged: number } | null; // the latest FLAGGING_RUN entry (HRD-1b, D6)
+  nextRunAt: string; // the next closing time from settings
 };
 
 // The 200 reply of POST /api/flags/:id/override. strikes is the borrower's count afterwards.

@@ -49,6 +49,9 @@ Paths are shortened: `api/` is `apps/api/tests/`, `web/` is `apps/web/src/pages/
 | TC-FND-29 | FND-6 | ARCH 6 | integration | Start the API with a `DATABASE_URL` that has `options` | Refused, because it would replace `TimeZone=UTC` | `api/timestamps.test.ts` |
 | TC-FND-30 | FND-7 | SPEC 8, ARCH 7 | component | Submit a form, from the keyboard, that gets API field errors for two fields listed out of form order | Focus moves to the first errored field in form order; each field error is announced (`role="alert"`) | `web/components/Field.test.tsx`, `web/qa-fnd7-gaps.test.tsx` (Change password and a real form), `web/qa-md1-r5-fnd7-merge.test.tsx` (Inventory add and rename) |
 | TC-FND-31 | REG-1 | SPEC 5 | component | Open Home, Checkout, Change password, a page the role may not open, an unknown path, and the sign-in page | The tab title is "<Page> · Borrowers Monitoring System": Home, Checkout, Change password, Not allowed, Home (redirected), Sign in | `web/reg1.test.tsx` |
+| TC-FND-32 | FND-8 | ARCH 12.2 | integration | In `npm run test:nginx`, replace the stub api with a new container on a different address, then call `/api/echo` through nginx for up to 15 s | 200 comes back without restarting nginx (before the fix: 502 until web restarts) | `web/scripts/check-nginx.ts` |
+| TC-FND-33 | FND-8 | ARCH 12.2 | manual | `docker compose up -d --build`, then `docker compose stop api`, `docker compose start api` (or `restart api`), then open `/api/health` through the web port every few seconds without restarting web | A brief 502 at most, then 200 within about 10 s; the web container's start time is unchanged | Manual (checked 2026-11-19 on a throwaway `-p bms-fnd8` stack: api address changed, 200 after 6 s) |
+| TC-FND-34 | FND-8 | ARCH 12.2, SEC-1 | integration | Run `npm run test:nginx` with the resolver and upstream in `nginx.conf` | Every earlier limit check (rates, connections, body sizes, JSON 413/429, Retry-After, X-Forwarded-For) still passes | `web/scripts/check-nginx.ts` (all checks other than TC-FND-32) |
 
 ## AUTH: Authentication and users
 
@@ -291,6 +294,11 @@ Paths are shortened: `api/` is `apps/api/tests/`, `web/` is `apps/web/src/pages/
 | TC-HRD-17 | HRD-1 | BR 14, D9 | integration | Sweep a database of unaudited records of every kind, then rows changed after their last entry | Each is reported under its own check with its id, including an open line changed by raw SQL (judged by its checkout entry); a RETURN entry covers its line and a SEMESTER_SET_CURRENT entry covers the semester it replaced | `audit-sweep.test.ts` |
 | TC-HRD-18 | HRD-1 | BR 14, D9 | integration | Seed, then through the API: create records, check out, return (one damaged), edit a note, change settings, add a semester and switch the current one twice, flag, override, then sweep | No findings (seed rows count as audited) | `audit-sweep.test.ts` |
 | TC-HRD-19 | HRD-1 | SPEC 5, D8 | component | Admin opens Audit log from the menu; picks Actor System and an Entity; enters a range over 366 days; no entries; a handler opens `/audit` | Last 7 days in Manila time with before and after in each row; the filters are sent; the range is refused with no request; the empty text names the range; a handler sees "not allowed" and no menu item | `AuditLogPage.test.tsx` |
+| TC-HRD-20 | HRD-1b | BR 14, D5 | integration | A run flags 0 lines, then a run flags 2 | One `FLAGGING_RUN` entry each (entity `flagging_run`, null actor, `after.flagged` 0 then 2) | `qa-flg2-gaps.test.ts` |
+| TC-HRD-21 | HRD-1b | BR 14, D5 | integration | Admin presses "Run flagging now" | One `FLAGGING_RUN` entry with the admin as actor | `qa-flg2-gaps.test.ts` |
+| TC-HRD-22 | HRD-1b | BR 14, D5 | integration | A run skipped because the lock is held; a run that fails after writing its entry | No entry for the skipped run; the entry is rolled back with the failed run | `qa-flg2-gaps.test.ts` |
+| TC-HRD-23 | HRD-1b | D6 | integration | GET /api/flags before any run and after a run; then the service with an injected clock before and at closing 17:00 Manila | Through the API: `lastRun` null, then `{ at, flagged }`. Through the service (injected clock): `nextRunAt` is today's closing, then tomorrow's | `qa-flg2-gaps.test.ts` |
+| TC-HRD-24 | HRD-1b | D6 | component | Open Flag review with a last run, then with none | "Last flagging run: <Manila time>, N lines flagged. Next run: ..."; or "No flagging run yet." | `FlagReviewPage.test.tsx` |
 | TC-HRD-04 | HRD-2 | BR section 3 | e2e | Checkout, partial return, end-of-day flagging, strike, block, override in Docker | The whole flow passes | not yet |
 | TC-HRD-05 | HRD-2 | BR section 3 | manual | Check every scenario S1 to S21 against the coverage table below | Each has an automated test that passes | not yet |
 | TC-HRD-06 | HRD-3 | ARCH 12.6 | manual | Back up, `docker compose down -v`, start clean, restore the file | Data restored; backup files outside the web root, readable only by admin | manual (run 2026-11-14 on a throwaway project, see the card) |
@@ -301,7 +309,7 @@ Paths are shortened: `api/` is `apps/api/tests/`, `web/` is `apps/web/src/pages/
 | TC-HRD-29 | HRD-3 | ARCH 12.6 | manual | Run `npm run restore` from a non-terminal, with a wrong confirmation, and with a corrupt file | Refuses each time; api not stopped; data unchanged | manual |
 | TC-HRD-07 | HRD-4 | ARCH 12.1 | manual | Follow the LAN guide on another PC | App reachable from the network with `COOKIE_SECURE=false`; port bound to the LAN address | not yet |
 | TC-HRD-08 | HRD-5, HRD-5b | SPEC 8 | manual | Go through each screen with bad input, slow loads, and empty data. Use only the keyboard on Checkout and on every list's edit and delete dialogs | Clear messages, consistent loading and empty states (the shared Loading and empty rows, no new patterns), keyboard-friendly checkout; focus never drops to the page body. The UI items are covered by TC-HRD-30 to TC-HRD-44 | manual (HRD-5b checklist pass: no screen needed a change) |
-| TC-HRD-30 | HRD-5b | SPEC 8, ARCH 13 | component | Show two messages, press Dismiss on the first with the keyboard, then on the last | Focus moves to the next message's Dismiss button, then to the main area | `components/Notifications.test.tsx` |
+| TC-HRD-30 | HRD-5b | SPEC 8, ARCH 13 | component | Show two messages, press Dismiss on the first with the keyboard, then on the last | Focus moves to the next message's Dismiss button, then to the main area, and the page does not scroll (preventScroll) | `components/Notifications.test.tsx` |
 | TC-HRD-31 | HRD-5b | SPEC 8 | component | Return screen: search answered with SEARCH_TOO_BROAD | The message shows as an error with no Retry button | `pages/ReturnPage.test.tsx` |
 | TC-HRD-32 | HRD-5b | SPEC 8 | component | Flag review: borrower search over the cap | The over-cap note is a status message (`role="status"`) | `pages/FlagReviewPage.test.tsx` |
 | TC-HRD-33 | HRD-5b | SPEC 8 | component | Flag review: the list loaded with the note showing, then a search fails | The note is hidden while the error shows | `pages/FlagReviewPage.test.tsx` |
@@ -313,7 +321,7 @@ Paths are shortened: `api/` is `apps/api/tests/`, `web/` is `apps/web/src/pages/
 | TC-HRD-39 | HRD-5b | SPEC 8 | component | Borrower edit refused with NOT_FOUND | Message shown, focus on the School ID field of the add form | `pages/qa-md5-gaps.test.tsx` |
 | TC-HRD-40 | HRD-5b | SPEC 8 | component | User edit refused with NOT_FOUND | Message shown, focus on + Add user | `pages/UsersPage.test.tsx` |
 | TC-HRD-41 | HRD-5b | SPEC 8 | component | Room delete refused with NOT_FOUND | Message shown, focus on the add field | `pages/RoomsPage.test.tsx` |
-| TC-HRD-42 | HRD-5b | SPEC 8 | component | Checkout: find a borrower, choose one with the Enter key | Focus moves to the room picker (bug wxTtqdMT) | `pages/CheckoutPage.test.tsx` |
+| TC-HRD-42 | HRD-5b | SPEC 8 | component | Checkout: find a borrower, choose one with the Enter key | Focus moves to the room picker (bug wxTtqdMT); a locked (blocked or inactive) borrower sends focus back to the borrower search | `pages/CheckoutPage.test.tsx` |
 | TC-HRD-43 | HRD-5b | SPEC 8 | component | Flag review: override refused with NOT_FOUND or LINE_NOT_FLAGGED | Message shown, focus on the search field (already worked; verified) | `pages/qa-flg4-gaps.test.tsx` |
 | TC-HRD-44 | HRD-5b | SPEC 8 | manual | Open each list screen while loading, empty, and failed | All use the shared Loading and empty-state rows or Retry alert; no screen needed a change | manual |
 | TC-HRD-09 | HRD-6 | SPEC 8, ARCH 3, 13 | manual | Run `npm run build` | No chunk-size warning; each screen page (Home, Inventory, Borrowers, Rooms, Settings, Change password) is its own chunk | manual |
@@ -355,7 +363,7 @@ Paths are shortened: `api/` is `apps/api/tests/`, `web/` is `apps/web/src/pages/
 | BR 11 Thresholds | TC-BRW-26, TC-FLG-17 to 21, TC-HRD-54 |
 | BR 12 Semester reset | TC-FLG-05 |
 | BR 13 Override | TC-FLG-04, 23, 24 |
-| BR 14 Audit | TC-FND-15, 17, TC-AUTH-06, 19, TC-MD-01, 08, TC-BRW-04, 20, 30, TC-FLG-07, 24, TC-HRD-01, 03, 17, 18 |
+| BR 14 Audit | TC-FND-15, 17, TC-AUTH-06, 19, TC-MD-01, 08, TC-BRW-04, 20, 30, TC-FLG-07, 24, TC-HRD-01, 03, 17, 18, 20 to 23 |
 | BR 15 No deletion of history | TC-FND-14, TC-AUTH-20, TC-MD-02, 07, 12 |
 | BR 16 Throttled, never locked | TC-AUTH-10, 11, 12, 34 |
 | S1 Same-day return | TC-FLG-06 |

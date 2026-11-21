@@ -51,6 +51,8 @@ function fakeApi(answer?: (method: string, path: string, body: unknown) => objec
           blockThreshold: 5,
           hasCurrentSemester: true,
           borrowerSearchSkipped: false,
+          lastRun: null,
+          nextRunAt: '2026-11-03T09:00:00.000Z',
         },
       };
     }
@@ -102,6 +104,8 @@ test('TC-FLG-24: overriding sends the reason, confirms, and reloads the list', a
           blockThreshold: 5,
           hasCurrentSemester: true,
           borrowerSearchSkipped: false,
+          lastRun: null,
+          nextRunAt: '2026-11-03T09:00:00.000Z',
         },
       };
   });
@@ -163,6 +167,8 @@ test('TC-FLG-39: shows Issued in Manila time and strikes, blocked at the thresho
             pageSize: 25,
             total: 2,
             blockThreshold: 5,
+            lastRun: null,
+            nextRunAt: '2026-11-03T09:00:00.000Z',
           },
         }
       : undefined,
@@ -216,6 +222,8 @@ test('TC-FLG-40: after an override, focus goes to the search field', async () =>
             blockThreshold: 5,
             hasCurrentSemester: true,
             borrowerSearchSkipped: false,
+            lastRun: null,
+            nextRunAt: '2026-11-03T09:00:00.000Z',
           },
         }
       : undefined;
@@ -261,6 +269,8 @@ test('TC-FLG-36: when the name search was skipped, a note says so', async () => 
             blockThreshold: 5,
             hasCurrentSemester: true,
             borrowerSearchSkipped: true,
+            lastRun: null,
+            nextRunAt: '2026-11-03T09:00:00.000Z',
           },
         }
       : undefined,
@@ -288,6 +298,8 @@ test('TC-FLG-34: with no current semester the empty state says so', async () => 
       blockThreshold: 5,
       hasCurrentSemester: false,
       borrowerSearchSkipped: false,
+      lastRun: null,
+      nextRunAt: '2026-11-03T09:00:00.000Z',
     },
   }));
   renderApp('/flags');
@@ -351,6 +363,8 @@ test('TC-HRD-32: the over-cap note is a status message', async () => {
             blockThreshold: 5,
             hasCurrentSemester: true,
             borrowerSearchSkipped: true,
+            lastRun: null,
+            nextRunAt: '2026-11-03T09:00:00.000Z',
           },
         }
       : undefined,
@@ -375,6 +389,8 @@ test('TC-HRD-33: the over-cap note is hidden while the list shows an error', asy
         blockThreshold: 5,
         hasCurrentSemester: true,
         borrowerSearchSkipped: true,
+        lastRun: null,
+        nextRunAt: '2026-11-03T09:00:00.000Z',
       },
     };
   });
@@ -385,4 +401,39 @@ test('TC-HRD-33: the over-cap note is hidden while the list shows an error', asy
   await user.type(screen.getByLabelText('Borrower or item'), 'mi{Enter}');
   await screen.findByText('Could not load.');
   expect(screen.queryByText(/Too many borrowers have flagged lines/)).toBeNull();
+});
+
+test('TC-HRD-24: shows the last flagging run and the next run in Manila time, or that there is none', async () => {
+  const page = (lastRun: object | null) => ({
+    status: 200,
+    body: {
+      data: [],
+      page: 1,
+      pageSize: 25,
+      total: 0,
+      blockThreshold: 5,
+      hasCurrentSemester: true,
+      borrowerSearchSkipped: false,
+      lastRun,
+      nextRunAt: '2026-11-03T09:00:00.000Z', // 17:00 Manila
+    },
+  });
+  fakeApi((method, path) =>
+    method === 'GET' && path.startsWith('/flags')
+      ? page({ at: '2026-11-02T09:00:05.000Z', flagged: 3 })
+      : undefined,
+  );
+  renderApp('/flags');
+  expect(
+    await screen.findByText(
+      /Last flagging run: 2 Nov, 17:00, 3 lines flagged\. Next run: 3 Nov, 17:00\./,
+    ),
+  ).toBeTruthy();
+  cleanup();
+
+  fakeApi((method, path) =>
+    method === 'GET' && path.startsWith('/flags') ? page(null) : undefined,
+  );
+  renderApp('/flags');
+  expect(await screen.findByText(/No flagging run yet\. Next run: 3 Nov, 17:00\./)).toBeTruthy();
 });

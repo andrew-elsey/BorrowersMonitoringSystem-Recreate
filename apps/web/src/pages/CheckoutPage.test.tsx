@@ -614,3 +614,20 @@ test('TC-HRD-42: choosing an inactive borrower moves focus to the borrower searc
     expect(document.activeElement).toBe(screen.getByLabelText('Find by name or school ID')),
   );
 });
+
+test('TC-HRD-42: choosing an active borrower after an inactive one moves focus to the room picker', async () => {
+  fakeApi();
+  const user = userEvent.setup();
+  renderApp('/checkout');
+  await screen.findByRole('heading', { name: 'Checkout' });
+  await user.type(screen.getByLabelText('Find by name or school ID'), 'so');
+  await user.click(await screen.findByRole('button', { name: 'Choose Rhea Soriano' }));
+  const search = screen.getByLabelText('Find by name or school ID');
+  await vi.waitFor(() => expect(document.activeElement).toBe(search));
+  await user.clear(search);
+  await user.type(search, 'ga');
+  await user.click(await screen.findByRole('button', { name: 'Choose Paolo Garcia' }));
+  await vi.waitFor(() =>
+    expect(document.activeElement).toBe(screen.getByLabelText('Where will the items be used?')),
+  );
+});

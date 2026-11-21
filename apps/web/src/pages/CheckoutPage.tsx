@@ -247,8 +247,6 @@ export function CheckoutPage() {
     setBorrower(chosen);
     form.setValue('borrowerId', chosen.id, { shouldValidate: form.formState.isSubmitted });
     setShowBorrowers(false);
-    // The focused Choose button is gone, so move on to step 2, the room.
-    form.setFocus('locationId');
   }
 
   function addLine(item: ListedItem) {
@@ -291,11 +289,14 @@ export function CheckoutPage() {
   const strikes = strikeQuery.data;
   const level = strikes ? strikeLevel(strikes) : 'none';
   const locked = borrower !== null && (!borrower.active || level === 'blocked');
-  // The steps below are disabled for a blocked or inactive borrower (the strikes can arrive after
-  // the choice), which would drop focus to the page body: go back to the borrower search instead.
+  // After a borrower is chosen the Choose button is gone: focus step 2 (the room). The steps are
+  // disabled for a blocked or inactive borrower (strikes can arrive after the choice), and a real
+  // browser refuses focus on a disabled field, so go back to the borrower search instead.
   useEffect(() => {
+    if (!borrower) return;
     if (locked) borrowerSearchRef.current?.focus();
-  }, [locked]);
+    else form.setFocus('locationId');
+  }, [borrower, locked, form]);
   const onLines = new Set(values.lines.map((line) => line.itemId));
   // VALIDATION_ERROR details the API keys as "lines" (a schema error on some line) belong to no
   // single field, so they go with the message at the top.
