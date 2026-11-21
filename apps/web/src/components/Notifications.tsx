@@ -75,7 +75,10 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
     if (index === null || !areaElement) return;
     focusIndexAfterDismiss.current = null;
     const buttons = areaElement.querySelectorAll('button');
-    (buttons[Math.min(index, buttons.length - 1)] ?? document.getElementById('main'))?.focus();
+    // preventScroll: focusing <main> would otherwise scroll the page back to its top.
+    (buttons[Math.min(index, buttons.length - 1)] ?? document.getElementById('main'))?.focus({
+      preventScroll: true,
+    });
   }, [notices, areaElement]);
 
   const dismiss = (id: number) => {

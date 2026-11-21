@@ -601,3 +601,16 @@ test('TC-HRD-42: choosing a borrower with the keyboard moves focus to the room p
     expect(document.activeElement).toBe(screen.getByLabelText('Where will the items be used?')),
   );
 });
+
+test('TC-HRD-42: choosing an inactive borrower moves focus to the borrower search, not the page body', async () => {
+  fakeApi();
+  const user = userEvent.setup();
+  renderApp('/checkout');
+  await screen.findByRole('heading', { name: 'Checkout' });
+  await user.type(screen.getByLabelText('Find by name or school ID'), 'so');
+  (await screen.findByRole('button', { name: 'Choose Rhea Soriano' })).focus();
+  await user.keyboard('{Enter}');
+  await vi.waitFor(() =>
+    expect(document.activeElement).toBe(screen.getByLabelText('Find by name or school ID')),
+  );
+});
