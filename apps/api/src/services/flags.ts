@@ -44,7 +44,7 @@ export async function listFlaggedLines(
   now = new Date(),
 ): Promise<FlaggedLinePage> {
   const { blockThreshold, closingTime } = await getSettings();
-  // HRD-1b, D6: shown whatever the semester. One row by the created_at index, so it is bounded.
+  // HRD-1b, D6: shown whatever the semester. One row, so it is bounded.
   const lastEntry = await prisma.auditLog.findFirst({
     where: { entity: 'flagging_run' },
     orderBy: { createdAt: 'desc' },

@@ -183,7 +183,7 @@ export function FlagReviewPage() {
           {flags.data.lastRun
             ? `Last flagging run: ${dateTime.format(new Date(flags.data.lastRun.at))}, ${flags.data.lastRun.flagged} ${flags.data.lastRun.flagged === 1 ? 'line' : 'lines'} flagged.`
             : 'No flagging run yet.'}{' '}
-          {flags.data.nextRunAt && `Next run: ${dateTime.format(new Date(flags.data.nextRunAt))}.`}
+          {`Next run: ${dateTime.format(new Date(flags.data.nextRunAt))}.`}
         </p>
       )}
 

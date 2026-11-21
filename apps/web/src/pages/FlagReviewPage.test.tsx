@@ -51,6 +51,8 @@ function fakeApi(answer?: (method: string, path: string, body: unknown) => objec
           blockThreshold: 5,
           hasCurrentSemester: true,
           borrowerSearchSkipped: false,
+          lastRun: null,
+          nextRunAt: '2026-11-03T09:00:00.000Z',
         },
       };
     }
@@ -102,6 +104,8 @@ test('TC-FLG-24: overriding sends the reason, confirms, and reloads the list', a
           blockThreshold: 5,
           hasCurrentSemester: true,
           borrowerSearchSkipped: false,
+          lastRun: null,
+          nextRunAt: '2026-11-03T09:00:00.000Z',
         },
       };
   });
@@ -163,6 +167,8 @@ test('TC-FLG-39: shows Issued in Manila time and strikes, blocked at the thresho
             pageSize: 25,
             total: 2,
             blockThreshold: 5,
+            lastRun: null,
+            nextRunAt: '2026-11-03T09:00:00.000Z',
           },
         }
       : undefined,
@@ -216,6 +222,8 @@ test('TC-FLG-40: after an override, focus goes to the search field', async () =>
             blockThreshold: 5,
             hasCurrentSemester: true,
             borrowerSearchSkipped: false,
+            lastRun: null,
+            nextRunAt: '2026-11-03T09:00:00.000Z',
           },
         }
       : undefined;
@@ -261,6 +269,8 @@ test('TC-FLG-36: when the name search was skipped, a note says so', async () => 
             blockThreshold: 5,
             hasCurrentSemester: true,
             borrowerSearchSkipped: true,
+            lastRun: null,
+            nextRunAt: '2026-11-03T09:00:00.000Z',
           },
         }
       : undefined,
@@ -288,6 +298,8 @@ test('TC-FLG-34: with no current semester the empty state says so', async () => 
       blockThreshold: 5,
       hasCurrentSemester: false,
       borrowerSearchSkipped: false,
+      lastRun: null,
+      nextRunAt: '2026-11-03T09:00:00.000Z',
     },
   }));
   renderApp('/flags');
