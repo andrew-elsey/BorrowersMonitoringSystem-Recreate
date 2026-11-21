@@ -80,7 +80,8 @@ describe.each(ROLES)('signed in as %s', (role) => {
         expectStandardError(res, 403, 'FORBIDDEN', label);
       }
     }
-    expect(await prisma.auditLog.count()).toBe(0);
+    // An admin's POST /flagging/run is allowed and now logs its FLAGGING_RUN entry (HRD-1b, D5).
+    expect(await prisma.auditLog.count({ where: { action: { not: 'FLAGGING_RUN' } } })).toBe(0);
   });
 });
 
