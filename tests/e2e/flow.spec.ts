@@ -136,6 +136,7 @@ test('TC-HRD-61 return: full same-day return and a partial return of 3 of 5 cord
   await page.getByRole('button', { name: 'Find open borrowings' }).click();
   await page.getByLabel('Quantity to return for Extension cord').fill('3');
   await page.getByRole('button', { name: 'Return quantity' }).click();
+  await expect(page.getByText('Return recorded.')).toBeVisible();
   await expect
     .poll(async () => (await call('get', '/returns/open?q=Cara')).body.data[0].outstanding)
     .toBe(2);
