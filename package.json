@@ -8,7 +8,7 @@
   ],
   "scripts": {
     "lint": "eslint .",
-    "typecheck": "npm run typecheck --workspaces",
+    "typecheck": "npm run typecheck --workspaces && tsc -p tests/e2e",
     "test": "npm run db:generate -w @bms/api && vitest run",
     "build": "npm run build --workspaces --if-present",
     "audit:sweep": "npm run audit:sweep -w @bms/api",
@@ -19,10 +19,12 @@
     "db:migrate": "npm run db:migrate -w @bms/api",
     "db:seed": "npm run db:seed -w @bms/api",
     "backup": "node apps/api/scripts/backup.ts",
-    "restore": "node apps/api/scripts/restore.ts"
+    "restore": "node apps/api/scripts/restore.ts",
+    "test:e2e": "node tests/e2e/run.ts"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
+    "@playwright/test": "1.65.1",
     "@types/node": "^26.6.6",
     "eslint": "^10.13.0",
     "prettier": "^3.9.10",

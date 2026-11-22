@@ -193,7 +193,7 @@ Acceptance: route-level code splitting with `React.lazy` and `Suspense` for the 
 
 **DOC-1 · Test cases and SEC-1 AC update** (1 pt, Sprint 2). Depends on: none.
 Added 2026-11-01 at the owner's request.
-Acceptance: `TEST_CASES.md` exists at the repo root with cases for every ticket in this file; each case has an ID (`TC-<EPIC>-NN`), ticket, rule or scenario, level, steps, expected result, and what automates it; every BR rule 1 to 16 and scenario S1 to S21 maps to at least one case; Sprint 1 cases point at existing tests, and those tests pass; the SEC-1 acceptance above includes nginx's own 413 as JSON and the single `/assets` `Cache-Control` header (built in SEC-1, not here); `CLAUDE.md` no longer says `TEST_CASES.md` is missing.
+Acceptance: `TEST_CASES.md` exists at the repo root with cases for every ticket in this file; each case has an ID (`TC-<EPIC>-NN`), ticket, rule or scenario, level, steps, expected result, and what automates it; every BR rule 1 to 16 and scenario S1 to S23 maps to at least one case; Sprint 1 cases point at existing tests, and those tests pass; the SEC-1 acceptance above includes nginx's own 413 as JSON and the single `/assets` `Cache-Control` header (built in SEC-1, not here); `CLAUDE.md` no longer says `TEST_CASES.md` is missing.
 
 ## Unscheduled
 

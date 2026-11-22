@@ -6,7 +6,7 @@ One list of test cases for every ticket in `docs/BACKLOG.md`. Cases come from ea
 
 - **ID**: `TC-<EPIC>-NN`, numbered per epic (FND, AUTH, MD, BRW, FLG, RPT, SEC, HRD, DOC). IDs are never reused or renumbered. A case that no longer applies is marked "Removed", not deleted.
 - **Ticket**: the ticket that makes the case pass. A ticket is ready for testing only when its cases are implemented and pass (`CLAUDE.md`, Trello workflow).
-- **Rule**: business rule (`BR 1` to `BR 16`), scenario (`S1` to `S21`), or document section the case checks.
+- **Rule**: business rule (`BR 1` to `BR 16`), scenario (`S1` to `S23`), or document section the case checks.
 - **Level**: `unit`, `integration` (Vitest and Supertest against the real test database), `component` (Vitest and Testing Library), `e2e` (Playwright), or `manual`.
 - **Automated by**: the test file that covers the case, `not yet` when the ticket is not built, or `manual` when it is checked by hand. When a ticket is built, replace `not yet` with the test file.
 - Unless a case says otherwise, "closing" is 17:00 `Asia/Manila`, a current semester is set, and thresholds are the defaults (3, 4, 5).
@@ -299,8 +299,17 @@ Paths are shortened: `api/` is `apps/api/tests/`, `web/` is `apps/web/src/pages/
 | TC-HRD-22 | HRD-1b | BR 14, D5 | integration | A run skipped because the lock is held; a run that fails after writing its entry | No entry for the skipped run; the entry is rolled back with the failed run | `qa-flg2-gaps.test.ts` |
 | TC-HRD-23 | HRD-1b | D6 | integration | GET /api/flags before any run and after a run; then the service with an injected clock before and at closing 17:00 Manila | Through the API: `lastRun` null, then `{ at, flagged }`. Through the service (injected clock): `nextRunAt` is today's closing, then tomorrow's | `qa-flg2-gaps.test.ts` |
 | TC-HRD-24 | HRD-1b | D6 | component | Open Flag review with a last run, then with none | "Last flagging run: <Manila time>, N lines flagged. Next run: ..."; or "No flagging run yet." | `FlagReviewPage.test.tsx` |
-| TC-HRD-04 | HRD-2 | BR section 3 | e2e | Checkout, partial return, end-of-day flagging, strike, block, override in Docker | The whole flow passes | not yet |
-| TC-HRD-05 | HRD-2 | BR section 3 | manual | Check every scenario S1 to S21 against the coverage table below | Each has an automated test that passes | not yet |
+| TC-HRD-04 | HRD-2 | BR section 3 | e2e | `npm run test:e2e`: checkout, partial return, end-of-day flagging, strike, block, override in Docker | The whole flow passes (TC-HRD-60 to 68) | `tests/e2e/flow.spec.ts` |
+| TC-HRD-05 | HRD-2 | BR section 3 | manual | Check every scenario S1 to S23 against the coverage table below | Each has an automated test that passes | manual (checked against the table below; every case named there is automated) |
+| TC-HRD-60 | HRD-2 | S1, S5, S6, S14 | e2e | Admin creates a semester, room, items, and borrowers through the API; three borrowers check out (one with three transactions); a second checkout of an item already out | 201 each; the item already out is `ITEM_UNAVAILABLE` | `tests/e2e/flow.spec.ts` |
+| TC-HRD-61 | HRD-2 | S3, S15 | e2e | Return one unit fully and 3 of 5 cords; then return 3 more cords | Both returns 201; the extra return is `RETURN_EXCEEDS_OUTSTANDING` | `tests/e2e/flow.spec.ts` |
+| TC-HRD-62 | HRD-2 | S1, S2, S3, S22, D11 | e2e | Set closing to the minute after the last checkout, wait for it, save settings (thresholds 1, 2, 3) | Flagging runs at once: 3 lines for one borrower, 1 line with 2 outstanding cords, none for the same-day return | `tests/e2e/flow.spec.ts` |
+| TC-HRD-63 | HRD-2 | S5, S6, BR 10 | e2e | Read each borrower's strikes | 0, 1, and 3: one per flagged transaction | `tests/e2e/flow.spec.ts` |
+| TC-HRD-64 | HRD-2 | S8, BR 6 | e2e | The borrower at 3 strikes (block threshold 3) checks out, then returns a laptop | `BORROWER_BLOCKED`; the return works and the strike stays | `tests/e2e/flow.spec.ts` |
+| TC-HRD-65 | HRD-2 | D6 | e2e | Admin opens Flag review in the browser | "Last flagging run: ..., 4 lines flagged" and an Override button per line | `tests/e2e/flow.spec.ts` |
+| TC-HRD-66 | HRD-2 | S7, S8, BR 13 | e2e | Admin overrides one line in the browser with a reason | The line leaves the list; the borrower has 2 strikes | `tests/e2e/flow.spec.ts` |
+| TC-HRD-67 | HRD-2 | S8 | e2e | The same borrower checks out again | 201: no longer blocked | `tests/e2e/flow.spec.ts` |
+| TC-HRD-68 | HRD-2 | S3 | e2e | The partial-return borrower returns the last 2 cords | Line still flagged, nothing outstanding, strike stays 1 | `tests/e2e/flow.spec.ts` |
 | TC-HRD-06 | HRD-3 | ARCH 12.6 | manual | Back up, `docker compose down -v`, start clean, restore the file | Data restored; backup files outside the web root, readable only by admin | manual (run 2026-11-14 on a throwaway project, see the card) |
 | TC-HRD-25 | HRD-3 | ARCH 12.6 | unit | Name a backup file | `bms-YYYYMMDD-HHmmss.dump`; `.partial` files are not backups | `apps/api/tests/backup.test.ts` |
 | TC-HRD-26 | HRD-3 | ARCH 12.6 | unit | Choose which files to prune | Only `bms-*.dump` older than 14 days; other files and `.partial` kept | `apps/api/tests/backup.test.ts` |
@@ -366,26 +375,26 @@ Paths are shortened: `api/` is `apps/api/tests/`, `web/` is `apps/web/src/pages/
 | BR 14 Audit | TC-FND-15, 17, TC-AUTH-06, 19, TC-MD-01, 08, TC-BRW-04, 20, 30, TC-FLG-07, 24, TC-HRD-01, 03, 17, 18, 20 to 23 |
 | BR 15 No deletion of history | TC-FND-14, TC-AUTH-20, TC-MD-02, 07, 12 |
 | BR 16 Throttled, never locked | TC-AUTH-10, 11, 12, 34 |
-| S1 Same-day return | TC-FLG-06 |
-| S2 Unit item not returned | TC-FLG-01, 07 |
-| S3 Partial return | TC-BRW-22, TC-FLG-08 |
+| S1 Same-day return | TC-FLG-06, TC-HRD-60, 62 |
+| S2 Unit item not returned | TC-FLG-01, 07, TC-HRD-62 |
+| S3 Partial return | TC-BRW-22, TC-FLG-08, TC-HRD-61, 62, 68 |
 | S4 Note does not prevent the flag | TC-BRW-32 |
-| S5 One transaction, many lines | TC-FLG-02 |
-| S6 Two transactions, same day | TC-FLG-03 |
-| S7 Partial override | TC-FLG-04 |
-| S8 Thresholds | TC-FLG-17, 18, 19 |
+| S5 One transaction, many lines | TC-FLG-02, TC-HRD-60, 63 |
+| S6 Two transactions, same day | TC-FLG-03, TC-HRD-60, 63 |
+| S7 Partial override | TC-FLG-04, TC-HRD-66 |
+| S8 Thresholds | TC-FLG-17, 18, 19, TC-HRD-64, 66, 67 |
 | S9 Semester reset | TC-FLG-05 |
 | S10 Checkout after closing | TC-FLG-09 |
 | S11 Service down at closing | TC-FLG-10 |
 | S12 Idempotent job | TC-FLG-11 |
 | S13 Overridden stays overridden | TC-FLG-12 |
 | S14 Checkout validations | TC-BRW-05 to 10, 34 |
-| S15 Return validations | TC-BRW-24 |
+| S15 Return validations | TC-BRW-24, TC-HRD-61 |
 | S16 Concurrent checkout | TC-BRW-11 |
 | S17 Damaged return | TC-BRW-25 |
 | S18 Permissions | TC-AUTH-17, 22, TC-BRW-13, TC-FLG-25, TC-RPT-02, 07 |
 | S19 Retiring versus deleting | TC-MD-07 |
 | S20 Login flood | TC-AUTH-10, TC-SEC-11 |
 | S21 Oversized input | TC-MD-19, TC-BRW-12, TC-RPT-04, TC-SEC-02, 09, 13 |
-| S22 Closing time moved earlier | TC-FLG-27 |
+| S22 Closing time moved earlier | TC-FLG-27, TC-HRD-62 |
 | S23 Failed or skipped run | TC-FLG-28, 30 |
