@@ -15,7 +15,7 @@ npm workspaces monorepo:
 apps/api/          Express API (routes, services, Prisma)
 apps/web/          React + Vite front end
 packages/shared/   Zod schemas, enums, and types used by api and web
-docs/              SPEC, BUSINESS_RULES, ARCHITECTURE, BACKLOG
+docs/              SPEC, BUSINESS_RULES, ARCHITECTURE, BACKLOG, DEPLOYMENT
 ```
 
 Shared TypeScript settings live in `tsconfig.base.json` (strict mode). Each package extends it. ESLint and Prettier are configured once at the root. `vitest.config.ts` runs every package's tests.
@@ -37,11 +37,14 @@ npm run typecheck   # tsc in every workspace
 npm test            # Vitest across all workspaces (needs npm run test:db and TEST_DATABASE_URL)
 npm run test:nginx  # nginx limits through a real nginx (needs Docker)
 npm run test:load   # abuse and load tests (needs Docker, about 10 minutes)
+npm run backup      # database backup to BACKUP_DIR (docs/DEPLOYMENT.md)
+npm run restore -- <file>   # replace the database from a backup
+npm run audit:sweep # after build: records with no audit entry (on the PC: docker compose exec api npm run audit:sweep)
 npm run build       # compile shared and api to dist/, build web with Vite
 npm run format      # Prettier
 ```
 
-More commands (database, seed) are added by later tickets; `CLAUDE.md` lists them.
+`CLAUDE.md` lists every command, including the database and seed ones.
 
 ## Running with Docker
 
@@ -56,7 +59,20 @@ Open http://127.0.0.1:8080. Three containers start:
 - **api**: the compiled Express API. Not published to the host; nginx reaches it on port 3000.
 - **web**: nginx serving the React build and proxying `/api` to the api.
 
-Only the web port is published, and by default only to this machine. To reach the app from other machines on the LAN, set `WEB_BIND_ADDRESS` in `.env` to this PC's LAN address. All variables are described in `.env.example` and `docs/ARCHITECTURE.md` section 10.
+Only the web port is published, and by default only to this machine. To reach the app from other machines on the LAN, set `WEB_BIND_ADDRESS` in `.env` to this PC's LAN address. The full department PC setup (LAN address, `COOKIE_SECURE`, firewall, backups, restore, settings, day-to-day operation) is in [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md). Never expose the app to the internet. All variables are described in `.env.example` and `docs/ARCHITECTURE.md` section 10.
+
+## Department PC
+
+Full steps are in [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md).
+
+- **Setup** ([sections 2 to 4](docs/DEPLOYMENT.md#2-set-up-env)): copy `.env.example` to `.env`; set `POSTGRES_PASSWORD`, `ADMIN_PASSWORD`, `SESSION_SECRET`, `WEB_BIND_ADDRESS` (the PC's LAN address), and `COOKIE_SECURE=false` (plain HTTP); run `docker compose up -d --build`; add the firewall rule.
+- **Settings** ([section 7](docs/DEPLOYMENT.md#7-settings-in-plain-terms)): an admin sets the closing time, the strike thresholds (3, 4, 5), and the current semester in Settings and semesters. Add a new semester at the start of each term.
+- **Day to day** ([section 8](docs/DEPLOYMENT.md#8-day-to-day)):
+  - Run the backup daily and check the newest file in `BACKUP_DIR` each morning ([section 5](docs/DEPLOYMENT.md#5-backups)); restore is in [section 6](docs/DEPLOYMENT.md#6-restore).
+  - After an error while saving a checkout or return, check the borrower's open items before entering it again (the exact note is in section 8).
+  - If the app is down, run `docker compose ps` and `docker compose logs api`.
+  - Lost admin password: `docker compose exec api npm run admin:reset-password -- <username>`.
+  - Update: back up, `git pull`, `docker compose up --build -d`.
 
 ## Development data
 

@@ -18,6 +18,7 @@ This is a recreation of a system the owner built in college. It runs in Docker o
 | `docs/BUSINESS_RULES.md` | Every rule with worked scenarios. The source of truth for behavior and test cases |
 | `docs/ARCHITECTURE.md` | Stack, repo layout, conventions, auth, time handling, API format, Docker, testing |
 | `docs/BACKLOG.md` | Tickets with acceptance criteria, dependencies, and the sprint plan |
+| `docs/DEPLOYMENT.md` | Department PC setup, backups, restore, and day-to-day operation |
 
 If documents disagree about behavior, `BUSINESS_RULES.md` wins, then `SPEC.md`, then `ARCHITECTURE.md`. If something is unclear or missing, ask the owner. Do not guess on business rules.
 
