@@ -6,6 +6,7 @@ import type {
   OverrideResult,
 } from '@bms/shared';
 import { Prisma } from '../generated/prisma/client.ts';
+import { nextClosing } from '../jobs/flagging.ts';
 import { audit } from '../lib/audit.ts';
 import { ApiError } from '../lib/errors.ts';
 import { prisma } from '../lib/prisma.ts';
@@ -40,8 +41,21 @@ export const FLAGGED_BORROWER_CAP = 5000;
 export async function listFlaggedLines(
   { returned, q, page, pageSize }: FlagListQuery,
   cap = FLAGGED_BORROWER_CAP,
+  now = new Date(),
 ): Promise<FlaggedLinePage> {
-  const { blockThreshold } = await getSettings();
+  const { blockThreshold, closingTime } = await getSettings();
+  // HRD-1b, D6: shown whatever the semester. One row, so it is bounded.
+  const lastEntry = await prisma.auditLog.findFirst({
+    where: { entity: 'flagging_run' },
+    orderBy: { createdAt: 'desc' },
+  });
+  const lastRun = lastEntry
+    ? {
+        at: lastEntry.createdAt.toISOString(),
+        flagged: (lastEntry.after as { flagged: number }).flagged,
+      }
+    : null;
+  const nextRunAt = nextClosing(now, closingTime).toISOString();
   const semester = await getCurrentSemester();
   if (!semester) {
     return {
@@ -52,6 +66,8 @@ export async function listFlaggedLines(
       blockThreshold,
       hasCurrentSemester: false,
       borrowerSearchSkipped: false,
+      lastRun,
+      nextRunAt,
     };
   }
 
@@ -126,6 +142,8 @@ export async function listFlaggedLines(
     blockThreshold,
     hasCurrentSemester: true,
     borrowerSearchSkipped,
+    lastRun,
+    nextRunAt,
   };
 }
 

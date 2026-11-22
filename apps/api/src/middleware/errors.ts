@@ -18,8 +18,11 @@ export const errorHandler: ErrorRequestHandler = (error, _req, res, _next) => {
 function toApiError(error: unknown): ApiError {
   if (error instanceof ApiError) return error;
   if (error instanceof z.ZodError) {
-    return new ApiError(400, 'VALIDATION_ERROR', 'Some fields are invalid.', {
-      fields: z.flattenError(error).fieldErrors,
+    const { fieldErrors, formErrors } = z.flattenError(error);
+    // A whole-body problem (such as "Nothing to update.") has no field, so it is the message.
+    const message = Object.keys(fieldErrors).length === 0 ? formErrors[0] : undefined;
+    return new ApiError(400, 'VALIDATION_ERROR', message ?? 'Some fields are invalid.', {
+      fields: fieldErrors,
     });
   }
   if (error instanceof HashingBusyError) {

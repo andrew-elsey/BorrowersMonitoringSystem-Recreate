@@ -137,7 +137,9 @@ test('TC-MD-30: a handler lists only active rooms, whatever the query says; admi
 
   for (const path of ['/api/rooms', '/api/rooms?active=false', '/api/rooms?page=1&pageSize=100']) {
     const list = await handler.get(path).expect(200);
-    expect(list.body).toMatchObject({ total: 1, data: [{ name: 'CL-201', active: true }] });
+    expect(list.body).toMatchObject({ total: 1, data: [{ name: 'CL-201' }] });
+    // HRD-5a: handlers get only id and name.
+    expect(Object.keys(list.body.data[0]).sort()).toEqual(['id', 'name']);
   }
   const tooMany = await handler.get('/api/rooms?pageSize=101').expect(400);
   expect(tooMany.body.error.code).toBe('VALIDATION_ERROR');

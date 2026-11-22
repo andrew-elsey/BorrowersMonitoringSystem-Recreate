@@ -41,12 +41,16 @@ npm run test:db             # start the throwaway test database (needed by npm t
 npm test                    # unit and integration tests (needs TEST_DATABASE_URL in .env or the shell)
 npm run test:nginx          # check the nginx limits through a real nginx in throwaway containers (needs Docker, uses port 18080)
 npm run test:load           # abuse and load tests on a throwaway "bms-load" compose stack, port 18180 (needs Docker, takes about 10 minutes; LOAD_FULL=1 adds a 15 minute wait)
+npm run test:e2e            # Playwright flow (checkout, return, flagging, strike, block, override) in its own compose project bms-e2e on port 18280 (needs Docker, takes about 3 minutes)
 npm run build               # compile shared and api with tsc, build web with Vite
+npm run audit:sweep         # after build: list records with no audit entry (in Docker: docker compose exec api npm run audit:sweep)
 npm run format              # Prettier (Markdown is excluded)
 npm run dev:db              # start only the dev database, published on 127.0.0.1:5432
 npm run db:migrate          # create/apply a migration in development (needs dev:db)
 npm run db:seed             # add missing seed data in development, with sample data (needs dev:db and DATABASE_URL in .env)
 docker compose exec api npm run admin:reset-password -- <username>   # emergency password reset (hidden prompt)
+npm run backup              # pg_dump to BACKUP_DIR (set in .env, outside the repo); keeps 14 days (needs the stack running)
+npm run restore -- <file>   # replace the database from a backup; stops the api, asks you to type the database name
 ```
 
 Not yet created (ticket in brackets):

@@ -168,10 +168,10 @@ describe('asset tags: case, whitespace, length', () => {
     );
   });
 
-  test('an empty asset tag on a QUANTITY item is refused and nothing is created', async () => {
-    const response = await post(supply({ assetTag: '' }));
-    expectFieldError(response, 400, 'VALIDATION_ERROR', 'assetTag');
-    expect(await prisma.item.count()).toBe(0);
+  // HRD-5a: a blank tag means "no tag", which a QUANTITY item accepts.
+  test('an empty asset tag on a QUANTITY item is accepted as no tag', async () => {
+    const response = await post(supply({ assetTag: '' })).expect(201);
+    expect(response.body.item.assetTag).toBeNull();
   });
 
   test('two creates with the same tag in different case at once: one 201, one DUPLICATE_VALUE', async () => {
@@ -289,10 +289,11 @@ describe('category and id checks', () => {
 });
 
 describe('PATCH edge cases', () => {
-  test('an empty PATCH body changes nothing and writes no audit entry', async () => {
+  // HRD-5a: an empty body is "Nothing to update." (400), still changing nothing.
+  test('an empty PATCH body is refused, changes nothing and writes no audit entry', async () => {
     const { id } = await create(unit('P-1'));
     const before = await stored(id);
-    await patch(id, {}).expect(200);
+    await patch(id, {}).expect(400);
     expect(await stored(id)).toEqual(before);
     expect(await auditFor(id)).toHaveLength(1);
   });
@@ -321,10 +322,10 @@ describe('PATCH edge cases', () => {
     expect(await auditFor(id)).toHaveLength(1);
   });
 
-  test('unknown keys in a PATCH body are ignored and never written', async () => {
+  test('a PATCH body of only unknown keys is refused and never written', async () => {
     const { id } = await create(unit('P-3'));
     const before = await stored(id);
-    await patch(id, { id: MISSING_ID, createdAt: '2000-01-01T00:00:00Z', foo: 'bar' }).expect(200);
+    await patch(id, { id: MISSING_ID, createdAt: '2000-01-01T00:00:00Z', foo: 'bar' }).expect(400);
     expect(await stored(id)).toEqual(before);
   });
 

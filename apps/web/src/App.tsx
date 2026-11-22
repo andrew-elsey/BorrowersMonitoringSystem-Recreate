@@ -2,6 +2,7 @@ import { PERMISSIONS, type Role } from '@bms/shared';
 import { lazy, type ReactNode } from 'react';
 import { Navigate, useLocation, type RouteObject } from 'react-router';
 import { AppShell } from './AppShell';
+import { PageLoadError } from './pages/PageLoadError';
 import { useAuth } from './auth';
 import { LoginPage } from './pages/LoginPage';
 import { NotAllowedPage } from './pages/NotAllowedPage';
@@ -33,6 +34,9 @@ const SettingsPage = lazy(() =>
 );
 const ReportsPage = lazy(() =>
   import('./pages/ReportsPage').then((m) => ({ default: m.ReportsPage })),
+);
+const AuditLogPage = lazy(() =>
+  import('./pages/AuditLogPage').then((m) => ({ default: m.AuditLogPage })),
 );
 const ChangePasswordPage = lazy(() =>
   import('./pages/ChangePasswordPage').then((m) => ({ default: m.ChangePasswordPage })),
@@ -70,6 +74,7 @@ export const routes: RouteObject[] = [
         <AppShell />
       </RequireSignIn>
     ),
+    errorElement: <PageLoadError />,
     children: [
       {
         index: true,
@@ -151,6 +156,14 @@ export const routes: RouteObject[] = [
         element: (
           <RequireRole roles={PERMISSIONS.viewDashboardAndReports} pageName="Reports">
             <ReportsPage />
+          </RequireRole>
+        ),
+      },
+      {
+        path: 'audit',
+        element: (
+          <RequireRole roles={PERMISSIONS.viewAuditLog} pageName="Audit log">
+            <AuditLogPage />
           </RequireRole>
         ),
       },

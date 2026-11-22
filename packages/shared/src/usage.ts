@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { realDateField } from './categories.ts';
 
 // Usage summary report (RPT-4, BR section 4). Limits from SPEC.md 7.
 export const REPORT_MAX_RANGE_DAYS = 366;
@@ -17,22 +18,20 @@ export function rangeDays(from: string, to: string): number {
 // included, at most 366 days (SPEC.md 7). Each report schema adds these fields, then applies
 // refineReportRange.
 export const reportRangeFields = {
-  from: z.iso
-    .date('Enter a start date.')
-    // PostgreSQL has no year 0, so 0000-01-01 could not be compared.
-    .refine((date) => date >= '0001-01-01', 'Enter a real date.'),
-  to: z.iso.date('Enter an end date.'),
+  from: realDateField('Enter a start date.'),
+  to: realDateField('Enter an end date.'),
 };
 
 export function refineReportRange<T extends z.ZodType<{ from: string; to: string }>>(schema: T) {
   return (
     schema
-      // YYYY-MM-DD strings sort in date order.
-      .refine((query) => query.to >= query.from, {
+      // A blank or unparseable date already has its own message, so it skips both range checks (HRD-1).
+      // Dates are whole days, so "end before start" is a day count below 1.
+      .refine((query) => !(rangeDays(query.from, query.to) < 1), {
         path: ['to'],
         message: 'The end date cannot be before the start date.',
       })
-      .refine((query) => rangeDays(query.from, query.to) <= REPORT_MAX_RANGE_DAYS, {
+      .refine((query) => !(rangeDays(query.from, query.to) > REPORT_MAX_RANGE_DAYS), {
         path: ['to'],
         message: `The date range can be at most ${REPORT_MAX_RANGE_DAYS} days.`,
       })

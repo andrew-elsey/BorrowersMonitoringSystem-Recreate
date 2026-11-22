@@ -274,3 +274,26 @@ test('TC-AUTH-22: a handler opening Users sees "Not allowed" and no Users menu i
   expect(screen.queryByRole('link', { name: 'Users' })).toBeNull();
   expect(requests(fetchMock, 'GET')).toEqual([]);
 });
+
+// HRD-5b item 15: after a NOT_FOUND the row and its Edit button are gone, so focus goes to + Add user.
+test('TC-HRD-40: an edit refused with NOT_FOUND focuses the Add user button', async () => {
+  let gone = false;
+  fakeApi((method, path) => {
+    if (method === 'PATCH') {
+      gone = true;
+      return { status: 404, body: apiError('NOT_FOUND', 'User not found.') };
+    }
+    return gone && method === 'GET' && path.startsWith('/users')
+      ? { status: 200, body: { data: [TERESA], page: 1, pageSize: 25, total: 1 } }
+      : undefined;
+  });
+  const user = userEvent.setup();
+  renderApp('/users');
+  await user.click(await screen.findByRole('button', { name: 'Edit Juan dela Cruz' }));
+  const dialog = screen.getByRole('dialog', { name: 'Edit Juan dela Cruz' });
+  await user.click(within(dialog).getByRole('button', { name: 'Save changes' }));
+  await screen.findByText('User not found.');
+  await vi.waitFor(() =>
+    expect(document.activeElement).toBe(screen.getByRole('button', { name: /Add user/ })),
+  );
+});

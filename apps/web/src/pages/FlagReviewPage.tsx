@@ -178,6 +178,15 @@ export function FlagReviewPage() {
         </button>
       </div>
 
+      {flags.data && (
+        <p className="text-sm text-muted">
+          {flags.data.lastRun
+            ? `Last flagging run: ${dateTime.format(new Date(flags.data.lastRun.at))}, ${flags.data.lastRun.flagged} ${flags.data.lastRun.flagged === 1 ? 'line' : 'lines'} flagged.`
+            : 'No flagging run yet.'}{' '}
+          {`Next run: ${dateTime.format(new Date(flags.data.nextRunAt))}.`}
+        </p>
+      )}
+
       {runRefused && <Alert kind="wait">{runRefused}</Alert>}
 
       <form
@@ -218,8 +227,8 @@ export function FlagReviewPage() {
         </button>
       </form>
 
-      {flags.data?.borrowerSearchSkipped && (
-        <p className="text-sm text-muted">
+      {!flags.isError && flags.data?.borrowerSearchSkipped && (
+        <p role="status" className="text-sm text-muted">
           Too many borrowers have flagged lines to search by name. Showing matches by item or asset
           tag only.
         </p>

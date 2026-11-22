@@ -102,7 +102,7 @@ export function UsersPage() {
       notify.error(error);
       if (isNotFound(error)) {
         setToEdit(null);
-        return refresh();
+        return refresh().then(() => addButtonRef.current?.focus());
       }
     },
   });
@@ -122,7 +122,7 @@ export function UsersPage() {
       notify.error(error);
       if (isNotFound(error)) {
         setToReset(null);
-        return refresh();
+        return refresh().then(() => addButtonRef.current?.focus());
       }
     },
   });

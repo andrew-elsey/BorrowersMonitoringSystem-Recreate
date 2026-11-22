@@ -74,17 +74,16 @@ describe('created_by comes from the session only', () => {
     expect((await stored(response.body.room.id)).createdById).toBe(handlerId);
   });
 
-  test('an admin PATCH with createdById or transactionCount changes nothing and writes no audit', async () => {
+  test('an admin PATCH with only createdById or transactionCount is refused and changes nothing', async () => {
     const existing = await room('QA-Lab-2');
-    await patch(existing.id, { createdById: handlerId, transactionCount: 9 }).expect(200);
+    await patch(existing.id, { createdById: handlerId, transactionCount: 9 }).expect(400);
     expect((await stored(existing.id)).createdById).toBe(adminId);
     expect(await auditFor(existing.id)).toEqual([]);
   });
 
-  test('an empty PATCH body changes nothing and writes no audit', async () => {
+  test('an empty PATCH body is refused and writes no audit', async () => {
     const existing = await room('QA-Lab-3');
-    const response = await patch(existing.id, {}).expect(200);
-    expect(response.body.room).toMatchObject({ name: 'QA-Lab-3', active: true });
+    await patch(existing.id, {}).expect(400);
     expect(await auditFor(existing.id)).toEqual([]);
   });
 });

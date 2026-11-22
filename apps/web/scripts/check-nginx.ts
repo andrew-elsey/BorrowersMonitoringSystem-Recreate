@@ -14,6 +14,8 @@ import { join } from 'node:path';
 const NGINX_IMAGE = 'nginxinc/nginx-unprivileged:1.30.6-alpine';
 const NODE_IMAGE = 'node:24.11.1-bookworm-slim';
 const NAME = 'bms-nginx-check';
+const SUBNET_PREFIX = '172.29.188';
+const SUBNET = `${SUBNET_PREFIX}.0/24`;
 const PORT = Number(process.env.NGINX_CHECK_PORT ?? 18080);
 const BASE = `http://127.0.0.1:${PORT}`;
 const CONF = new URL('../nginx.conf', import.meta.url).pathname.replace(/^\/(\w:)/, '$1');
@@ -53,12 +55,8 @@ function cleanUp() {
 
 const html = mkdtempSync(join(tmpdir(), `${NAME}-`));
 
-function start() {
-  mkdirSync(join(html, 'assets'));
-  writeFileSync(join(html, 'index.html'), '<!doctype html>');
-  writeFileSync(join(html, 'assets', 'app-abc123.js'), 'console.log(1);');
-
-  docker('network', 'create', NAME);
+// The stub api, with a fixed address so FND-8 can bring it back on a different one.
+function startApi(ip: string) {
   docker(
     'run',
     '-d',
@@ -66,6 +64,8 @@ function start() {
     `${NAME}-api`,
     '--network',
     NAME,
+    '--ip',
+    ip,
     '--network-alias',
     'api',
     NODE_IMAGE,
@@ -73,6 +73,15 @@ function start() {
     '-e',
     STUB,
   );
+}
+
+function start() {
+  mkdirSync(join(html, 'assets'));
+  writeFileSync(join(html, 'index.html'), '<!doctype html>');
+  writeFileSync(join(html, 'assets', 'app-abc123.js'), 'console.log(1);');
+
+  docker('network', 'create', '--subnet', SUBNET, NAME);
+  startApi(`${SUBNET_PREFIX}.10`);
   docker(
     'run',
     '-d',
@@ -243,6 +252,22 @@ const checks: [string, () => Promise<void>][] = [
       assert.ok(limited >= 15, `the second client should be limited, got ${limited} 429s`);
       // ...while this client, on another address, is still allowed.
       assert.equal((await fetch(`${BASE}/api/echo`)).status, 200);
+    },
+  ],
+  [
+    'TC-FND-32: after the api restarts on a new address, nginx reaches it again without a restart',
+    async () => {
+      // A different --ip: otherwise Docker may reuse the old one and the check passes without the fix.
+      docker('rm', '-f', `${NAME}-api`);
+      startApi(`${SUBNET_PREFIX}.11`);
+      let status = 0;
+      for (let attempt = 0; attempt < 30 && status !== 200; attempt++) {
+        await sleep(500);
+        const response = await fetch(`${BASE}/api/echo`);
+        await response.arrayBuffer();
+        status = response.status;
+      }
+      assert.equal(status, 200, 'nginx never found the restarted api (still 502?)');
     },
   ],
 ];

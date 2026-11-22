@@ -40,6 +40,8 @@ const page = (data: FlaggedLine[]): FlaggedLinePage => ({
   blockThreshold: 5,
   hasCurrentSemester: true,
   borrowerSearchSkipped: false,
+  lastRun: null,
+  nextRunAt: '2026-11-03T09:00:00.000Z',
 });
 
 // The admin's fake API: `answer` may reply first; otherwise GET /flags returns `rows`.
