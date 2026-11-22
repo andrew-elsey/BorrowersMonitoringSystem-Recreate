@@ -110,6 +110,6 @@ LOAD_FULL=1 LOAD_REQUIRE_HRD=1 npm run test:load
 
 In PowerShell: `$env:LOAD_FULL=1; $env:LOAD_REQUIRE_HRD=1; npm run test:load`. It takes about 35 minutes and uses port 18180. Run it outside opening hours, and run `npm install` first (the seed and autocannon come from the host's `node_modules`). It builds its own throwaway compose project (`bms-load`) and does not touch the real data.
 
-Keep more than 10 GB free on `C:` as a safety margin: Docker crashed once on the dev machine with about 3 GB free. Check with `Get-PSDrive C` and `docker system df`. Afterwards clean up with `docker image rm bms-load-api bms-load-web` and `docker builder prune`.
+Keep more than 10 GB free on `C:` as a safety margin: Docker crashed once on the dev machine with about 3 GB free. Check with `Get-PSDrive C` and `docker system df`. Afterwards clean up with `docker image rm bms-load-api bms-load-web` and `docker builder prune`. The prune also clears the real app's build cache, so the next `docker compose up --build` takes longer.
 
 `npm run test:nginx` is a developer check. It uses the fixed Docker subnet `172.29.188.0/24`: do not run it on a LAN that uses that range.
