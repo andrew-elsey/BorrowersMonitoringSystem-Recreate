@@ -1,16 +1,27 @@
-import { type APIRequestContext, expect, request, test } from '@playwright/test';
+import {
+  type APIRequestContext,
+  type BrowserContext,
+  expect,
+  type Page,
+  request,
+  test,
+} from '@playwright/test';
 
 // HRD-2 (TC-HRD-60 to 68): checkout, partial return, end-of-day flagging, strike, block, override
 // against the real Docker stack. Data is created through the API as admin (the containers seed only
 // the admin and the settings). Flagging is triggered as the owner decided (D11): closing time is
 // moved to just after the checkouts, which runs flagging at once (S22). Thresholds are lowered to
-// 1/2/3 so three flagged transactions block a borrower.
+// 1/2/3 so three flagged transactions block a borrower. Setup and most checkouts are API calls; one
+// checkout, the partial return, the blocked-borrower screen and the override are done in the browser,
+// which shares the single API login through its cookies.
 
 const baseURL = process.env.BASE_URL ?? 'http://web:8080';
 let api: APIRequestContext;
+let context: BrowserContext;
+let page: Page;
 
 const ids = {} as Record<string, string>; // borrower, room, item, and line ids by name
-let lastIssuedAt = 0;
+let lastIssuedAt = 0; // upper bound of every checkout time, in ms
 
 async function call(method: 'get' | 'post' | 'put', path: string, data?: object) {
   const res = await api[method](`/api${path}`, { data });
@@ -33,7 +44,7 @@ const flaggedLines = async () => (await call('get', '/flags?pageSize=100')).body
 
 test.describe.configure({ mode: 'serial' });
 
-test.beforeAll(async () => {
+test.beforeAll(async ({ browser }) => {
   // nginx allows 5 logins a minute per address: sign in once for the whole flow.
   api = await request.newContext({
     baseURL,
@@ -44,8 +55,13 @@ test.beforeAll(async () => {
     password: process.env.ADMIN_PASSWORD,
   });
   expect(login.status).toBe(200);
+  context = await browser.newContext({ baseURL, storageState: await api.storageState() });
+  page = await context.newPage();
 });
-test.afterAll(async () => api.dispose());
+test.afterAll(async () => {
+  await context.close();
+  await api.dispose();
+});
 
 test('TC-HRD-60 checkout: admin sets up and three borrowers check out items', async () => {
   const semester = (
@@ -82,34 +98,47 @@ test('TC-HRD-60 checkout: admin sets up and three borrowers check out items', as
     ).borrower.id;
   }
 
-  const checkouts = [
-    await checkout('ana', [{ item: 'projector', quantity: 1 }]),
-    await checkout('cara', [{ item: 'cords', quantity: 5 }]),
-  ];
+  const checkouts = [await checkout('ana', [{ item: 'projector', quantity: 1 }])];
   // S6: three separate transactions for Fil, one laptop each.
   for (const n of [1, 2, 3])
     checkouts.push(await checkout('fil', [{ item: `laptop${n}`, quantity: 1 }]));
-  for (const res of checkouts) {
-    expect(res.status, JSON.stringify(res.body)).toBe(201);
-    lastIssuedAt = Math.max(lastIssuedAt, Date.parse(res.body.transaction.issuedAt));
-  }
-  const lineOf = (index: number) => checkouts[index].body.transaction.lines[0].id;
-  ids.anaLine = lineOf(0);
-  ids.caraLine = lineOf(1);
-  for (const n of [1, 2, 3]) ids[`filLine${n}`] = lineOf(1 + n);
+  for (const res of checkouts) expect(res.status, JSON.stringify(res.body)).toBe(201);
+  ids.anaLine = checkouts[0].body.transaction.lines[0].id;
+  for (const n of [1, 2, 3]) ids[`filLine${n}`] = checkouts[n].body.transaction.lines[0].id;
   // The projector is out now, so a second checkout of it is refused.
   const again = await checkout('cara', [{ item: 'projector', quantity: 1 }]);
   expect(again.body.error.code).toBe('ITEM_UNAVAILABLE');
+
+  // Cara borrows all 5 cords on the Checkout screen: borrower, room, item, quantity, confirm.
+  await page.goto('/checkout');
+  await page.getByLabel('Find by name or school ID').fill('Cara');
+  await page.getByRole('button', { name: 'Choose Cara Partial' }).click();
+  await page.getByLabel('Where will the items be used?').selectOption({ label: 'E2E Lab' });
+  await page.getByLabel('Search by name or asset tag').fill('Extension');
+  await page.getByRole('button', { name: 'Add Extension cord' }).click();
+  await page.getByLabel('Quantity of Extension cord').fill('5');
+  await page.getByRole('button', { name: 'Confirm checkout' }).click();
+  await expect(page.getByText('Checkout saved.')).toBeVisible();
+  lastIssuedAt = Date.now();
+  const open = await call('get', '/returns/open?q=Cara');
+  expect(open.body.data).toHaveLength(1);
+  ids.caraLine = open.body.data[0].lineId;
 });
 
 test('TC-HRD-61 return: full same-day return and a partial return of 3 of 5 cords', async () => {
-  const returns = await call('post', '/returns', {
-    lines: [
-      { lineId: ids.anaLine, quantity: 1, condition: 'GOOD' },
-      { lineId: ids.caraLine, quantity: 3, condition: 'GOOD' },
-    ],
+  const same = await call('post', '/returns', {
+    lines: [{ lineId: ids.anaLine, quantity: 1, condition: 'GOOD' }],
   });
-  expect(returns.status, JSON.stringify(returns.body)).toBe(201);
+  expect(same.status, JSON.stringify(same.body)).toBe(201);
+  // Cara returns 3 of her 5 cords on the Return screen.
+  await page.goto('/return');
+  await page.getByLabel('Search', { exact: true }).fill('Cara');
+  await page.getByRole('button', { name: 'Find open borrowings' }).click();
+  await page.getByLabel('Quantity to return for Extension cord').fill('3');
+  await page.getByRole('button', { name: 'Return quantity' }).click();
+  await expect
+    .poll(async () => (await call('get', '/returns/open?q=Cara')).body.data[0].outstanding)
+    .toBe(2);
   // S15: only 2 cords are still out.
   const tooMany = await call('post', '/returns', {
     lines: [{ lineId: ids.caraLine, quantity: 3, condition: 'GOOD' }],
@@ -153,6 +182,14 @@ test('TC-HRD-63 strike: one per flagged transaction, not per line', async () => 
 });
 
 test('TC-HRD-64 block: Fil is blocked from borrowing but can still return', async () => {
+  // The Checkout screen shows the block and will not let the checkout be confirmed.
+  await page.goto('/checkout');
+  await page.getByLabel('Find by name or school ID').fill('Fil');
+  await page.getByRole('button', { name: 'Choose Fil Student' }).click();
+  await expect(page.getByText('Blocked: 3 strikes.')).toBeVisible();
+  await expect(page.getByText('Checkout is blocked for this borrower')).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Confirm checkout' })).toBeDisabled();
+  // The server refuses it too (rule 2).
   const blocked = await checkout('fil', [{ item: 'projector', quantity: 1 }]);
   expect(blocked.status).toBe(409);
   expect(blocked.body.error.code).toBe('BORROWER_BLOCKED');
@@ -163,11 +200,7 @@ test('TC-HRD-64 block: Fil is blocked from borrowing but can still return', asyn
   expect(await strikes('fil')).toBe(3); // BR 6: returning never removes a flag
 });
 
-test('TC-HRD-65 and 66 flag review screen shows the last run and the flagged lines, then the admin overrides one', async ({
-  browser,
-}) => {
-  const context = await browser.newContext({ baseURL, storageState: await api.storageState() });
-  const page = await context.newPage();
+test('TC-HRD-65 and 66 flag review screen shows the last run and the flagged lines, then the admin overrides one', async () => {
   await page.goto('/flags');
   await expect(page.getByText(/Last flagging run: .*4 lines flagged/)).toBeVisible();
   await expect(
@@ -181,7 +214,6 @@ test('TC-HRD-65 and 66 flag review screen shows the last run and the flagged lin
   await expect(
     page.getByRole('button', { name: /Override flag for Fil Student, Laptop 1/ }),
   ).toHaveCount(0);
-  await context.close();
   expect(await strikes('fil')).toBe(2);
 });
 

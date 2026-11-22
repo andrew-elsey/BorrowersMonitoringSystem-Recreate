@@ -28,6 +28,8 @@ const run = (args: string[]) => spawnSync('docker', args, { cwd: root, env, stdi
 const compose = (...args: string[]) => run(['compose', '-p', 'bms-e2e', ...args]);
 
 let status = 1;
+// Ctrl+C skips the finally block below, so start from a clean project after an interrupted run.
+compose('down', '-v');
 try {
   if (compose('up', '-d', '--build', '--wait').status === 0) {
     status =
