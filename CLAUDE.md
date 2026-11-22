@@ -40,6 +40,7 @@ npm run typecheck
 npm run test:db             # start the throwaway test database (needed by npm test)
 npm test                    # unit and integration tests (needs TEST_DATABASE_URL in .env or the shell)
 npm run test:nginx          # check the nginx limits through a real nginx in throwaway containers (needs Docker, uses port 18080)
+npm run test:load           # abuse and load tests on a throwaway "bms-load" compose stack, port 18180 (needs Docker, takes about 10 minutes; LOAD_FULL=1 adds a wait of up to 15 minutes, about 35 minutes in all)
 npm run test:e2e            # Playwright flow (checkout, return, flagging, strike, block, override) in its own compose project bms-e2e on port 18280 (needs Docker, takes about 3 minutes)
 npm run build               # compile shared and api with tsc, build web with Vite
 npm run audit:sweep         # after build: list records with no audit entry (in Docker: docker compose exec api npm run audit:sweep)

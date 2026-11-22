@@ -212,7 +212,7 @@ Moving to a department PC means copying the repo, creating `.env`, and running `
 - **Integration tests** (Vitest and Supertest) against a real PostgreSQL database, started through a Docker Compose test profile. Each test file starts from a clean schema. The database comes from `TEST_DATABASE_URL` (shell first, then `.env`), which is required with no default (owner decision 2026-11-08): two suites sharing one database wipe each other's rows, so each worktree running tests at the same time uses its own database name ending in `_test` (create it on the db-test container first). Every scenario S1 to S23 in `BUSINESS_RULES.md` becomes a test.
 - **Component tests** (React Testing Library in jsdom, with `fetch` replaced by a fake API) for the login and change-password forms (AUTH-4) and the checkout and return forms.
 - **End-to-end** (Playwright, HRD-2): checkout, partial return, flagging, strike, block, override. `npm run test:e2e` runs it in a separate compose project (`bms-e2e`, port 18280, throwaway secrets, `down -v` at the end) with the Playwright container on that network; it creates its data through the API as admin, triggers flagging by moving the closing time just past the checkouts (S22), and lowers the strike thresholds to 1, 2, 3 to reach a block. The image tag must match the `@playwright/test` version.
-- **Abuse and load tests** (autocannon, SEC-2): login flood, slow connections, oversized bodies and uploads, maximum-range reports, all run from a separate container against the compose stack. Pass criteria are in section 12.7.
+- **Abuse and load tests** (autocannon, SEC-2): login flood, slow connections, oversized bodies and uploads, maximum-range reports, all run from a separate container against the compose stack. They live in `tests/load` and run with `npm run test:load` (not part of `npm test`; it needs Docker and takes about 10 minutes, or about 35 with `LOAD_FULL=1`). Pass criteria and the recorded results are in section 12.7.
 - Use an injected clock for anything involving closing time or semesters.
 
 ## 12. Abuse and denial-of-service resistance
@@ -294,6 +294,32 @@ Ticket SEC-2 load-tests these protections with autocannon, run from a separate c
 5. **Flagging under load:** the flagging job runs correctly, without overlapping runs, while the API is under load.
 
 Record the results and any tuned limits in this section.
+
+**How to run it.** `npm run test:load` (needs Docker; about 10 minutes, `LOAD_FULL=1` adds a wait of up to 15 minutes for the throttle window of TC-SEC-22, about 35 minutes in all). It builds its own compose project `bms-load` (web on `127.0.0.1:18180`, database `bms_load`, throwaway secrets made at start, volumes removed at the end), so it never touches the real stack. Files in `tests/load`:
+
+- `seed.ts` and `seed.sql` load 5,000 borrowers, 500 items, 20,000 transactions and about 104,500 audit rows (CHECKOUT, RETURN, LINE_FLAGGED and ITEM_UPDATED, like the real code writes). `seed.ts` refuses when `NODE_ENV` is production or the database name has no "load" in it, and the SQL checks `current_database()` again. It runs on the host because the api container always has `NODE_ENV=production`.
+- `run.ts` and `slow.ts` run inside a `node:24.11.1-bookworm-slim` container on the compose network and talk to `http://web:8080`, so the load comes from another address and goes through nginx. `run.ts` calls the autocannon CLI (`--json`).
+- `main.ts` drives it all. The "other client" and every measurement run on the host (another source address than the load), plus SQL checks and `docker stats` / `docker inspect`.
+- Heavy reads are measured as five sequential requests per endpoint, not a flood: the reports limit (30 a minute), the search limit (60 a minute) and nginx (10 a second) would otherwise turn the test into a 429 test.
+- The audit viewer timings (HRD-1) and the `FLAGGING_RUN` entry check (HRD-1b) are skipped with a message while the endpoint or entries are missing. `LOAD_REQUIRE_HRD=1` turns those skips into failures.
+
+**Results: final run on 2026-11-22, branch feature/SEC-2-load-tests merged with feature/SPRINT-6 (head 61fd6f1), `LOAD_FULL=1 LOAD_REQUIRE_HRD=1 npm run test:load`: 19 passed, 0 failed, 0 skipped.**
+
+Machine: 12 x 12th Gen Intel Core i5-12400F, 31.8 GiB RAM, Windows 11, Docker Desktop 4.93.0 (engine 29.8.1; 12 CPUs, 15.5 GiB for the Docker VM), 2026-11-22. Load generator and stack share this one machine, which is harder on the stack than a separate load machine.
+
+| # | Criterion | Result |
+|---|---|---|
+| 1 | Login flood | 200 connections for 60 s: 815,688 requests, answered 401 (10) and 429 (815,678, from nginx), no 5xx, no errors or timeouts, p99 98 ms. The signed-in client from the host did checkout, return and dashboard cycles (204 requests): p95 82 ms, max 361 ms, no failures. api peak memory 170 of 512 MiB, no OOM kill, no restart. A valid login from another source worked right after the flood. After the 15 minute throttle window a valid login from the flooded address returned 200 (TC-SEC-22, `LOAD_FULL=1`). |
+| 2 | Slow connections | 25 sockets dripping header bytes for 25 s: nginx closed all 25 after about 10 s (last at 10,013 ms, `client_header_timeout`). The other client (120 requests) had p95 21 ms and no failures. |
+| 3 | Oversized input | 150 KB JSON and 3 MB CSV under load (82 and 42 requests): every answer was 413 `PAYLOAD_TOO_LARGE` from nginx. The replies carry none of the headers Express adds (a normal API reply does), so nothing reached the api. |
+| 4 | Heavy reads | Slowest of the sequential requests (three for each audit filter, 150 ms pause between calls, to stay under the shared 30 a minute reports limit) on the seeded data, all 200: usage 366 days 32 ms; borrower history 366 days page 100 30 ms; item history 366 days page 100 27 ms; items `?q=` 37 ms; borrowers `?q=` 36 ms; `/api/returns/open?q=` 19 ms; `/api/flags?q=` 19 ms; audit viewer 366 days 16 ms, with `entity=transaction` 22 ms, with `actor=admin` 24 ms. No audit index migration is needed. |
+| 5 | Flagging under load | `POST /api/flagging/run` and an unchanged `PUT /api/settings` (which also starts a run, with no one-a-minute limit) fired at the same moment, while autocannon ran 160 dashboard requests (all 200): both answered 200, the manual run flagged all 499 eligible lines, nothing eligible was left unflagged, no line has more than one `LINE_FLAGGED` entry, and the 499 new entries equal the lines flagged. Exactly one new `FLAGGING_RUN` entry is well-formed and accounts for all 499 lines. |
+
+End of run: api 185 of 512 MiB, web 12 of 128 MiB, db 108 of 1,024 MiB, no restart or OOM kill in any service.
+
+**Tuned limits:** none.
+
+**What this does not show.** Which of the two simultaneous runs wins the advisory lock is not asserted (either order is fine); the test checks the database, not one reply. The slow-connection test uses 25 sockets from one address, below the 30 connections per address limit.
 
 ## 13. Decision log
 
