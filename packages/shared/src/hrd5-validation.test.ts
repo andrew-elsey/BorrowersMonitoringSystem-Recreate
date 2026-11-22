@@ -98,6 +98,25 @@ describe('TC-HRD-57: a blank or unparseable date gets only its own message', () 
   });
 });
 
+describe('TC-HRD-58: one message per bad date', () => {
+  const semester = { name: 'S', startDate: '2026-01-01', endDate: '2026-01-01' };
+  test('a blank end date and a malformed year-0 date get one message each', () => {
+    expect(messages(semesterSchema, { ...semester, endDate: '' })).toEqual(['Enter an end date.']);
+    expect(messages(usageQuerySchema, { from: '0000-xx', to: '2026-11-22' })).toEqual([
+      'Enter a start date.',
+    ]);
+    expect(messages(usageQuerySchema, { from: '0000-01-01', to: '2026-11-22' })).toContain(
+      'Enter a real date.',
+    );
+  });
+  test('real semester dates still behave: same day is fine, end before start is refused', () => {
+    expect(messages(semesterSchema, semester)).toEqual([]);
+    expect(messages(semesterSchema, { ...semester, endDate: '2025-12-31' })).toEqual([
+      'The end date cannot be before the start date.',
+    ]);
+  });
+});
+
 describe('TC-HRD-50: an empty PATCH body is refused', () => {
   test.each([
     ['items', itemUpdateSchema],
