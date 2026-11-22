@@ -92,6 +92,12 @@ describe('TC-HRD-49: one real-date field', () => {
   });
 });
 
+describe('TC-HRD-57: a blank or unparseable date gets only its own message', () => {
+  test.each(['', 'abc'])('from %j gives one issue and no range message on `to`', (from) => {
+    expect(messages(usageQuerySchema, { from, to: '2026-11-22' })).toEqual(['Enter a start date.']);
+  });
+});
+
 describe('TC-HRD-50: an empty PATCH body is refused', () => {
   test.each([
     ['items', itemUpdateSchema],

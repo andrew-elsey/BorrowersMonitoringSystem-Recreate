@@ -1,8 +1,11 @@
 import { spawnSync } from 'node:child_process';
+import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 import { backupFileName, filesToPrune, isBackupFile, isConfirmed } from '../scripts/backup-lib.ts';
 
 // TC-HRD-25 to TC-HRD-27: the pure choices the backup and restore scripts make.
+const apiDir = fileURLToPath(new URL('..', import.meta.url));
+const scriptsDir = fileURLToPath(new URL('../scripts', import.meta.url)); // a folder, not a file
 const DAY = 24 * 60 * 60 * 1000;
 const NOW = Date.parse('2026-11-14T12:00:00Z');
 
@@ -40,13 +43,17 @@ describe('restore confirmation', () => {
   });
 });
 
-describe('restore with a missing file', () => {
-  it('TC-HRD-56: says the file does not exist, exits 1, and touches nothing', () => {
-    // The check comes before the terminal check, so this works without a terminal or Docker.
-    const run = spawnSync(process.execPath, ['scripts/restore.ts', 'C:/nope/x.dump'], {
-      encoding: 'utf8',
-    });
-    expect(run.status).toBe(1);
-    expect(run.stderr.trim()).toBe('That file does not exist. Nothing was changed.');
-  });
+describe('restore with a missing file or a folder', () => {
+  it.each(['C:/nope/x.dump', scriptsDir])(
+    'TC-HRD-56: %s is refused with one line, exit 1, and nothing touched',
+    (path) => {
+      // The check comes before the terminal check, so this works without a terminal or Docker.
+      const run = spawnSync(process.execPath, ['scripts/restore.ts', path], {
+        cwd: apiDir, // the script path is relative, so the folder must not depend on where vitest started
+        encoding: 'utf8',
+      });
+      expect(run.status).toBe(1);
+      expect(run.stderr.trim()).toBe('That file does not exist. Nothing was changed.');
+    },
+  );
 });

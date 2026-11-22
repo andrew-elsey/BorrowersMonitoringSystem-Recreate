@@ -25,9 +25,9 @@ export const reportRangeFields = {
 export function refineReportRange<T extends z.ZodType<{ from: string; to: string }>>(schema: T) {
   return (
     schema
-      // YYYY-MM-DD strings sort in date order.
-      // A blank or bad date already has its own message, so it skips the range checks (HRD-1).
-      .refine((query) => !query.from || !query.to || query.to >= query.from, {
+      // A blank or unparseable date already has its own message, so it skips both range checks (HRD-1).
+      // Dates are whole days, so "end before start" is a day count below 1.
+      .refine((query) => !(rangeDays(query.from, query.to) < 1), {
         path: ['to'],
         message: 'The end date cannot be before the start date.',
       })
