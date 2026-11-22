@@ -37,11 +37,14 @@ npm run typecheck   # tsc in every workspace
 npm test            # Vitest across all workspaces (needs npm run test:db and TEST_DATABASE_URL)
 npm run test:nginx  # nginx limits through a real nginx (needs Docker)
 npm run test:load   # abuse and load tests (needs Docker, about 10 minutes)
+npm run backup      # database backup to BACKUP_DIR (docs/DEPLOYMENT.md)
+npm run restore -- <file>   # replace the database from a backup
+npm run audit:sweep # after build: records with no audit entry
 npm run build       # compile shared and api to dist/, build web with Vite
 npm run format      # Prettier
 ```
 
-More commands (database, seed) are added by later tickets; `CLAUDE.md` lists them.
+`CLAUDE.md` lists every command, including the database and seed ones.
 
 ## Running with Docker
 
@@ -56,7 +59,7 @@ Open http://127.0.0.1:8080. Three containers start:
 - **api**: the compiled Express API. Not published to the host; nginx reaches it on port 3000.
 - **web**: nginx serving the React build and proxying `/api` to the api.
 
-Only the web port is published, and by default only to this machine. To reach the app from other machines on the LAN, set `WEB_BIND_ADDRESS` in `.env` to this PC's LAN address. All variables are described in `.env.example` and `docs/ARCHITECTURE.md` section 10.
+Only the web port is published, and by default only to this machine. To reach the app from other machines on the LAN, set `WEB_BIND_ADDRESS` in `.env` to this PC's LAN address. The full department PC setup (LAN address, `COOKIE_SECURE`, firewall, backups, restore, settings, day-to-day operation) is in [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md). Never expose the app to the internet. All variables are described in `.env.example` and `docs/ARCHITECTURE.md` section 10.
 
 ## Development data
 
