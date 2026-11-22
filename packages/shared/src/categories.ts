@@ -25,7 +25,7 @@ export const textField = (missing: string) =>
 
 // A date field YYYY-MM-DD. PostgreSQL has no year 0, so 0000-01-01 could not be stored or compared.
 export const realDateField = (missing: string) =>
-  z.iso.date(missing).refine((date) => date >= '0001-01-01', 'Enter a real date.');
+  z.iso.date(missing).refine((date) => !date.startsWith('0000-'), 'Enter a real date.'); // not `>= 0001`, which also flagged a blank date
 
 // Refine for PATCH bodies, checked on the parsed object so unknown (stripped) keys count as empty.
 export const nothingToUpdate = [
