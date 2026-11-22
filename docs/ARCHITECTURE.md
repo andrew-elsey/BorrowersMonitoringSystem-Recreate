@@ -29,7 +29,7 @@ Adding a dependency outside this list needs the owner's approval.
 ```
 /
   CLAUDE.md
-  docs/                  SPEC.md, BUSINESS_RULES.md, ARCHITECTURE.md, BACKLOG.md
+  docs/                  SPEC.md, BUSINESS_RULES.md, ARCHITECTURE.md, BACKLOG.md, DEPLOYMENT.md
   apps/
     api/
       Dockerfile
@@ -224,7 +224,7 @@ Goal: someone on the network (or an attacker, if the app is ever exposed) cannot
 ### 12.1 Network exposure
 
 - Publish only the web port. The db and api ports are never published to the host, except through a development override file.
-- Bind the web port to the LAN address (for example `"192.168.1.20:8080:80"`) or restrict it with the host firewall to the department subnet.
+- Bind the web port to the LAN address with `WEB_BIND_ADDRESS` (for example `192.168.1.20`, which gives `192.168.1.20:8080:8080`) or restrict it with the host firewall to the department subnet.
 - Do not expose the app to the internet. For remote access use a VPN. If it must ever be public, put it behind a CDN or WAF, serve it over HTTPS, and set `COOKIE_SECURE=true`.
 
 ### 12.2 nginx (first line of defense)
@@ -279,8 +279,8 @@ argon2 is deliberately slow and memory hungry, which makes `/api/auth/login` the
 - Log rotation with the `json-file` driver (`max-size: 10m`, `max-file: 3`) so logs cannot fill the disk.
 - Rate-limit hits are logged at warn level with the IP, never with passwords or session IDs.
 - Containers run as a non-root user.
-- Backup files are stored outside the web root, in a folder only the admin account can read (on Windows, remove other accounts' access with `icacls`; the step is written up in HRD-4).
-- **Backup** (`npm run backup`, `apps/api/scripts/backup.ts`): needs `BACKUP_DIR` (no default; it refuses to run without it). Runs `pg_dump -Fc --exclude-table-data=session` in the db container and streams it to `bms-YYYYMMDD-HHmmss.dump.partial`, renamed only when `pg_dump` exits 0 with a non-empty file. Only after a good backup does it delete `bms-*.dump` files older than 14 days (never any other file). A daily Task Scheduler job runs it (HRD-4).
+- Backup files are stored outside the web root, in a folder only the admin account can read (on Windows, remove other accounts' access with `icacls`; the step is in `docs/DEPLOYMENT.md`).
+- **Backup** (`npm run backup`, `apps/api/scripts/backup.ts`): needs `BACKUP_DIR` (no default; it refuses to run without it). Runs `pg_dump -Fc --exclude-table-data=session` in the db container and streams it to `bms-YYYYMMDD-HHmmss.dump.partial`, renamed only when `pg_dump` exits 0 with a non-empty file. Only after a good backup does it delete `bms-*.dump` files older than 14 days (never any other file). A daily Task Scheduler job runs it (`docs/DEPLOYMENT.md`).
 - **Restore** (`npm run restore -- <file>`, `restore.ts`): first checks that the file exists ("That file does not exist. Nothing was changed.", exit 1), then needs a terminal. It checks the file with `pg_restore --list`, asks the person to type the database name, stops the api, runs `pg_restore --clean --if-exists --no-owner --single-transaction`, and always starts the api again (which reruns migrations and the seed). It replaces all data, and every session is gone afterwards, so everyone signs in again. Because it is one transaction, a failed restore leaves the database as it was.
 
 ### 12.7 Verification

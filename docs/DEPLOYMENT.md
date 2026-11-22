@@ -1,6 +1,6 @@
 # Deployment guide: department PC on the LAN
 
-How to run the app on the department PC and reach it from other machines on the network (HRD-4). It assumes Windows 11, Docker Desktop (set to start at login), the repo cloned on the PC, and a fixed address for the PC (a static IP, or a DHCP reservation on the router). Variables are described in `.env.example` and `docs/ARCHITECTURE.md` section 10.
+How to run the app on the department PC and reach it from other machines on the network (HRD-4). It assumes Windows 11, Docker Desktop (set to start at login), Node.js 24 (the version in `.nvmrc`, because `npm run backup` runs Node on the PC itself), the repo cloned on the PC, and a fixed address for the PC (a static IP, or a DHCP reservation on the router). Variables are described in `.env.example` and `docs/ARCHITECTURE.md` section 10.
 
 ## 1. Keep it off the internet
 
@@ -22,7 +22,7 @@ In PowerShell use `Copy-Item .env.example .env`. Edit `.env` (never commit it):
 |---|---|
 | `POSTGRES_PASSWORD` | Required. Letters and digits only. |
 | `ADMIN_PASSWORD` | Required, at least 10 characters. Wrap it in single quotes if it contains `$` or `#`. |
-| `SESSION_SECRET` | Required. A long random string, for example the output of `openssl rand -hex 32`. |
+| `SESSION_SECRET` | Required. A long random string, for example the output of `node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"`. |
 | `COOKIE_SECURE` | Keep `false`. The LAN uses plain HTTP, and browsers drop a secure cookie on HTTP, so nobody could sign in. |
 | `WEB_BIND_ADDRESS` | The PC's LAN address, for example `192.168.1.20`. The default `127.0.0.1` reaches the app from this PC only. |
 | `WEB_PORT` | Port people use. Default `8080`. |
@@ -38,35 +38,35 @@ docker compose up -d --build
 
 The api applies the database migrations, then creates the first admin (`ADMIN_USERNAME`, default `admin`, with `ADMIN_PASSWORD`) and the default settings. `ADMIN_PASSWORD` only matters on the first start: changing it later does not change the admin's password.
 
-1. Open `http://127.0.0.1:8080` on the PC (or `http://<LAN address>:8080`) and sign in as the admin.
+1. Open `http://<LAN address>:8080` (the address in `WEB_BIND_ADDRESS`; `127.0.0.1` no longer works once it is set) and sign in as the admin.
 2. Change the admin password (Change password).
 3. Open Settings and semesters and set the values in section 7.
 
-Docker Desktop restarts the containers when it starts (`restart: unless-stopped`). In Docker Desktop settings, turn on "Start Docker Desktop when you sign in to your computer".
+Docker Desktop restarts the containers when it starts (`restart: unless-stopped`). In Docker Desktop settings, turn on "Start Docker Desktop when you sign in to your computer". The app starts only after someone signs in, so after a Windows Update restart it stays down until someone signs in to the PC.
 
 ## 4. Let other machines in (firewall)
 
 Docker publishes the port on the address from `WEB_BIND_ADDRESS`; Windows Firewall must also allow it. In an administrator PowerShell, allow the web port from the department subnet only (change the port and subnet to yours):
 
 ```
-New-NetFirewallRule -DisplayName "BMS web" -Direction Inbound -Protocol TCP -LocalPort 8080 -RemoteAddress 192.168.1.0/24 -Action Allow
+New-NetFirewallRule -DisplayName "BMS web" -Direction Inbound -Protocol TCP -LocalPort 8080 -Profile Private -RemoteAddress 192.168.1.0/24 -Action Allow
 ```
 
-From another machine on the LAN, open `http://<LAN address>:8080` and sign in. If it does not load, check: the PC's address with `ipconfig` matches `WEB_BIND_ADDRESS` (after a change run `docker compose up -d`); the firewall rule exists; the Windows network profile is Private, not Public. If the PC's address changes, the app is unreachable until `.env` is fixed, which is why the address must be fixed.
+From another machine on the LAN, open `http://<LAN address>:8080` and sign in. If it does not load, check: the PC's address with `ipconfig` matches `WEB_BIND_ADDRESS` (after a change run `docker compose up -d`); the firewall rule exists; the Windows network profile is Private, not Public. A Block rule for "Docker Desktop Backend" (made by clicking Cancel on Docker's first firewall prompt) overrides any Allow rule: delete it in Windows Defender Firewall, Inbound Rules. If the PC's address changes, the app is unreachable until `.env` is fixed, which is why the address must be fixed.
 
 ## 5. Backups
 
 `npm run backup` makes a `pg_dump` file (session data is not included).
 
 1. Make the folder outside the repo and outside anything the web serves, for example `C:\bms-backups`, and set `BACKUP_DIR=C:\bms-backups` in `.env`.
-2. Let only the Windows account that runs the backups use it (administrator PowerShell, replace `<account>`):
+2. Let only the Windows account that runs the backups use it. Get `<account>` by running `whoami` in a normal PowerShell; administrator rights are not needed for this step:
 
    ```
    icacls C:\bms-backups /inheritance:r /grant:r "<account>:(OI)(CI)F"
    ```
 
 3. Run `npm install` once in the repo (the script runs on the host with Node), then try `npm run backup`. It writes `bms-YYYYMMDD-HHmmss.dump` (the PC's local time) and, only after a good backup, deletes `bms-*.dump` files older than 14 days. Backups are kept 14 days.
-4. Schedule it daily in Task Scheduler: Create Task, a Daily trigger outside opening hours, action "Start a program" with program `npm.cmd`, arguments `run backup`, and **Start in** set to the repo folder. The folder matters: the script finds the compose project and `.env` from it. Docker Desktop must be running, so run the task only when you are signed in.
+4. Schedule it daily in Task Scheduler: Create Task. Trigger: Daily, at a time the PC is reliably on and someone is signed in, for example 30 minutes after closing time. Action "Start a program": program is the full path from `(Get-Command npm.cmd).Source` (usually `C:\Program Files\nodejs\npm.cmd`), arguments `run backup`, and **Start in** is the repo folder (no quotes). The folder matters: the script finds the compose project and `.env` from it. Docker Desktop must be running, so choose "Run only when user is logged on", and in Settings tick "Run task as soon as possible after a scheduled start is missed".
 5. Run the task once from Task Scheduler and check that a new file appears.
 
 Now and then copy the backups to another disk or machine: a backup on the same PC does not survive a dead disk.
@@ -94,6 +94,7 @@ Admins set these in Settings and semesters. The server enforces them (`docs/BUSI
 
 - Staff sign in and record checkouts and returns; borrowers never sign in.
 - After an error while saving a checkout or return, check the borrower's open items (or the dashboard) before entering it again, so it is not recorded twice.
+- Every morning (or at least weekly), check that the newest file in the backup folder is from the last working day. A backup job can fail without any message.
 - If the app does not respond, run `docker compose ps` and `docker compose logs api`.
 - Audit check: `docker compose exec api npm run audit:sweep` lists records with no audit entry. It changes nothing and exits 1 when it finds problems.
 - Lost admin password: `docker compose exec api npm run admin:reset-password -- <username>` (asks for the new password at a hidden prompt).
@@ -107,6 +108,8 @@ Once after setup, re-run the abuse and load test on this PC and compare the numb
 LOAD_FULL=1 LOAD_REQUIRE_HRD=1 npm run test:load
 ```
 
-In PowerShell: `$env:LOAD_FULL=1; $env:LOAD_REQUIRE_HRD=1; npm run test:load`. It takes about 35 minutes, needs more than 10 GB free disk and Docker running, and uses port 18180. It builds its own throwaway compose project (`bms-load`) and does not touch the real data.
+In PowerShell: `$env:LOAD_FULL=1; $env:LOAD_REQUIRE_HRD=1; npm run test:load`. It takes about 35 minutes and uses port 18180. Run it outside opening hours, and run `npm install` first (the seed and autocannon come from the host's `node_modules`). It builds its own throwaway compose project (`bms-load`) and does not touch the real data.
+
+Keep more than 10 GB free on `C:` as a safety margin: Docker crashed once on the dev machine with about 3 GB free. Check with `Get-PSDrive C` and `docker system df`. Afterwards clean up with `docker image rm bms-load-api bms-load-web` and `docker builder prune`.
 
 `npm run test:nginx` is a developer check. It uses the fixed Docker subnet `172.29.188.0/24`: do not run it on a LAN that uses that range.
