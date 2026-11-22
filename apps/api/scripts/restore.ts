@@ -2,7 +2,7 @@
 // This REPLACES the whole database. The api is stopped first and started again afterwards, which
 // reruns migrations and the seed. Every session is gone after a restore, so everyone signs in again.
 import { spawn, spawnSync } from 'node:child_process';
-import { closeSync, openSync } from 'node:fs';
+import { closeSync, openSync, statSync } from 'node:fs';
 import { once } from 'node:events';
 import { createInterface } from 'node:readline/promises';
 import { isConfirmed, loadEnv } from './backup-lib.ts';
@@ -15,6 +15,8 @@ function fail(message: string): never {
 loadEnv();
 const file = process.argv[2];
 if (!file) fail('Usage: npm run restore -- <path to a bms-*.dump file>');
+if (!statSync(file, { throwIfNoEntry: false })?.isFile())
+  fail('That file does not exist. Nothing was changed.');
 if (!process.stdin.isTTY)
   fail('Restore needs a person at the keyboard (it asks for a typed confirmation).');
 

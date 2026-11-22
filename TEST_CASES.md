@@ -317,6 +317,7 @@ Paths are shortened: `api/` is `apps/api/tests/`, `web/` is `apps/web/src/pages/
 | TC-HRD-28 | HRD-3 | ARCH 12.6 | manual | Run `npm run backup` without `BACKUP_DIR`, and with the db stopped | Refuses with a clear message; no file kept, old backups not deleted | manual |
 | TC-HRD-29 | HRD-3 | ARCH 12.6 | manual | Run `npm run restore` from a non-terminal, with a wrong confirmation, and with a corrupt file | Refuses each time; api not stopped; data unchanged | manual |
 | TC-HRD-07 | HRD-4 | ARCH 12.1 | manual | Follow the LAN guide on another PC | App reachable from the network with `COOKIE_SECURE=false`; port bound to the LAN address | not yet |
+| TC-HRD-56 | HRD-3 | ARCH 12.6 | unit | Run restore with a path that does not exist, and with a folder | One line "That file does not exist. Nothing was changed.", exit 1, no stack trace; api not stopped | `apps/api/tests/backup.test.ts` |
 | TC-HRD-08 | HRD-5, HRD-5b | SPEC 8 | manual | Go through each screen with bad input, slow loads, and empty data. Use only the keyboard on Checkout and on every list's edit and delete dialogs | Clear messages, consistent loading and empty states (the shared Loading and empty rows, no new patterns), keyboard-friendly checkout; focus never drops to the page body. The UI items are covered by TC-HRD-30 to TC-HRD-44 | manual (HRD-5b checklist pass: no screen needed a change) |
 | TC-HRD-30 | HRD-5b | SPEC 8, ARCH 13 | component | Show two messages, press Dismiss on the first with the keyboard, then on the last | Focus moves to the next message's Dismiss button, then to the main area, and the page does not scroll (preventScroll) | `components/Notifications.test.tsx` |
 | TC-HRD-31 | HRD-5b | SPEC 8 | component | Return screen: search answered with SEARCH_TOO_BROAD | The message shows as an error with no Retry button | `pages/ReturnPage.test.tsx` |
@@ -346,6 +347,9 @@ Paths are shortened: `api/` is `apps/api/tests/`, `web/` is `apps/web/src/pages/
 | TC-HRD-52 | HRD-5a | SPEC 3 | integration | GET /api/rooms as handler and as admin | Handler rows have only `id` and `name`; admin rows are complete | `api/hrd5-api.test.ts` |
 | TC-HRD-53 | HRD-5a | SPEC 7 | integration | `?page=abc`; semester starting `0000-01-01` | 400 with plain messages (no 500) | `api/hrd5-api.test.ts` |
 | TC-HRD-54 | HRD-5a | BR 11 | integration | Update settings thresholds out of order in SQL/Prisma | Rejected by `settings_threshold_order` | `api/hrd5-api.test.ts` |
+| TC-HRD-58 | HRD-1 | SPEC 7 | unit | Semester with a blank end date; report `from=0000-xx`; `from=0000-01-01`; semester end equal to and before start | One message each ("Enter an end date.", "Enter a start date.", "Enter a real date."); same day OK; end before start refused | `shared/hrd5-validation.test.ts` |
+| TC-HRD-57 | HRD-1 | SPEC 7 | unit | Report range with `from=""`, then `from=abc`, `to=2026-11-22` | Only "Enter a start date." each time, no message on `to` | `shared/hrd5-validation.test.ts` |
+| TC-HRD-55 | HRD-1 | SPEC 7 | component | Audit log: clear From and press Filter | Only "Enter a start date." under From, nothing on To, old result box hidden, no request | `pages/AuditLogPage.test.tsx` |
 
 ## DOC: Documentation
 

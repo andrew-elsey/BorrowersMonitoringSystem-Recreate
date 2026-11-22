@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { realDateField, textField } from './categories.ts';
+import { rangeDays } from './usage.ts';
 
 // Semesters and settings (MD-7, SPEC.md 4).
 
@@ -11,8 +12,8 @@ export const semesterSchema = z
     startDate: realDateField('Enter a start date.'),
     endDate: realDateField('Enter an end date.'),
   })
-  // YYYY-MM-DD strings sort in date order.
-  .refine((semester) => semester.endDate >= semester.startDate, {
+  // A blank or unparseable date already has its own message, so it skips this check (day count below 1 = end before start).
+  .refine((semester) => !(rangeDays(semester.startDate, semester.endDate) < 1), {
     path: ['endDate'],
     message: 'The end date cannot be before the start date.',
   });
