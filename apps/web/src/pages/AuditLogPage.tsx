@@ -195,7 +195,7 @@ export function AuditLogPage() {
         </button>
       </form>
 
-      {audit.isError ? (
+      {errors.from || errors.to ? null : audit.isError ? (
         <RetryAlert query={audit} onRetried={() => fromRef.current?.focus()} />
       ) : (
         <DataTable

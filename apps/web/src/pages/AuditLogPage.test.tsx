@@ -122,6 +122,20 @@ test('TC-HRD-19: a range over 366 days is refused in the form and no request is 
   expect(auditRequests(fetchMock)).toHaveLength(1);
 });
 
+test('TC-HRD-55: a cleared From shows only the start-date message and hides the old result', async () => {
+  const fetchMock = fakeApi([]);
+  const user = userEvent.setup();
+  renderApp('/audit');
+  await screen.findByText(/No audit entries match these filters/);
+
+  await user.clear(screen.getByLabelText('From (required)'));
+  await user.click(screen.getByRole('button', { name: 'Filter' }));
+  const alerts = await screen.findAllByRole('alert');
+  expect(alerts.map((alert) => alert.textContent)).toEqual(['Enter a start date.']);
+  expect(screen.queryByText(/No audit entries match these filters/)).toBeNull();
+  expect(auditRequests(fetchMock)).toHaveLength(1);
+});
+
 test('TC-HRD-19: no entries says so with the range', async () => {
   fakeApi([]);
   renderApp('/audit');

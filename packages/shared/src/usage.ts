@@ -26,11 +26,12 @@ export function refineReportRange<T extends z.ZodType<{ from: string; to: string
   return (
     schema
       // YYYY-MM-DD strings sort in date order.
-      .refine((query) => query.to >= query.from, {
+      // A blank or bad date already has its own message, so it skips the range checks (HRD-1).
+      .refine((query) => !query.from || !query.to || query.to >= query.from, {
         path: ['to'],
         message: 'The end date cannot be before the start date.',
       })
-      .refine((query) => rangeDays(query.from, query.to) <= REPORT_MAX_RANGE_DAYS, {
+      .refine((query) => !(rangeDays(query.from, query.to) > REPORT_MAX_RANGE_DAYS), {
         path: ['to'],
         message: `The date range can be at most ${REPORT_MAX_RANGE_DAYS} days.`,
       })

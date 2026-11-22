@@ -337,6 +337,7 @@ Paths are shortened: `api/` is `apps/api/tests/`, `web/` is `apps/web/src/pages/
 | TC-HRD-52 | HRD-5a | SPEC 3 | integration | GET /api/rooms as handler and as admin | Handler rows have only `id` and `name`; admin rows are complete | `api/hrd5-api.test.ts` |
 | TC-HRD-53 | HRD-5a | SPEC 7 | integration | `?page=abc`; semester starting `0000-01-01` | 400 with plain messages (no 500) | `api/hrd5-api.test.ts` |
 | TC-HRD-54 | HRD-5a | BR 11 | integration | Update settings thresholds out of order in SQL/Prisma | Rejected by `settings_threshold_order` | `api/hrd5-api.test.ts` |
+| TC-HRD-55 | HRD-1 | SPEC 7 | component | Audit log: clear From and press Filter | Only "Enter a start date." under From, nothing on To, old result box hidden, no request | `pages/AuditLogPage.test.tsx` |
 
 ## DOC: Documentation
 
