@@ -1,3 +1,4 @@
+import { spawnSync } from 'node:child_process';
 import { describe, expect, it } from 'vitest';
 import { backupFileName, filesToPrune, isBackupFile, isConfirmed } from '../scripts/backup-lib.ts';
 
@@ -36,5 +37,16 @@ describe('restore confirmation', () => {
     expect(isConfirmed(' bms \n', 'bms')).toBe(true);
     expect(isConfirmed('yes', 'bms')).toBe(false);
     expect(isConfirmed('', 'bms')).toBe(false);
+  });
+});
+
+describe('restore with a missing file', () => {
+  it('TC-HRD-56: says the file does not exist, exits 1, and touches nothing', () => {
+    // The check comes before the terminal check, so this works without a terminal or Docker.
+    const run = spawnSync(process.execPath, ['scripts/restore.ts', 'C:/nope/x.dump'], {
+      encoding: 'utf8',
+    });
+    expect(run.status).toBe(1);
+    expect(run.stderr.trim()).toBe('That file does not exist. Nothing was changed.');
   });
 });
