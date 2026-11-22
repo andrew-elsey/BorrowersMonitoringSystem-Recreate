@@ -303,21 +303,21 @@ Record the results and any tuned limits in this section.
 - Heavy reads are measured as five sequential requests per endpoint, not a flood: the reports limit (30 a minute), the search limit (60 a minute) and nginx (10 a second) would otherwise turn the test into a 429 test.
 - The audit viewer timings (HRD-1) and the `FLAGGING_RUN` entry check (HRD-1b) are skipped with a message while the endpoint or entries are missing. `LOAD_REQUIRE_HRD=1` turns those skips into failures.
 
-**Results: PRELIMINARY (trial run on feature/SEC-2-load-tests, before FND-8, HRD-1, HRD-1b and HRD-5a were merged; the final run is recorded after they are).**
+**Results: final run on 2026-11-22, branch feature/SEC-2-load-tests merged with feature/SPRINT-6 (head 61fd6f1), `LOAD_FULL=1 LOAD_REQUIRE_HRD=1 npm run test:load`: 19 passed, 0 failed, 0 skipped.**
 
-Machine: 12 x 12th Gen Intel Core i5-12400F, 31.8 GiB RAM, Windows 11, Docker Desktop 29.8.1 (12 CPUs, 15.5 GiB for the Docker VM), 2026-11-14. Load generator and stack share this one machine, which is harder on the stack than a separate load machine.
+Machine: 12 x 12th Gen Intel Core i5-12400F, 31.8 GiB RAM, Windows 11, Docker Desktop 4.93.0 (engine 29.8.1; 12 CPUs, 15.5 GiB for the Docker VM), 2026-11-22. Load generator and stack share this one machine, which is harder on the stack than a separate load machine.
 
 | # | Criterion | Result |
 |---|---|---|
-| 1 | Login flood | 200 connections for 60 s: 311,564 requests, answered 401 (10) and 429 (311,554, from nginx), no 5xx, no errors or timeouts, p99 219 ms. The signed-in client from the host did checkout, return and dashboard cycles (162 requests): p95 207 ms, max 1,707 ms (the one slow call seen, a checkout during the flood; 1,644 ms in a second run; p95 stays far under the 2 s limit), no failures. api peak memory 175 of 512 MiB, no OOM kill, no restart. A valid login from the host worked right after the flood. After the 15 minute throttle window a valid login from the flooded address returned 200 (TC-SEC-22, `LOAD_FULL=1`). |
-| 2 | Slow connections | 25 sockets dripping header bytes for 25 s: nginx closed all 25 after about 10 s (`client_header_timeout`). The other client (117 requests) had p95 36 ms and no failures. |
-| 3 | Oversized input | 150 KB JSON and 3 MB CSV under load (88 and 43 requests): every answer was 413 `PAYLOAD_TOO_LARGE` from nginx. The replies carry none of the headers Express adds (a normal API reply does), so nothing reached the api. |
-| 4 | Heavy reads | Slowest of five requests (three for each audit filter, 25 report calls in all, to stay under the shared 30 a minute reports limit; 150 ms pause between calls) on the seeded data: usage 366 days 77 ms; borrower history (a borrower with 2,000 transactions) 366 days page 100 71 ms; item history 366 days page 100 40 ms; items `?q=` 35 ms; borrowers `?q=` 30 ms; `/api/returns/open?q=` 41 ms; `/api/flags?q=` 51 ms. Audit viewer: skipped (HRD-1 not merged). |
-| 5 | Flagging under load | `POST /api/flagging/run` and an unchanged `PUT /api/settings` (which also starts a run, with no one-a-minute limit) fired at the same moment, while autocannon ran 160 dashboard requests (all 200): both answered 200, the manual run flagged all 499 eligible lines, nothing eligible was left unflagged, no line has more than one `LINE_FLAGGED` entry, and the new entries equal the lines flagged. The `FLAGGING_RUN` check was skipped (HRD-1b not merged). |
+| 1 | Login flood | 200 connections for 60 s: 815,688 requests, answered 401 (10) and 429 (815,678, from nginx), no 5xx, no errors or timeouts, p99 98 ms. The signed-in client from the host did checkout, return and dashboard cycles (204 requests): p95 82 ms, max 361 ms, no failures. api peak memory 170 of 512 MiB, no OOM kill, no restart. A valid login from another source worked right after the flood. After the 15 minute throttle window a valid login from the flooded address returned 200 (TC-SEC-22, `LOAD_FULL=1`). |
+| 2 | Slow connections | 25 sockets dripping header bytes for 25 s: nginx closed all 25 after about 10 s (last at 10,013 ms, `client_header_timeout`). The other client (120 requests) had p95 21 ms and no failures. |
+| 3 | Oversized input | 150 KB JSON and 3 MB CSV under load (82 and 42 requests): every answer was 413 `PAYLOAD_TOO_LARGE` from nginx. The replies carry none of the headers Express adds (a normal API reply does), so nothing reached the api. |
+| 4 | Heavy reads | Slowest of the sequential requests (three for each audit filter, 150 ms pause between calls, to stay under the shared 30 a minute reports limit) on the seeded data, all 200: usage 366 days 32 ms; borrower history 366 days page 100 30 ms; item history 366 days page 100 27 ms; items `?q=` 37 ms; borrowers `?q=` 36 ms; `/api/returns/open?q=` 19 ms; `/api/flags?q=` 19 ms; audit viewer 366 days 16 ms, with `entity=transaction` 22 ms, with `actor=admin` 24 ms. No audit index migration is needed. |
+| 5 | Flagging under load | `POST /api/flagging/run` and an unchanged `PUT /api/settings` (which also starts a run, with no one-a-minute limit) fired at the same moment, while autocannon ran 160 dashboard requests (all 200): both answered 200, the manual run flagged all 499 eligible lines, nothing eligible was left unflagged, no line has more than one `LINE_FLAGGED` entry, and the 499 new entries equal the lines flagged. Exactly one new `FLAGGING_RUN` entry is well-formed and accounts for all 499 lines. |
 
-End of run: api 185 of 512 MiB, web 11 of 128 MiB, db 136 of 1,024 MiB, no restart or OOM kill in any service.
+End of run: api 185 of 512 MiB, web 12 of 128 MiB, db 108 of 1,024 MiB, no restart or OOM kill in any service.
 
-**Tuned limits:** none so far.
+**Tuned limits:** none.
 
 **What this does not show.** Which of the two simultaneous runs wins the advisory lock is not asserted (either order is fine); the test checks the database, not one reply. The slow-connection test uses 25 sockets from one address, below the 30 connections per address limit.
 
