@@ -1,0 +1,59 @@
+import { spawnSync } from 'node:child_process';
+import { fileURLToPath } from 'node:url';
+import { describe, expect, it } from 'vitest';
+import { backupFileName, filesToPrune, isBackupFile, isConfirmed } from '../scripts/backup-lib.ts';
+
+// TC-HRD-25 to TC-HRD-27: the pure choices the backup and restore scripts make.
+const apiDir = fileURLToPath(new URL('..', import.meta.url));
+const scriptsDir = fileURLToPath(new URL('../scripts', import.meta.url)); // a folder, not a file
+const DAY = 24 * 60 * 60 * 1000;
+const NOW = Date.parse('2026-11-14T12:00:00Z');
+
+describe('backup file names', () => {
+  it('TC-HRD-25: names a dump bms-YYYYMMDD-HHmmss.dump and recognises it', () => {
+    const name = backupFileName(new Date(2026, 10, 4, 9, 5, 7));
+    expect(name).toBe('bms-20261104-090507.dump');
+    expect(isBackupFile(name)).toBe(true);
+    expect(isBackupFile(`${name}.partial`)).toBe(false);
+  });
+});
+
+describe('pruning', () => {
+  it('TC-HRD-26: removes only our dumps older than 14 days', () => {
+    const files = [
+      { name: 'bms-20261001-010101.dump', mtimeMs: NOW - 20 * DAY },
+      { name: 'bms-20261110-010101.dump', mtimeMs: NOW - 4 * DAY },
+      { name: 'bms-20261031-010101.dump', mtimeMs: NOW - 14 * DAY - 1 },
+      { name: 'notes.txt', mtimeMs: NOW - 90 * DAY },
+      { name: 'bms-20260101-000000.dump.partial', mtimeMs: NOW - 90 * DAY },
+    ];
+    expect(filesToPrune(files, NOW)).toEqual([
+      'bms-20261001-010101.dump',
+      'bms-20261031-010101.dump',
+    ]);
+  });
+});
+
+describe('restore confirmation', () => {
+  it('TC-HRD-27: accepts only the exact database name', () => {
+    expect(isConfirmed('bms', 'bms')).toBe(true);
+    expect(isConfirmed(' bms \n', 'bms')).toBe(true);
+    expect(isConfirmed('yes', 'bms')).toBe(false);
+    expect(isConfirmed('', 'bms')).toBe(false);
+  });
+});
+
+describe('restore with a missing file or a folder', () => {
+  it.each(['C:/nope/x.dump', scriptsDir])(
+    'TC-HRD-56: %s is refused with one line, exit 1, and nothing touched',
+    (path) => {
+      // The check comes before the terminal check, so this works without a terminal or Docker.
+      const run = spawnSync(process.execPath, ['scripts/restore.ts', path], {
+        cwd: apiDir, // the script path is relative, so the folder must not depend on where vitest started
+        encoding: 'utf8',
+      });
+      expect(run.status).toBe(1);
+      expect(run.stderr.trim()).toBe('That file does not exist. Nothing was changed.');
+    },
+  );
+});

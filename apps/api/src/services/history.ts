@@ -21,7 +21,7 @@ const lineInclude = {
 
 // from and to are calendar days in the app timezone (ARCHITECTURE.md 6): from its first instant
 // to the first instant of the day after to.
-function issuedBetween(from: string, to: string): Prisma.DateTimeFilter {
+export function issuedBetween(from: string, to: string): Prisma.DateTimeFilter {
   const start = DateTime.fromISO(from, { zone: config.timezone });
   const end = DateTime.fromISO(to, { zone: config.timezone }).plus({ days: 1 });
   return { gte: start.toJSDate(), lt: end.toJSDate() };

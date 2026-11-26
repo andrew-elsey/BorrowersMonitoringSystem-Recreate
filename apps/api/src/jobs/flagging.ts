@@ -1,5 +1,5 @@
 import { DateTime } from 'luxon';
-import { auditMany } from '../lib/audit.ts';
+import { audit, auditMany } from '../lib/audit.ts';
 import { config } from '../lib/config.ts';
 import { prisma } from '../lib/prisma.ts';
 import { getSettings } from '../services/settings.ts';
@@ -21,6 +21,11 @@ function latestClosing(now: Date, closingTime: string): DateTime {
     millisecond: 0,
   });
   return today <= DateTime.fromJSDate(now) ? today : today.minus({ days: 1 });
+}
+
+// The next closing time after `now` (HRD-1b, shown on Flag review).
+export function nextClosing(now: Date, closingTime: string): Date {
+  return latestClosing(now, closingTime).plus({ days: 1 }).toJSDate();
 }
 
 // BR 8: flags every open, unflagged line issued before the latest closing time. BR 9: because the
@@ -54,6 +59,14 @@ export async function runFlagging(now: Date, actorId: string | null = null): Pro
         after: { flagStatus: 'FLAGGED', flaggedAt: now.toISOString() },
       })),
     );
+    // BR 14, D5: every run that did the work leaves one entry, even with 0 lines flagged.
+    await audit(tx, {
+      actorId,
+      action: 'FLAGGING_RUN',
+      entity: 'flagging_run',
+      entityId: closing.toISOString(),
+      after: { flagged: lines.length, closingAt: closing.toISOString() },
+    });
     return { flagged: lines.length, skipped: false };
   });
   console.log(`Flagging run at ${now.toISOString()}: ${JSON.stringify(run)}`);
@@ -81,7 +94,7 @@ async function runAndSchedule(now: Date): Promise<void> {
     const { closingTime } = await getSettings();
     const run = await runFlagging(now);
     if (!run.skipped) {
-      delayMs = latestClosing(now, closingTime).plus({ days: 1 }).toMillis() - now.getTime();
+      delayMs = nextClosing(now, closingTime).getTime() - now.getTime();
     }
   } catch (error) {
     console.error('Flagging run failed, retrying:', error);

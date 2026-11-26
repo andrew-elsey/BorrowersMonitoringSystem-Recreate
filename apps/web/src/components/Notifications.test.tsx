@@ -1,6 +1,6 @@
 import { cleanup, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { afterEach, expect, test } from 'vitest';
+import { afterEach, expect, test, vi } from 'vitest';
 import { ApiRequestError } from '../api';
 import { NotificationProvider, useNotify } from './Notifications';
 
@@ -124,4 +124,40 @@ test('TC-BRW-39: the message area is pinned, and focused fields scroll in below 
 
 test('useNotify outside the provider fails clearly', () => {
   expect(() => render(<Buttons />)).toThrow('useNotify needs a NotificationProvider above it');
+});
+
+test('TC-HRD-30: dismissing a message by keyboard focuses the next Dismiss button, then the main area', async () => {
+  render(
+    <NotificationProvider>
+      <main id="main" tabIndex={-1}>
+        <Buttons />
+      </main>
+    </NotificationProvider>,
+  );
+  const user = userEvent.setup();
+  await user.click(screen.getByRole('button', { name: 'Save' }));
+  await user.click(screen.getByRole('button', { name: 'Offline' }));
+  const [first, second] = screen.getAllByRole('button', { name: 'Dismiss' });
+  first!.focus();
+  await user.keyboard('{Enter}');
+  expect(screen.getAllByRole('button', { name: 'Dismiss' })).toHaveLength(1);
+  expect(document.activeElement).toBe(second);
+  await user.keyboard('{Enter}');
+  expect(document.activeElement).toBe(screen.getByRole('main'));
+});
+
+test('TC-HRD-30: focusing the main area after the last Dismiss does not scroll the page', async () => {
+  render(
+    <NotificationProvider>
+      <main id="main" tabIndex={-1}>
+        <Buttons />
+      </main>
+    </NotificationProvider>,
+  );
+  const user = userEvent.setup();
+  await user.click(screen.getByRole('button', { name: 'Save' }));
+  const focus = vi.spyOn(screen.getByRole('main'), 'focus');
+  screen.getByRole('button', { name: 'Dismiss' }).focus();
+  await user.keyboard('{Enter}');
+  expect(focus).toHaveBeenCalledWith({ preventScroll: true });
 });

@@ -324,3 +324,32 @@ test('the first Tab reaches a "Skip to main content" link that targets the main 
   expect(skip.getAttribute('href')).toBe('#main');
   expect(screen.getByRole('main').id).toBe('main');
 });
+
+// HRD-5b item 15: after a NOT_FOUND the row and its opener are gone, so focus goes to the add field.
+test('TC-HRD-36: a rename refused with NOT_FOUND focuses the add field, not the page start', async () => {
+  fakeApi((method) =>
+    method === 'PUT'
+      ? { status: 404, body: apiError('NOT_FOUND', 'Category not found.') }
+      : undefined,
+  );
+  const user = userEvent.setup();
+  renderApp('/inventory?tab=categories');
+  await user.click(await screen.findByRole('button', { name: 'Rename Audio' }));
+  await user.keyboard('x{Enter}');
+  await screen.findByText('Category not found.');
+  await vi.waitFor(() => expect(document.activeElement?.getAttribute('name')).toBe('name'));
+});
+
+test('TC-HRD-37: a delete refused with NOT_FOUND focuses the add field, not the page start', async () => {
+  fakeApi((method) =>
+    method === 'DELETE'
+      ? { status: 404, body: apiError('NOT_FOUND', 'Category not found.') }
+      : undefined,
+  );
+  const user = userEvent.setup();
+  renderApp('/inventory?tab=categories');
+  await user.click(await screen.findByRole('button', { name: 'Delete Audio' }));
+  await user.click(screen.getByRole('button', { name: 'Delete category' }));
+  await screen.findByText('Category not found.');
+  await vi.waitFor(() => expect(document.activeElement?.getAttribute('name')).toBe('name'));
+});

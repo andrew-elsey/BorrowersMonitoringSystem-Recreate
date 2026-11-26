@@ -67,7 +67,26 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
     [add],
   );
 
-  const dismiss = (id: number) => setNotices((current) => current.filter((n) => n.id !== id));
+  // The Dismiss button the keyboard user pressed is about to disappear. Remember its position, then
+  // (after the re-render) focus the next notice's Dismiss button, or <main> when none is left.
+  const focusIndexAfterDismiss = useRef<number | null>(null);
+  useLayoutEffect(() => {
+    const index = focusIndexAfterDismiss.current;
+    if (index === null || !areaElement) return;
+    focusIndexAfterDismiss.current = null;
+    const buttons = areaElement.querySelectorAll('button');
+    // preventScroll: focusing <main> would otherwise scroll the page back to its top.
+    (buttons[Math.min(index, buttons.length - 1)] ?? document.getElementById('main'))?.focus({
+      preventScroll: true,
+    });
+  }, [notices, areaElement]);
+
+  const dismiss = (id: number) => {
+    if (areaElement?.contains(document.activeElement)) {
+      focusIndexAfterDismiss.current = notices.findIndex((n) => n.id === id);
+    }
+    setNotices((current) => current.filter((n) => n.id !== id));
+  };
 
   return (
     <NotifyContext.Provider value={notify}>

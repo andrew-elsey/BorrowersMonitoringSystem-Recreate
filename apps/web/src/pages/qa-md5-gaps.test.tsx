@@ -131,3 +131,15 @@ test('a search with a control character shows only the list error with Retry, no
   expect(screen.queryByRole('table', { name: 'Borrowers' })).toBeNull();
   expect(search.getAttribute('aria-invalid')).not.toBe('true');
 });
+
+// HRD-5b item 15: after a NOT_FOUND the row and its Edit button are gone, so focus goes to the add form.
+test('TC-HRD-39: an edit refused with NOT_FOUND focuses the School ID field of the add form', async () => {
+  fakeApi(() => ({ status: 404, body: apiError('NOT_FOUND', 'Borrower not found.') }));
+  const user = userEvent.setup();
+  renderApp('/borrowers');
+  await user.click(await screen.findByRole('button', { name: 'Edit Carlo Dizon' }));
+  const dialog = screen.getByRole('dialog', { name: 'Edit Carlo Dizon' });
+  await user.click(within(dialog).getByRole('button', { name: 'Save changes' }));
+  await screen.findByText('Borrower not found.');
+  await vi.waitFor(() => expect(document.activeElement?.getAttribute('name')).toBe('schoolId'));
+});

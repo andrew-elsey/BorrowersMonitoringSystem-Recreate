@@ -49,21 +49,20 @@ const stored = (id: string) => prisma.borrower.findUniqueOrThrow({ where: { id }
 
 // --- PATCH body edge cases ---
 
-test('an empty PATCH body changes nothing and writes no audit entry', async () => {
+test('an empty PATCH body is refused and writes no audit entry', async () => {
   const { id } = await create();
-  const response = await patch(id, {}).expect(200);
-  expect(response.body.borrower).toMatchObject({ ...SAMPLE, active: true });
+  await patch(id, {}).expect(400);
   expect(await auditFor(id)).toHaveLength(1);
 });
 
-test('unknown keys in a PATCH body are ignored and never written (id, createdAt, foo)', async () => {
+test('a PATCH body of only unknown keys (id, createdAt, foo) is refused and never written', async () => {
   const { id } = await create();
   const before = await stored(id);
   await patch(id, {
     id: '00000000-0000-4000-8000-000000000000',
     createdAt: '2000-01-01T00:00:00Z',
     foo: 'bar',
-  }).expect(200);
+  }).expect(400);
   expect(await stored(id)).toEqual(before);
   expect(await auditFor(id)).toHaveLength(1);
 });

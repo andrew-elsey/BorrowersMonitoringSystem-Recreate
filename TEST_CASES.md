@@ -6,7 +6,7 @@ One list of test cases for every ticket in `docs/BACKLOG.md`. Cases come from ea
 
 - **ID**: `TC-<EPIC>-NN`, numbered per epic (FND, AUTH, MD, BRW, FLG, RPT, SEC, HRD, DOC). IDs are never reused or renumbered. A case that no longer applies is marked "Removed", not deleted.
 - **Ticket**: the ticket that makes the case pass. A ticket is ready for testing only when its cases are implemented and pass (`CLAUDE.md`, Trello workflow).
-- **Rule**: business rule (`BR 1` to `BR 16`), scenario (`S1` to `S21`), or document section the case checks.
+- **Rule**: business rule (`BR 1` to `BR 16`), scenario (`S1` to `S23`), or document section the case checks.
 - **Level**: `unit`, `integration` (Vitest and Supertest against the real test database), `component` (Vitest and Testing Library), `e2e` (Playwright), or `manual`.
 - **Automated by**: the test file that covers the case, `not yet` when the ticket is not built, or `manual` when it is checked by hand. When a ticket is built, replace `not yet` with the test file.
 - Unless a case says otherwise, "closing" is 17:00 `Asia/Manila`, a current semester is set, and thresholds are the defaults (3, 4, 5).
@@ -49,6 +49,9 @@ Paths are shortened: `api/` is `apps/api/tests/`, `web/` is `apps/web/src/pages/
 | TC-FND-29 | FND-6 | ARCH 6 | integration | Start the API with a `DATABASE_URL` that has `options` | Refused, because it would replace `TimeZone=UTC` | `api/timestamps.test.ts` |
 | TC-FND-30 | FND-7 | SPEC 8, ARCH 7 | component | Submit a form, from the keyboard, that gets API field errors for two fields listed out of form order | Focus moves to the first errored field in form order; each field error is announced (`role="alert"`) | `web/components/Field.test.tsx`, `web/qa-fnd7-gaps.test.tsx` (Change password and a real form), `web/qa-md1-r5-fnd7-merge.test.tsx` (Inventory add and rename) |
 | TC-FND-31 | REG-1 | SPEC 5 | component | Open Home, Checkout, Change password, a page the role may not open, an unknown path, and the sign-in page | The tab title is "<Page> · Borrowers Monitoring System": Home, Checkout, Change password, Not allowed, Home (redirected), Sign in | `web/reg1.test.tsx` |
+| TC-FND-32 | FND-8 | ARCH 12.2 | integration | In `npm run test:nginx`, replace the stub api with a new container on a different address, then call `/api/echo` through nginx for up to 15 s | 200 comes back without restarting nginx (before the fix: 502 until web restarts) | `web/scripts/check-nginx.ts` |
+| TC-FND-33 | FND-8 | ARCH 12.2 | manual | `docker compose up -d --build`, then `docker compose stop api`, `docker compose start api` (or `restart api`), then open `/api/health` through the web port every few seconds without restarting web | A brief 502 at most, then 200 within about 10 s; the web container's start time is unchanged | Manual (checked 2026-11-19 on a throwaway `-p bms-fnd8` stack: api address changed, 200 after 6 s) |
+| TC-FND-34 | FND-8 | ARCH 12.2, SEC-1 | integration | Run `npm run test:nginx` with the resolver and upstream in `nginx.conf` | Every earlier limit check (rates, connections, body sizes, JSON 413/429, Retry-After, X-Forwarded-For) still passes | `web/scripts/check-nginx.ts` (all checks other than TC-FND-32) |
 
 ## AUTH: Authentication and users
 
@@ -270,27 +273,93 @@ Paths are shortened: `api/` is `apps/api/tests/`, `web/` is `apps/web/src/pages/
 | TC-SEC-08 | SEC-1 | ARCH 12.3 | integration | Cause an unexpected error in a route; cause an unhandled rejection | Route: `INTERNAL_ERROR` with no internals; unhandled: logged and the process exits so Docker restarts it | `api/qa-regression-flows.test.ts` (a failed audit insert in a route answers 500 `INTERNAL_ERROR`), `api/request-limits.test.ts` (exit on unhandled errors) |
 | TC-SEC-09 | SEC-1 | SPEC 7, S21 | integration | Send a body over 100 KB to Express directly | `PAYLOAD_TOO_LARGE` | `api/auth.test.ts` |
 | TC-SEC-10 | SEC-1 | SPEC 7 | unit | Validate the shared Zod schemas at and over every SPEC 7 limit | At the limit accepted; over it rejected | `packages/shared/src/limits.test.ts` (override reasons, report ranges, and CSV rows come with their tickets) |
-| TC-SEC-11 | SEC-2 | ARCH 12.7 | manual | Login flood: 200 connections for 60 s while a signed-in client from another source works | p95 under 2 s; api under its memory limit with no restart; valid login works after the window | not yet |
-| TC-SEC-12 | SEC-2 | ARCH 12.7 | manual | Slow-connection (slowloris) test | Other clients keep working | not yet |
-| TC-SEC-13 | SEC-2 | ARCH 12.7, S21 | manual | Oversized JSON body and oversized CSV under load | Rejected with 413 without reaching a service | not yet |
-| TC-SEC-14 | SEC-2 | ARCH 12.7 | manual | Reports and search at maximum ranges on seeded data (5,000 borrowers, 500 items, 20,000 transactions) | Each answers in under 2 s | not yet |
-| TC-SEC-15 | SEC-2 | ARCH 12.7 | manual | Run the flagging job while the API is under load | Correct results; no overlapping runs | not yet |
+| TC-SEC-11 | SEC-2 | ARCH 12.7 | manual | Login flood: 200 connections for 60 s while a signed-in client from another source works | p95 under 2 s; api under its memory limit with no restart; valid login works after the window | `tests/load/main.ts` (`npm run test:load`) |
+| TC-SEC-12 | SEC-2 | ARCH 12.7 | manual | Slow-connection (slowloris) test | Other clients keep working | `tests/load/main.ts` (`npm run test:load`) |
+| TC-SEC-13 | SEC-2 | ARCH 12.7, S21 | manual | Oversized JSON body and oversized CSV under load | Rejected with 413 without reaching a service | `tests/load/main.ts` (`npm run test:load`) |
+| TC-SEC-14 | SEC-2 | ARCH 12.7 | manual | Reports and search at maximum ranges on seeded data (5,000 borrowers, 500 items, 20,000 transactions) | Each answers in under 2 s | `tests/load/main.ts` (`npm run test:load`) |
+| TC-SEC-15 | SEC-2 | ARCH 12.7 | manual | Run the flagging job while the API is under load | Two runs at once (the manual run and a settings save): nothing left unflagged, no line flagged twice, api stays up | `tests/load/main.ts` (`npm run test:load`) |
+| TC-SEC-16 | SEC-2 | ARCH 12.7, D18 | manual | `seed.ts` run with NODE_ENV=production, and with a database name that has no "load" in it | Both refuse and load nothing | `tests/load/main.ts` (`npm run test:load`) |
+| TC-SEC-17 | SEC-2 | ARCH 12.7, D18 | manual | `seed.sql` run against a database without "load" in its name | The SQL itself refuses ("Refusing to seed") | `tests/load/main.ts` (`npm run test:load`) |
+| TC-SEC-18 | SEC-2 | ARCH 12.7 | manual | Seed the load stack | 5,000 borrowers, 500 items, 20,000 transactions and at least 100,000 audit rows (CHECKOUT, RETURN, LINE_FLAGGED, ITEM_UPDATED) | `tests/load/main.ts` (`npm run test:load`) |
+| TC-SEC-19 | SEC-2 | ARCH 12.7, HRD-1 | manual | Audit viewer at 366 days, page 100, unfiltered and with the entity and actor filters | Each answers in under 2 s | `tests/load/main.ts` (`npm run test:load`) |
+| TC-SEC-20 | SEC-2 | ARCH 12.7 | manual | The login flood is answered by the nginx limits | No 2xx, no 5xx, no errors or timeouts at the flooder | `tests/load/main.ts` (`npm run test:load`) |
+| TC-SEC-21 | SEC-2 | ARCH 12.6, 12.7 | manual | Memory and restarts of api, web and db after the flood and after the whole run | Under the memory limit, no OOM kill, RestartCount 0 | `tests/load/main.ts` (`npm run test:load`) |
+| TC-SEC-22 | SEC-2 | ARCH 12.4, 12.7, S20 | manual | A valid login from the flooded address once the 15 minute throttle window has passed | 200 (needs `LOAD_FULL=1`; skipped otherwise) | `tests/load/main.ts` (`npm run test:load`) |
+| TC-SEC-23 | SEC-2 | ARCH 12.2 | manual | About 25 sockets drip header bytes and never finish | nginx closes every one within 15 s (client_header_timeout 10 s) | `tests/load/main.ts` (`npm run test:load`) |
+| TC-SEC-24 | SEC-2 | ARCH 12.7, S21 | manual | The 413 answers to the oversized JSON and CSV | API error body `PAYLOAD_TOO_LARGE` and none of the headers Express adds, so the request never reached the api | `tests/load/main.ts` (`npm run test:load`) |
+| TC-SEC-25 | SEC-2 | ARCH 12.7, BR 8, 9, HRD-1b | manual | Audit entries of the flagging run under load | Each line has at most one LINE_FLAGGED entry and the run wrote one per flagged line; exactly one well-formed FLAGGING_RUN entry | `tests/load/main.ts` (`npm run test:load`) |
 
 ## HRD: Hardening
 
 | ID | Ticket | Rule | Level | Steps | Expected | Automated by |
 |---|---|---|---|---|---|---|
-| TC-HRD-01 | HRD-1 | BR 14, SPEC 7 | integration | Admin filters the audit log by actor, entity, and date | Matching entries, paginated; a request without a date range is rejected | not yet |
-| TC-HRD-02 | HRD-1 | SPEC 3 | integration | Handler opens the audit log | 403 | not yet |
-| TC-HRD-03 | HRD-1 | BR 14 | integration | Run the audit sweep after a state change with no audit entry | The change is reported | not yet |
-| TC-HRD-04 | HRD-2 | BR section 3 | e2e | Checkout, partial return, end-of-day flagging, strike, block, override in Docker | The whole flow passes | not yet |
-| TC-HRD-05 | HRD-2 | BR section 3 | manual | Check every scenario S1 to S21 against the coverage table below | Each has an automated test that passes | not yet |
-| TC-HRD-06 | HRD-3 | ARCH 12.6 | manual | Back up, restore on a clean environment | Data restored; backup files outside the web root, readable only by admin | not yet |
-| TC-HRD-07 | HRD-4 | ARCH 12.1 | manual | Follow the LAN guide on another PC | App reachable from the network with `COOKIE_SECURE=false`; port bound to the LAN address | not yet |
-| TC-HRD-08 | HRD-5 | SPEC 8 | manual | Go through each screen with bad input, slow loads, and empty data | Clear messages, consistent loading and empty states, keyboard-friendly checkout | not yet |
+| TC-HRD-01 | HRD-1 | BR 14, SPEC 7 | integration | Admin filters the audit log by actor, entity, and date | Matching entries, paginated; a request without a date range is rejected | `audit-log.test.ts` |
+| TC-HRD-02 | HRD-1 | SPEC 3 | integration | Handler opens the audit log | 403 | `audit-log.test.ts` |
+| TC-HRD-03 | HRD-1 | BR 14 | integration | Run the audit sweep after a state change with no audit entry | The change is reported | `audit-sweep.test.ts` |
+| TC-HRD-12 | HRD-1 | BR 14, ARCH 6 | integration | Entries just before and after a Manila day boundary, filtered for that day | Both ends of the day are included; the next instant is not | `audit-log.test.ts` |
+| TC-HRD-13 | HRD-1 | BR 14, D8 | integration | Filter with `actor=system`; read one entry | Only entries with no actor; each entry shows actor name, action, entity, entity id, before, and after | `audit-log.test.ts` |
+| TC-HRD-14 | HRD-1 | SPEC 7 | integration | Page through entries; ask for page size 101, page 0, an unknown entity, or an unknown actor | Newest first, with the total; the bad requests are 400 `VALIDATION_ERROR`; `flagging_run` is a valid entity | `audit-log.test.ts` |
+| TC-HRD-15 | HRD-1 | SPEC 7, D7 | integration | Ask with no dates, one date, end before start, year 0000, 366 days, 367 days | Only 366 days or fewer with both dates is 200; the rest are 400 | `audit-log.test.ts` |
+| TC-HRD-16 | HRD-1 | ARCH 12.3, D7 | integration | 15 audit requests and 15 usage reports in a minute, then one more audit request; then a handler asks | The 31st is 429 `RATE_LIMITED`: the count is shared; the handler still gets 403, so the role check runs before the limit | `audit-log.test.ts` |
+| TC-HRD-17 | HRD-1 | BR 14, D9 | integration | Sweep a database of unaudited records of every kind, then rows changed after their last entry | Each is reported under its own check with its id, including an open line changed by raw SQL (judged by its checkout entry); a RETURN entry covers its line and a SEMESTER_SET_CURRENT entry covers the semester it replaced | `audit-sweep.test.ts` |
+| TC-HRD-18 | HRD-1 | BR 14, D9 | integration | Seed, then through the API: create records, check out, return (one damaged), edit a note, change settings, add a semester and switch the current one twice, flag, override, then sweep | No findings (seed rows count as audited) | `audit-sweep.test.ts` |
+| TC-HRD-19 | HRD-1 | SPEC 5, D8 | component | Admin opens Audit log from the menu; picks Actor System and an Entity; enters a range over 366 days; no entries; a handler opens `/audit` | Last 7 days in Manila time with before and after in each row; the filters are sent; the range is refused with no request; the empty text names the range; a handler sees "not allowed" and no menu item | `AuditLogPage.test.tsx` |
+| TC-HRD-20 | HRD-1b | BR 14, D5 | integration | A run flags 0 lines, then a run flags 2 | One `FLAGGING_RUN` entry each (entity `flagging_run`, null actor, `after.flagged` 0 then 2) | `qa-flg2-gaps.test.ts` |
+| TC-HRD-21 | HRD-1b | BR 14, D5 | integration | Admin presses "Run flagging now" | One `FLAGGING_RUN` entry with the admin as actor | `qa-flg2-gaps.test.ts` |
+| TC-HRD-22 | HRD-1b | BR 14, D5 | integration | A run skipped because the lock is held; a run that fails after writing its entry | No entry for the skipped run; the entry is rolled back with the failed run | `qa-flg2-gaps.test.ts` |
+| TC-HRD-23 | HRD-1b | D6 | integration | GET /api/flags before any run and after a run; then the service with an injected clock before and at closing 17:00 Manila | Through the API: `lastRun` null, then `{ at, flagged }`. Through the service (injected clock): `nextRunAt` is today's closing, then tomorrow's | `qa-flg2-gaps.test.ts` |
+| TC-HRD-24 | HRD-1b | D6 | component | Open Flag review with a last run, then with none | "Last flagging run: <Manila time>, N lines flagged. Next run: ..."; or "No flagging run yet." | `FlagReviewPage.test.tsx` |
+| TC-HRD-04 | HRD-2 | BR section 3 | e2e | `npm run test:e2e`: checkout, partial return, end-of-day flagging, strike, block, override in Docker | The whole flow passes (TC-HRD-60 to 68) | `tests/e2e/flow.spec.ts` |
+| TC-HRD-05 | HRD-2 | BR section 3 | manual | Check every scenario S1 to S23 against the coverage table below | Each has an automated test that passes | manual (the tech lead checked with a script on 2026-11-22 that every scenario S1 to S23 has at least one automated case; TC-SEC-11 and TC-SEC-13 now pass in `npm run test:load`, final run 2026-11-22) |
+| TC-HRD-60 | HRD-2 | S1, S5, S6, S14 | e2e | Admin creates a semester, room, items, and borrowers through the API; three borrowers check out (one on the Checkout screen, one with three transactions); a second checkout of an item already out | 201 each; the item already out is `ITEM_UNAVAILABLE` | `tests/e2e/flow.spec.ts` |
+| TC-HRD-61 | HRD-2 | S3, S15 | e2e | Return one unit fully (API) and 3 of 5 cords (Return screen); then return 3 more cords | Both returns 201; the extra return is `RETURN_EXCEEDS_OUTSTANDING` | `tests/e2e/flow.spec.ts` |
+| TC-HRD-62 | HRD-2 | S1, S2, S3, S22, D11 | e2e | Set closing to the minute after the last checkout, wait for it, save settings (thresholds 1, 2, 3) | Flagging runs at once: 3 lines for one borrower, 1 line with 2 outstanding cords, none for the same-day return | `tests/e2e/flow.spec.ts` |
+| TC-HRD-63 | HRD-2 | S5, S6, BR 10 | e2e | Read each borrower's strikes | 0, 1, and 3: one per flagged transaction | `tests/e2e/flow.spec.ts` |
+| TC-HRD-64 | HRD-2 | S8, BR 6 | e2e | The borrower at 3 strikes (block threshold 3) is chosen on the Checkout screen, then checks out by API and returns a laptop | The screen shows "Blocked" and Confirm is disabled; the API gives `BORROWER_BLOCKED`; the return works and the strike stays | `tests/e2e/flow.spec.ts` |
+| TC-HRD-65 | HRD-2 | D6 | e2e | Admin opens Flag review in the browser | "Last flagging run: ..., 4 lines flagged" and an Override button per line | `tests/e2e/flow.spec.ts` |
+| TC-HRD-66 | HRD-2 | S7, S8, BR 13 | e2e | Admin overrides one line in the browser with a reason | The line leaves the list; the borrower has 2 strikes | `tests/e2e/flow.spec.ts` |
+| TC-HRD-67 | HRD-2 | S8 | e2e | The same borrower checks out again | 201: no longer blocked | `tests/e2e/flow.spec.ts` |
+| TC-HRD-68 | HRD-2 | S3 | e2e | The partial-return borrower returns the last 2 cords | Line still flagged, nothing outstanding, strike stays 1 | `tests/e2e/flow.spec.ts` |
+| TC-HRD-06 | HRD-3 | ARCH 12.6 | manual | Back up, `docker compose down -v`, start clean, restore the file | Data restored; backup files outside the web root, readable only by admin | manual (run 2026-11-14 on a throwaway project, see the card) |
+| TC-HRD-25 | HRD-3 | ARCH 12.6 | unit | Name a backup file | `bms-YYYYMMDD-HHmmss.dump`; `.partial` files are not backups | `apps/api/tests/backup.test.ts` |
+| TC-HRD-26 | HRD-3 | ARCH 12.6 | unit | Choose which files to prune | Only `bms-*.dump` older than 14 days; other files and `.partial` kept | `apps/api/tests/backup.test.ts` |
+| TC-HRD-27 | HRD-3 | ARCH 12.6 | unit | Check the typed restore confirmation | Only the exact database name is accepted | `apps/api/tests/backup.test.ts` |
+| TC-HRD-28 | HRD-3 | ARCH 12.6 | manual | Run `npm run backup` without `BACKUP_DIR`, and with the db stopped | Refuses with a clear message; no file kept, old backups not deleted | manual |
+| TC-HRD-29 | HRD-3 | ARCH 12.6 | manual | Run `npm run restore` from a non-terminal, with a wrong confirmation, and with a corrupt file | Refuses each time; api not stopped; data unchanged | manual |
+| TC-HRD-07 | HRD-4 | ARCH 12.1 | manual | Follow `docs/DEPLOYMENT.md`, then open the app from a second LAN device (any device, even a phone). Check the PC's sleep setting is Never. Restart the PC, sign in, and open the app from the second device again | App reachable from the network with `COOKIE_SECURE=false`; sign-in works over plain HTTP; port bound to the LAN address; the firewall rule allows only the subnet; the PC never sleeps; the app is reachable again after a reboot (if not, the `0.0.0.0` fallback in DEPLOYMENT section 4 makes it reachable) | manual |
+| TC-HRD-56 | HRD-3 | ARCH 12.6 | unit | Run restore with a path that does not exist, and with a folder | One line "That file does not exist. Nothing was changed.", exit 1, no stack trace; api not stopped | `apps/api/tests/backup.test.ts` |
+| TC-HRD-08 | HRD-5, HRD-5b | SPEC 8 | manual | Go through each screen with bad input, slow loads, and empty data. Use only the keyboard on Checkout and on every list's edit and delete dialogs | Clear messages, consistent loading and empty states (the shared Loading and empty rows, no new patterns), keyboard-friendly checkout; focus never drops to the page body. The UI items are covered by TC-HRD-30 to TC-HRD-44 | manual (HRD-5b checklist pass: no screen needed a change) |
+| TC-HRD-30 | HRD-5b | SPEC 8, ARCH 13 | component | Show two messages, press Dismiss on the first with the keyboard, then on the last | Focus moves to the next message's Dismiss button, then to the main area, and the page does not scroll (preventScroll) | `components/Notifications.test.tsx` |
+| TC-HRD-31 | HRD-5b | SPEC 8 | component | Return screen: search answered with SEARCH_TOO_BROAD | The message shows as an error with no Retry button | `pages/ReturnPage.test.tsx` |
+| TC-HRD-32 | HRD-5b | SPEC 8 | component | Flag review: borrower search over the cap | The over-cap note is a status message (`role="status"`) | `pages/FlagReviewPage.test.tsx` |
+| TC-HRD-33 | HRD-5b | SPEC 8 | component | Flag review: the list loaded with the note showing, then a search fails | The note is hidden while the error shows | `pages/FlagReviewPage.test.tsx` |
+| TC-HRD-34 | HRD-5b | SPEC 8 | component | Items list fails to load, press Retry until it loads | Focus moves to + Add item, not the page start | `pages/qa-md2-gaps.test.tsx` |
+| TC-HRD-35 | HRD-5b | SPEC 8, ARCH 13 | component | A lazy page whose chunk cannot be fetched | The friendly "This page could not load" page with a Reload button, not a blank screen | `pages/PageLoadError.test.tsx` |
+| TC-HRD-36 | HRD-5b | SPEC 8 | component | Category rename refused with NOT_FOUND | Message shown, dialog closed, focus on the add field | `pages/InventoryPage.test.tsx` |
+| TC-HRD-37 | HRD-5b | SPEC 8 | component | Category delete refused with NOT_FOUND | Message shown, focus on the add field | `pages/InventoryPage.test.tsx` |
+| TC-HRD-38 | HRD-5b | SPEC 8 | component | Item edit, then item delete, refused with NOT_FOUND (the row is gone after the reload) | Message shown, focus on + Add item | `pages/qa-md2-gaps.test.tsx` |
+| TC-HRD-39 | HRD-5b | SPEC 8 | component | Borrower edit refused with NOT_FOUND | Message shown, focus on the School ID field of the add form | `pages/qa-md5-gaps.test.tsx` |
+| TC-HRD-40 | HRD-5b | SPEC 8 | component | User edit refused with NOT_FOUND | Message shown, focus on + Add user | `pages/UsersPage.test.tsx` |
+| TC-HRD-41 | HRD-5b | SPEC 8 | component | Room delete refused with NOT_FOUND | Message shown, focus on the add field | `pages/RoomsPage.test.tsx` |
+| TC-HRD-42 | HRD-5b | SPEC 8 | component | Checkout: find a borrower, choose one with the Enter key | Focus moves to the room picker (bug wxTtqdMT); a locked (blocked or inactive) borrower sends focus back to the borrower search | `pages/CheckoutPage.test.tsx` |
+| TC-HRD-43 | HRD-5b | SPEC 8 | component | Flag review: override refused with NOT_FOUND or LINE_NOT_FLAGGED | Message shown, focus on the search field (already worked; verified) | `pages/qa-flg4-gaps.test.tsx` |
+| TC-HRD-44 | HRD-5b | SPEC 8 | manual | Open each list screen while loading, empty, and failed | All use the shared Loading and empty-state rows or Retry alert; no screen needed a change | manual |
 | TC-HRD-09 | HRD-6 | SPEC 8, ARCH 3, 13 | manual | Run `npm run build` | No chunk-size warning; each screen page (Home, Inventory, Borrowers, Rooms, Settings, Change password) is its own chunk | manual |
 | TC-HRD-10 | HRD-6 | SPEC 8 | component | Render the app at each route (`/`, `/inventory`, `/borrowers`, `/rooms`, `/settings`, `/password`, `/login`) with the lazy pages | Each page renders inside the app shell | the page tests (`apps/web/src/pages/*.test.tsx`) through `renderApp` |
 | TC-HRD-11 | HRD-6 | SPEC 8 | manual | Under `docker compose up`, open sign-in with the browser network tab open, sign in, then open every menu item | Sign-in and the shell load from the entry chunk; each screen fetches its own chunk on first visit, shows "Loading…" briefly if slow, and renders | manual |
+| TC-HRD-45 | HRD-5a | SPEC 7 | unit | Validate `{}`, `page=abc`, wrong types against the shared schemas | No message contains "Invalid input", "expected" or "received" | `shared/hrd5-validation.test.ts` |
+| TC-HRD-46 | HRD-5a | SPEC 7 | unit | QUANTITY item with total quantity `'x'` | The schema's own message still wins over the global one | `shared/hrd5-validation.test.ts` |
+| TC-HRD-47 | HRD-5a | SPEC 4 | unit | UNIT item with an empty or blank asset tag | "Enter an asset tag." once | `shared/hrd5-validation.test.ts` |
+| TC-HRD-48 | HRD-5a | SPEC 4 | unit | QUANTITY item with a blank tag, null, then tag "X" | Blank accepted, null gets "Enter a valid value."; "X" gives "Quantity items have no asset tag." | `shared/hrd5-validation.test.ts` |
+| TC-HRD-49 | HRD-5a | SPEC 7 | unit | Date `0000-01-01` as semester start, report from, expected return date | "Enter a real date."; `0001-01-01` accepted | `shared/hrd5-validation.test.ts` |
+| TC-HRD-50 | HRD-5a | SPEC 7 | unit | `{}` and `{foo:1}` against the item, room, borrower, user update schemas | "Nothing to update." | `shared/hrd5-validation.test.ts` |
+| TC-HRD-51 | HRD-5a | SPEC 7 | integration | PATCH `{}` and `{foo:1}` on items, rooms, borrowers, users | 400 VALIDATION_ERROR, message "Nothing to update."; also a QUANTITY item PATCH with the same name and a blank tag is 200 with no audit entry | `api/hrd5-api.test.ts` |
+| TC-HRD-52 | HRD-5a | SPEC 3 | integration | GET /api/rooms as handler and as admin | Handler rows have only `id` and `name`; admin rows are complete | `api/hrd5-api.test.ts` |
+| TC-HRD-53 | HRD-5a | SPEC 7 | integration | `?page=abc`; semester starting `0000-01-01` | 400 with plain messages (no 500) | `api/hrd5-api.test.ts` |
+| TC-HRD-54 | HRD-5a | BR 11 | integration | Update settings thresholds out of order in SQL/Prisma | Rejected by `settings_threshold_order` | `api/hrd5-api.test.ts` |
+| TC-HRD-58 | HRD-1 | SPEC 7 | unit | Semester with a blank end date; report `from=0000-xx`; `from=0000-01-01`; semester end equal to and before start | One message each ("Enter an end date.", "Enter a start date.", "Enter a real date."); same day OK; end before start refused | `shared/hrd5-validation.test.ts` |
+| TC-HRD-57 | HRD-1 | SPEC 7 | unit | Report range with `from=""`, then `from=abc`, `to=2026-11-22` | Only "Enter a start date." each time, no message on `to` | `shared/hrd5-validation.test.ts` |
+| TC-HRD-55 | HRD-1 | SPEC 7 | component | Audit log: clear From and press Filter | Only "Enter a start date." under From, nothing on To, old result box hidden, no request | `pages/AuditLogPage.test.tsx` |
 
 ## DOC: Documentation
 
@@ -309,37 +378,37 @@ Paths are shortened: `api/` is `apps/api/tests/`, `web/` is `apps/web/src/pages/
 | BR 3 Eligible borrowers | TC-MD-17, TC-BRW-08, TC-FLG-19 |
 | BR 4 Atomic and safe | TC-BRW-10, 11 |
 | BR 5 Return events | TC-BRW-20, 21, 22, 28 |
-| BR 6 Returning never touches flags | TC-BRW-23, 29, TC-FLG-08 |
+| BR 6 Returning never touches flags | TC-BRW-23, 29, TC-FLG-08, TC-HRD-64 |
 | BR 7 Notes are informational | TC-BRW-30, 32, 35 |
 | BR 8 End-of-day flagging | TC-FLG-06 to 12 |
 | BR 9 Catch-up | TC-FLG-10 |
 | BR 10 Strike count | TC-FLG-01 to 04 |
-| BR 11 Thresholds | TC-BRW-26, TC-FLG-17 to 21 |
+| BR 11 Thresholds | TC-BRW-26, TC-FLG-17 to 21, TC-HRD-54 |
 | BR 12 Semester reset | TC-FLG-05 |
-| BR 13 Override | TC-FLG-04, 23, 24 |
-| BR 14 Audit | TC-FND-15, 17, TC-AUTH-06, 19, TC-MD-01, 08, TC-BRW-04, 20, 30, TC-FLG-07, 24, TC-HRD-01, 03 |
+| BR 13 Override | TC-FLG-04, 23, 24, TC-HRD-66 |
+| BR 14 Audit | TC-FND-15, 17, TC-AUTH-06, 19, TC-MD-01, 08, TC-BRW-04, 20, 30, TC-FLG-07, 24, TC-HRD-01, 03, 17, 18, 20 to 23 |
 | BR 15 No deletion of history | TC-FND-14, TC-AUTH-20, TC-MD-02, 07, 12 |
 | BR 16 Throttled, never locked | TC-AUTH-10, 11, 12, 34 |
-| S1 Same-day return | TC-FLG-06 |
-| S2 Unit item not returned | TC-FLG-01, 07 |
-| S3 Partial return | TC-BRW-22, TC-FLG-08 |
+| S1 Same-day return | TC-FLG-06, TC-HRD-60, 62 |
+| S2 Unit item not returned | TC-FLG-01, 07, TC-HRD-62 |
+| S3 Partial return | TC-BRW-22, TC-FLG-08, TC-HRD-61, 62, 68 |
 | S4 Note does not prevent the flag | TC-BRW-32 |
-| S5 One transaction, many lines | TC-FLG-02 |
-| S6 Two transactions, same day | TC-FLG-03 |
-| S7 Partial override | TC-FLG-04 |
-| S8 Thresholds | TC-FLG-17, 18, 19 |
+| S5 One transaction, many lines | TC-FLG-02, TC-HRD-60, 63 |
+| S6 Two transactions, same day | TC-FLG-03, TC-HRD-60, 63 |
+| S7 Partial override | TC-FLG-04, TC-HRD-66 |
+| S8 Thresholds | TC-FLG-17, 18, 19, TC-HRD-64, 66, 67 |
 | S9 Semester reset | TC-FLG-05 |
 | S10 Checkout after closing | TC-FLG-09 |
 | S11 Service down at closing | TC-FLG-10 |
 | S12 Idempotent job | TC-FLG-11 |
 | S13 Overridden stays overridden | TC-FLG-12 |
-| S14 Checkout validations | TC-BRW-05 to 10, 34 |
-| S15 Return validations | TC-BRW-24 |
+| S14 Checkout validations | TC-BRW-05 to 10, 34, TC-HRD-60 |
+| S15 Return validations | TC-BRW-24, TC-HRD-61 |
 | S16 Concurrent checkout | TC-BRW-11 |
 | S17 Damaged return | TC-BRW-25 |
 | S18 Permissions | TC-AUTH-17, 22, TC-BRW-13, TC-FLG-25, TC-RPT-02, 07 |
 | S19 Retiring versus deleting | TC-MD-07 |
 | S20 Login flood | TC-AUTH-10, TC-SEC-11 |
 | S21 Oversized input | TC-MD-19, TC-BRW-12, TC-RPT-04, TC-SEC-02, 09, 13 |
-| S22 Closing time moved earlier | TC-FLG-27 |
+| S22 Closing time moved earlier | TC-FLG-27, TC-HRD-62 |
 | S23 Failed or skipped run | TC-FLG-28, 30 |

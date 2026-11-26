@@ -110,7 +110,9 @@ function CategoriesTab() {
       // Someone else deleted it while the dialog was open: close it and drop the row.
       if (isNotFound(error)) {
         setToRename(null);
-        return refresh();
+        // The row and its Rename button are gone: focus the add field, not the page start.
+        // shortcut: relies on the refetch finishing after the dialog closes (true over a real network); wait a frame if that changes.
+        return refresh().then(() => addForm.setFocus('name'));
       }
     },
   });
@@ -129,7 +131,8 @@ function CategoriesTab() {
     onError: (error) => {
       notify.error(error);
       setToDelete(null);
-      return refresh();
+      // NOT_FOUND removes the row and its Delete button, so focus the add field.
+      return refresh().then(() => isNotFound(error) && addForm.setFocus('name'));
     },
   });
 

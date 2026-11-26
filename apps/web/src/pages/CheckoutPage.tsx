@@ -10,6 +10,7 @@ import {
   NOTE_MAX_LENGTH,
   type Room,
   type RoomInput,
+  type RoomOption,
   type RoomPage,
   roomSchema,
   SEARCH_MAX_LENGTH,
@@ -141,7 +142,11 @@ export function CheckoutPage() {
   // department ever has more.
   const rooms = useQuery({
     queryKey: ['rooms', 'checkout'],
-    queryFn: () => apiFetch<RoomPage>('GET', '/rooms?page=1&pageSize=100'),
+    queryFn: () =>
+      apiFetch<Omit<RoomPage, 'data'> & { data: RoomOption[] }>(
+        'GET',
+        '/rooms?page=1&pageSize=100',
+      ),
   });
   // Lines still out at closing time are flagged (BR 8). From settings, never hardcoded (rule 3);
   // "closing time" stands in until it loads.
@@ -284,6 +289,14 @@ export function CheckoutPage() {
   const strikes = strikeQuery.data;
   const level = strikes ? strikeLevel(strikes) : 'none';
   const locked = borrower !== null && (!borrower.active || level === 'blocked');
+  // After a borrower is chosen the Choose button is gone: focus step 2 (the room). The steps are
+  // disabled for a blocked or inactive borrower (strikes can arrive after the choice), and a real
+  // browser refuses focus on a disabled field, so go back to the borrower search instead.
+  useEffect(() => {
+    if (!borrower) return;
+    if (locked) borrowerSearchRef.current?.focus();
+    else form.setFocus('locationId');
+  }, [borrower, locked, form]);
   const onLines = new Set(values.lines.map((line) => line.itemId));
   // VALIDATION_ERROR details the API keys as "lines" (a schema error on some line) belong to no
   // single field, so they go with the message at the top.

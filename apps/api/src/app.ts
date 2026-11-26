@@ -7,7 +7,10 @@ import { requireFetchHeader } from './middleware/auth.ts';
 import { errorHandler } from './middleware/errors.ts';
 import { createFlaggingRouter } from './routes/flagging.ts';
 import { createFlagsRouter } from './routes/flags.ts';
-import { createGlobalRateLimiter, createReportRateLimiter } from './middleware/request-rate-limit.ts';
+import {
+  createGlobalRateLimiter,
+  createReportRateLimiter,
+} from './middleware/request-rate-limit.ts';
 import { createAuthRouter } from './routes/auth.ts';
 import { createBorrowersRouter } from './routes/borrowers.ts';
 import { createCategoriesRouter } from './routes/categories.ts';
@@ -20,6 +23,7 @@ import { createHistoryRouter } from './routes/history.ts';
 import { createUsersRouter } from './routes/users.ts';
 import { healthRouter } from './routes/health.ts';
 import { createUsageReportRouter } from './routes/usage-report.ts';
+import { createAuditRouter } from './routes/audit.ts';
 
 export function createApp() {
   const app = express();
@@ -47,6 +51,7 @@ export function createApp() {
   app.use('/api', createHistoryRouter(reportLimiter));
   app.use('/api', createUsersRouter());
   app.use('/api', createUsageReportRouter(reportLimiter));
+  app.use('/api', createAuditRouter(reportLimiter));
   // Unknown API paths get the standard error format too (CLAUDE.md rule 10), not Express's HTML page.
   app.use('/api', () => {
     throw new ApiError(404, 'NOT_FOUND', 'Not found.');

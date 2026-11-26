@@ -145,7 +145,8 @@ export async function updateItem(actorId: string, id: string, changes: ItemUpdat
         });
       }
       const changedKeys = (Object.keys(data) as (keyof typeof data)[]).filter(
-        (key) => data[key] !== before[key],
+        // undefined means "not sent" (a blank asset tag becomes undefined, HRD-5a).
+        (key) => data[key] !== undefined && data[key] !== before[key],
       );
       // Nothing differs: nothing is written or audited.
       if (changedKeys.length === 0) return row;

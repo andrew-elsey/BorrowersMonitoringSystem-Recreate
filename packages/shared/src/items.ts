@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { pageQuerySchema, textField } from './categories.ts';
+import { nothingToUpdate, pageQuerySchema, textField } from './categories.ts';
 import { searchTextField } from './borrowers.ts';
 import { ItemCondition, ItemStatus, TrackingType } from './enums.ts';
 
@@ -41,7 +41,13 @@ const itemFields = {
     .max(DESCRIPTION_MAX_LENGTH, `Too long: at most ${DESCRIPTION_MAX_LENGTH} characters.`)
     .refine((value) => !OTHER_CONTROL_CHARACTER.test(value), 'Remove the control characters.')
     .optional(),
-  assetTag: textField('Enter an asset tag.').optional(),
+  // A blank tag means "no tag" (create and edit alike): UNIT gets "Enter an asset tag." from
+  // trackingErrors, QUANTITY accepts it, and an edit with only a blank tag is "Nothing to update."
+  assetTag: z
+    .string()
+    .optional()
+    .transform((value) => (value?.trim() ? value : undefined))
+    .pipe(textField('Enter an asset tag.').optional()),
   totalQuantity: z
     .number({ error: QUANTITY_MESSAGE })
     .int(QUANTITY_MESSAGE)
@@ -88,7 +94,10 @@ export const itemSchema = z
   })
   .superRefine((item, ctx) => {
     for (const [field, message] of Object.entries(trackingErrors(item))) {
-      ctx.addIssue({ code: 'custom', path: [field], message });
+      // Skip a field that already has an issue, so a blank tag is not reported twice.
+      if (!ctx.issues.some((issue) => issue.path?.[0] === field)) {
+        ctx.addIssue({ code: 'custom', path: [field], message });
+      }
     }
   });
 export type ItemInput = z.infer<typeof itemSchema>;
@@ -102,7 +111,8 @@ export const itemUpdateSchema = z
     trackingType: z
       .never({ error: 'The tracking type cannot be changed after the item is created.' })
       .optional(),
-  });
+  })
+  .refine(...nothingToUpdate);
 export type ItemUpdate = z.infer<typeof itemUpdateSchema>;
 
 // GET /api/items?q=&categoryId=&status=&trackingType=&page=&pageSize=. q matches name or asset tag.
