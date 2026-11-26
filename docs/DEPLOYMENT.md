@@ -44,6 +44,8 @@ The api applies the database migrations, then creates the first admin (`ADMIN_US
 
 Docker Desktop restarts the containers when it starts (`restart: unless-stopped`). In Docker Desktop settings, turn on "Start Docker Desktop when you sign in to your computer". The app starts only after someone signs in, so after a Windows Update restart it stays down until someone signs in to the PC.
 
+Never let the PC sleep. A sleeping PC cannot be reached from the LAN, and the closing-time flagging does not run until the api next restarts. In Settings, System, Power, set "When plugged in, put my device to sleep after" to Never, or in PowerShell run `powercfg /change standby-timeout-ac 0`. The screen may still turn off.
+
 ## 4. Let other machines in (firewall)
 
 Docker publishes the port on the address from `WEB_BIND_ADDRESS`; Windows Firewall must also allow it. In an administrator PowerShell, allow the web port from the department subnet only (change the port and subnet to yours):
@@ -53,6 +55,8 @@ New-NetFirewallRule -DisplayName "BMS web" -Direction Inbound -Protocol TCP -Loc
 ```
 
 From another machine on the LAN, open `http://<LAN address>:8080` and sign in. If it does not load, check: the PC's address with `ipconfig` matches `WEB_BIND_ADDRESS` (after a change run `docker compose up -d`); the firewall rule exists; the Windows network profile is Private, not Public. A Block rule for "Docker Desktop Backend" (made by clicking Cancel on Docker's first firewall prompt) overrides any Allow rule: delete it in Windows Defender Firewall, Inbound Rules. If the PC's address changes, the app is unreachable until `.env` is fixed, which is why the address must be fixed.
+
+Then test a reboot: restart the PC, sign in, wait for Docker Desktop, and open the app from another machine again. If Docker starts before the network has the PC's address (common on Wi-Fi or a slow network), the web container cannot use `WEB_BIND_ADDRESS` and the app stays down; `docker compose ps` shows web not running. If that happens, set `WEB_BIND_ADDRESS=0.0.0.0` and run `docker compose up -d`. The app then listens on every network of the PC, and the firewall rule above becomes the only thing that limits it to the department subnet, so keep that rule, keep the network profile Private, and make sure no other Allow rule (for example one for "Docker Desktop Backend") opens the port to everyone.
 
 ## 5. Backups
 
