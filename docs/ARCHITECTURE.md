@@ -226,6 +226,7 @@ Goal: someone on the network (or an attacker, if the app is ever exposed) cannot
 - Publish only the web port. The db and api ports are never published to the host, except through a development override file.
 - Bind the web port to the LAN address with `WEB_BIND_ADDRESS` (for example `192.168.1.20`, which gives `192.168.1.20:8080:8080`) or restrict it with the host firewall to the department subnet.
 - Do not expose the app to the internet. For remote access use a VPN. If it must ever be public, put it behind a CDN or WAF, serve it over HTTPS, and set `COOKIE_SECURE=true`.
+- The step-by-step setup for the department PC (LAN binding, `COOKIE_SECURE`, firewall rule) is in `docs/DEPLOYMENT.md`.
 
 ### 12.2 nginx (first line of defense)
 
