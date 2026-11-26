@@ -65,7 +65,7 @@ Only the web port is published, and by default only to this machine. To reach th
 
 Full steps are in [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md).
 
-- **Setup** ([sections 2 to 4](docs/DEPLOYMENT.md#2-set-up-env)): copy `.env.example` to `.env`; set `POSTGRES_PASSWORD`, `ADMIN_PASSWORD`, `SESSION_SECRET`, `WEB_BIND_ADDRESS` (the PC's LAN address), and `COOKIE_SECURE=false` (plain HTTP); run `docker compose up -d --build`; add the firewall rule.
+- **Setup** ([sections 2 to 4](docs/DEPLOYMENT.md#2-set-up-env)): copy `.env.example` to `.env`; set `POSTGRES_PASSWORD`, `ADMIN_PASSWORD`, `SESSION_SECRET`, `WEB_BIND_ADDRESS` (the PC's LAN address), and `COOKIE_SECURE=false` (plain HTTP); run `docker compose up -d --build`; set the PC to never sleep; add the firewall rule; test that the app comes back after a reboot.
 - **Settings** ([section 7](docs/DEPLOYMENT.md#7-settings-in-plain-terms)): an admin sets the closing time, the strike thresholds (3, 4, 5), and the current semester in Settings and semesters. Add a new semester at the start of each term.
 - **Day to day** ([section 8](docs/DEPLOYMENT.md#8-day-to-day)):
   - Run the backup daily and check the newest file in `BACKUP_DIR` each morning ([section 5](docs/DEPLOYMENT.md#5-backups)); restore is in [section 6](docs/DEPLOYMENT.md#6-restore).
